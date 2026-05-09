@@ -3,160 +3,259 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>扫码入库</title>
+  <title>服装扫码入库</title>
   
-  <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json">
-  
-  <!-- iOS Safari 添加到桌面支持 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="扫码入库">
+  <meta name="apple-mobile-web-app-title" content="服装入库">
+  <meta name="theme-color" content="#1e293b">
   
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      padding: 16px;
+      padding: 12px;
       max-width: 500px;
       margin: 0 auto;
-      background: #f9fafb;
+      background: #f1f5f9;
       min-height: 100vh;
+      color: #1e293b;
     }
-    h2 { 
-      text-align: center; 
-      margin: 16px 0;
-      color: #1f2937;
+    
+    /* 顶部栏 */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
     }
+    .header h2 { font-size: 20px; }
+    .sync-badge {
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .sync-online { background: #d1fae5; color: #065f46; }
+    .sync-offline { background: #fee2e2; color: #991b1b; }
+    .sync-syncing { background: #fef3c7; color: #92400e; }
     
     /* 按钮 */
     .btn {
       width: 100%;
-      padding: 14px;
-      font-size: 17px;
+      padding: 13px;
+      font-size: 16px;
       border: none;
-      border-radius: 12px;
-      margin: 8px 0;
+      border-radius: 10px;
+      margin: 6px 0;
       font-weight: 600;
       cursor: pointer;
-      transition: opacity 0.2s;
+      transition: all 0.15s;
     }
-    .btn:active { opacity: 0.7; }
+    .btn:active { transform: scale(0.97); opacity: 0.85; }
     .btn-primary { background: #3b82f6; color: #fff; }
     .btn-success { background: #10b981; color: #fff; }
-    .btn-outline { 
-      background: #fff; 
-      color: #3b82f6; 
-      border: 2px solid #3b82f6; 
-    }
+    .btn-outline { background: #fff; color: #3b82f6; border: 2px solid #3b82f6; }
+    .btn-danger { background: #fff; color: #ef4444; border: 2px solid #fca5a5; }
     
     /* 扫码区域 */
     #reader {
       width: 100%;
-      border-radius: 12px;
+      border-radius: 10px;
       overflow: hidden;
-      margin: 12px 0;
+      margin: 10px 0;
       display: none;
       border: 2px solid #3b82f6;
     }
     
-    /* 扫描结果卡片 */
+    /* 卡片 */
     .card {
       background: #fff;
-      padding: 16px;
-      border-radius: 12px;
-      margin: 12px 0;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-      text-align: center;
-    }
-    .card .name { font-size: 20px; font-weight: 700; color: #1f2937; }
-    .card .spec { font-size: 14px; color: #6b7280; margin: 4px 0; }
-    .card .code { font-size: 13px; color: #9ca3af; font-family: monospace; }
-    .card .not-found { color: #ef4444; font-weight: 600; }
-    
-    /* 数量输入 */
-    .input-group {
-      display: flex;
-      gap: 8px;
-      margin: 8px 0;
-      align-items: center;
-    }
-    .input-group input {
-      flex: 1;
       padding: 14px;
-      font-size: 18px;
-      border: 2px solid #e5e7eb;
-      border-radius: 12px;
+      border-radius: 10px;
+      margin: 10px 0;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    
+    /* 服装信息表格 */
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      font-size: 14px;
+    }
+    .info-item {
+      background: #f8fafc;
+      padding: 10px 12px;
+      border-radius: 8px;
+    }
+    .info-item .label {
+      font-size: 11px;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .info-item .value {
+      font-weight: 700;
+      font-size: 16px;
+      margin-top: 2px;
+    }
+    .info-item .value.code { font-family: 'SF Mono', monospace; font-size: 13px; color: #64748b; }
+    
+    .not-found {
       text-align: center;
+      color: #ef4444;
       font-weight: 600;
+      padding: 20px;
+    }
+    
+    /* 数量控制 */
+    .qty-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 10px 0;
+    }
+    .qty-row label {
+      font-weight: 600;
+      font-size: 14px;
+      white-space: nowrap;
+    }
+    .qty-row input {
+      flex: 1;
+      padding: 12px;
+      font-size: 18px;
+      border: 2px solid #e2e8f0;
+      border-radius: 10px;
+      text-align: center;
+      font-weight: 700;
     }
     .qty-btn {
-      width: 48px;
-      height: 48px;
+      width: 44px;
+      height: 44px;
       font-size: 22px;
-      border: 2px solid #e5e7eb;
-      border-radius: 12px;
+      border: 2px solid #e2e8f0;
+      border-radius: 10px;
       background: #fff;
       cursor: pointer;
       font-weight: 700;
       color: #3b82f6;
     }
-    .qty-btn:active { background: #eff6ff; }
     
     /* 历史记录 */
-    h3 { margin: 20px 0 12px; color: #374151; }
-    .history-item {
-      background: #fff;
-      padding: 12px 16px;
-      margin: 6px 0;
-      border-radius: 10px;
+    .section-title {
+      font-size: 16px;
+      font-weight: 700;
+      margin: 16px 0 8px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-      font-size: 14px;
     }
-    .history-item .h-name { font-weight: 600; color: #1f2937; }
-    .history-item .h-meta { color: #9ca3af; font-size: 12px; }
-    .delete-btn {
-      background: #fee2e2;
-      color: #ef4444;
-      border: none;
-      padding: 6px 12px;
-      border-radius: 8px;
+    .record-card {
+      background: #fff;
+      padding: 12px 14px;
+      margin: 6px 0;
+      border-radius: 10px;
       font-size: 13px;
-      cursor: pointer;
-    }
-    
-    /* 底部操作栏 */
-    .actions {
+      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
       display: flex;
-      gap: 8px;
-      margin: 16px 0;
+      justify-content: space-between;
+      align-items: center;
     }
-    .actions .btn { flex: 1; font-size: 14px; padding: 12px; }
+    .record-left .sku {
+      font-weight: 700;
+      font-size: 15px;
+    }
+    .record-left .sku-code {
+      color: #94a3b8;
+      font-family: monospace;
+      font-size: 11px;
+    }
+    .record-right {
+      text-align: right;
+    }
+    .record-right .qty {
+      font-weight: 700;
+      font-size: 18px;
+      color: #10b981;
+    }
+    .record-right .time {
+      font-size: 11px;
+      color: #cbd5e1;
+    }
+    .delete-btn {
+      background: none;
+      border: none;
+      color: #f87171;
+      font-size: 18px;
+      cursor: pointer;
+      padding: 4px 8px;
+    }
     
     .empty-state {
       text-align: center;
-      color: #9ca3af;
-      padding: 24px;
+      color: #94a3b8;
+      padding: 32px;
       font-size: 14px;
+    }
+    
+    /* 底部操作 */
+    .bottom-actions {
+      display: flex;
+      gap: 8px;
+      margin: 14px 0;
+    }
+    .bottom-actions .btn {
+      flex: 1;
+      font-size: 13px;
+      padding: 10px;
+    }
+    
+    /* 统计 */
+    .stats {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .stat-item {
+      flex: 1;
+      background: #fff;
+      padding: 10px;
+      border-radius: 8px;
+      text-align: center;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    }
+    .stat-item .num {
+      font-size: 24px;
+      font-weight: 800;
+      color: #3b82f6;
+    }
+    .stat-item .lbl {
+      font-size: 11px;
+      color: #94a3b8;
     }
   </style>
 </head>
 <body>
 
-  <h2>📦 扫码入库</h2>
+  <div class="header">
+    <h2>👕 服装扫码入库</h2>
+    <span id="syncStatus" class="sync-badge sync-syncing">⏳ 同步中</span>
+  </div>
   
   <!-- 扫码器 -->
-  <button class="btn btn-primary" onclick="startScan()" id="scanBtn">📷 打开扫码</button>
+  <button class="btn btn-primary" onclick="startScan()" id="scanBtn">📷 扫码入库</button>
   <button class="btn btn-outline" onclick="stopScan()" id="stopBtn" style="display:none;">✕ 关闭扫码</button>
   <div id="reader"></div>
   
   <!-- 扫描结果 -->
   <div id="scanResult" style="display:none;">
-    <div class="card" id="resultCard"></div>
-    <div class="input-group">
+    <div class="card" id="resultCard">
+      <!-- 动态渲染 -->
+    </div>
+    <div class="qty-row">
+      <label>入库数量</label>
       <button class="qty-btn" onclick="changeQty(-1)">−</button>
       <input type="number" id="quantity" value="1" min="1" onchange="validateQty()">
       <button class="qty-btn" onclick="changeQty(1)">+</button>
@@ -164,90 +263,238 @@
     <button class="btn btn-success" onclick="submitInbound()">✅ 确认入库</button>
   </div>
   
-  <!-- 历史记录 -->
-  <h3>📋 入库记录</h3>
-  <div id="history"></div>
-  <div class="actions">
-    <button class="btn btn-outline" onclick="exportData()">📤 导出 CSV</button>
-    <button class="btn btn-outline" onclick="clearAll()" style="color:#ef4444;border-color:#fca5a5;">🗑 清空记录</button>
+  <!-- 统计 -->
+  <div class="stats" id="statsArea" style="display:none;">
+    <div class="stat-item">
+      <div class="num" id="statTotal">0</div>
+      <div class="lbl">总件数</div>
+    </div>
+    <div class="stat-item">
+      <div class="num" id="statSKU">0</div>
+      <div class="lbl">SKU 数</div>
+    </div>
+    <div class="stat-item">
+      <div class="num" id="statToday">0</div>
+      <div class="lbl">今日入库</div>
+    </div>
   </div>
   
-  <!-- 安装提示 -->
-  <div id="installPrompt" style="display:none;position:fixed;bottom:20px;left:16px;right:16px;background:#1f2937;color:#fff;padding:16px;border-radius:12px;text-align:center;z-index:999;">
-    点击下方按钮将此应用添加到桌面
-    <button onclick="installPWA()" style="display:block;width:100%;margin-top:8px;padding:10px;background:#3b82f6;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:600;">添加到主屏幕</button>
+  <!-- 历史记录 -->
+  <div class="section-title">
+    <span>📋 入库记录</span>
+    <span style="font-weight:normal;color:#94a3b8;font-size:13px;" id="recordCount">0条</span>
+  </div>
+  <div id="history"></div>
+  
+  <div class="bottom-actions">
+    <button class="btn btn-outline" onclick="exportData()">📤 导出 CSV</button>
+    <button class="btn btn-danger" onclick="clearAll()">🗑 清空</button>
   </div>
 
-  <!-- ========== 核心脚本 ========== -->
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <script>
-    // ===== 商品主表（可以在这里添加你的商品条码）=====
+    // ========== 配置 ==========
+    const API_BASE = 'https://scan-api.你的用户名.workers.dev';  // ← 改成你的 Worker 网址
+    
+    // ========== 服装商品主表 ==========
+    // 条码规则：款号(6位)+色号(3位)+尺码(3位) = 12位
+    // 例如：AW2401-001-L00 → AW2401001L00
     const PRODUCTS = {
-      '6901234567890': { name: '农夫山泉矿泉水', spec: '550ml' },
-      '6909876543210': { name: '得力笔记本', spec: 'A5/60页' },
-      '6901111222333': { name: '晨光签字笔', spec: '黑色0.5mm' },
-      '6923456789012': { name: '康师傅方便面', spec: '红烧牛肉面' },
-      '6900000000000': { name: '测试商品', spec: '演示用' },
+      // 示例商品
+      'AW2401BLKS00': {
+        styleNo: 'AW2401',        // 款号
+        name: '韩版宽松卫衣',
+        brand: '自有品牌',
+        color: '黑色',
+        colorCode: 'BLK',
+        size: 'S',
+        category: '上衣',
+        season: '秋',
+        price: 299
+      },
+      'AW2401BLKM00': {
+        styleNo: 'AW2401',
+        name: '韩版宽松卫衣',
+        brand: '自有品牌',
+        color: '黑色',
+        colorCode: 'BLK',
+        size: 'M',
+        category: '上衣',
+        season: '秋',
+        price: 299
+      },
+      'AW2401WHTL00': {
+        styleNo: 'AW2401',
+        name: '韩版宽松卫衣',
+        brand: '自有品牌',
+        color: '白色',
+        colorCode: 'WHT',
+        size: 'L',
+        category: '上衣',
+        season: '秋',
+        price: 299
+      },
+      'SS2402BLUM00': {
+        styleNo: 'SS2402',
+        name: '直筒休闲裤',
+        brand: '代理品牌A',
+        color: '深蓝',
+        colorCode: 'BLU',
+        size: 'M',
+        category: '裤子',
+        season: '春',
+        price: 399
+      },
+      'SS2403REDL00': {
+        styleNo: 'SS2403',
+        name: 'A字连衣裙',
+        brand: '自有品牌',
+        color: '红色',
+        colorCode: 'RED',
+        size: 'L',
+        category: '裙子',
+        season: '夏',
+        price: 499
+      },
+      // 添加更多你的商品...
     };
 
-    // ===== 状态管理 =====
+    // ========== 状态 ==========
     let html5QrCode = null;
     let lastScannedCode = '';
     let lastScannedProduct = null;
-    let records = JSON.parse(localStorage.getItem('pwa_inbound_records') || '[]');
-    let deferredPrompt = null;  // PWA 安装
+    let records = [];
+    let localQueue = [];
+    let cloudSha = null;
+    let syncStatus = 'syncing';
 
-    // ===== 扫码 =====
+    // ========== API 调用 ==========
+    async function fetchData() {
+      const res = await fetch(`${API_BASE}/data`);
+      if (!res.ok) throw new Error('Fetch failed');
+      const data = await res.json();
+      cloudSha = data._sha;
+      return data.records || [];
+    }
+
+    async function pushData(records, sha) {
+      const res = await fetch(`${API_BASE}/data`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ records, sha: sha || cloudSha }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Push failed');
+      }
+      const data = await res.json();
+      if (data.sha) cloudSha = data.sha;
+    }
+
+    // ========== 同步 ==========
+    function updateSyncUI(status) {
+      syncStatus = status;
+      const el = document.getElementById('syncStatus');
+      switch(status) {
+        case 'online':
+          el.className = 'sync-badge sync-online';
+          el.textContent = '☁️ 已同步';
+          break;
+        case 'syncing':
+          el.className = 'sync-badge sync-syncing';
+          el.textContent = '⏳ 同步中';
+          break;
+        case 'offline':
+          el.className = 'sync-badge sync-offline';
+          el.textContent = '⚠️ 未同步';
+          break;
+      }
+    }
+
+    async function syncWithCloud() {
+      updateSyncUI('syncing');
+      try {
+        const cloudRecords = await fetchData();
+        
+        // 合并：去重 + 本地未同步优先
+        const mergedMap = {};
+        cloudRecords.forEach(r => mergedMap[r.id] = r);
+        localQueue.forEach(r => mergedMap[r.id] = r);
+
+        const merged = Object.values(mergedMap).sort((a, b) => b.id - a.id);
+        
+        // 如果有本地未同步数据，推送到云端
+        const cloudIds = new Set(cloudRecords.map(r => r.id));
+        const newLocal = localQueue.filter(r => !cloudIds.has(r.id));
+        
+        if (newLocal.length > 0) {
+          const uploadData = [...cloudRecords, ...newLocal];
+          await pushData(uploadData, cloudSha);
+        }
+        
+        records = merged;
+        localQueue = [];
+        saveLocal();
+        updateSyncUI('online');
+        renderAll();
+      } catch (err) {
+        console.error('同步失败:', err);
+        updateSyncUI('offline');
+        if (records.length === 0) {
+          records = getLocalCache();
+          renderAll();
+        }
+      }
+    }
+
+    function saveLocal() {
+      localStorage.setItem('garment_queue', JSON.stringify(localQueue));
+      localStorage.setItem('garment_cache', JSON.stringify(records));
+    }
+
+    function loadLocal() {
+      localQueue = JSON.parse(localStorage.getItem('garment_queue') || '[]');
+    }
+
+    function getLocalCache() {
+      return JSON.parse(localStorage.getItem('garment_cache') || '[]');
+    }
+
+    // ========== 扫码 ==========
     async function startScan() {
       try {
         document.getElementById('reader').style.display = 'block';
         document.getElementById('scanBtn').style.display = 'none';
         document.getElementById('stopBtn').style.display = 'block';
         document.getElementById('scanResult').style.display = 'none';
-        
+
         html5QrCode = new Html5Qrcode("reader");
-        const config = { 
-          fps: 10, 
-          qrbox: { width: 250, height: 180 },
-          aspectRatio: 1.0
-        };
-        
         await html5QrCode.start(
           { facingMode: "environment" },
-          config,
-          onScanSuccess,
-          onScanFailure
+          { fps: 10, qrbox: { width: 260, height: 180 } },
+          (decodedText) => {
+            if (decodedText === lastScannedCode) return;
+            lastScannedCode = decodedText.trim();
+            lastScannedProduct = PRODUCTS[lastScannedCode] || null;
+            
+            if (html5QrCode) {
+              html5QrCode.stop().then(() => {
+                document.getElementById('reader').style.display = 'none';
+              });
+            }
+            document.getElementById('scanBtn').style.display = 'block';
+            document.getElementById('stopBtn').style.display = 'none';
+            
+            showScanResult();
+            if (navigator.vibrate) navigator.vibrate(50);
+          },
+          () => {}
         );
       } catch (err) {
         alert('摄像头启动失败: ' + err.message);
-        resetScanUI();
+        document.getElementById('scanBtn').style.display = 'block';
+        document.getElementById('stopBtn').style.display = 'none';
       }
-    }
-
-    function onScanSuccess(decodedText) {
-      // 防止同一条码重复触发
-      if (decodedText === lastScannedCode) return;
-      
-      lastScannedCode = decodedText;
-      lastScannedProduct = PRODUCTS[decodedText] || null;
-      
-      // 停止扫码
-      if (html5QrCode) {
-        html5QrCode.stop().then(() => {
-          document.getElementById('reader').style.display = 'none';
-        });
-      }
-      resetScanUI();
-      
-      // 显示结果
-      showScanResult();
-      
-      // 震动反馈（如果设备支持）
-      if (navigator.vibrate) navigator.vibrate(50);
-    }
-
-    function onScanFailure(error) {
-      // 扫描失败是常态，不处理
     }
 
     function stopScan() {
@@ -256,189 +503,241 @@
           document.getElementById('reader').style.display = 'none';
         });
       }
-      resetScanUI();
-    }
-
-    function resetScanUI() {
       document.getElementById('scanBtn').style.display = 'block';
       document.getElementById('stopBtn').style.display = 'none';
     }
 
-    // ===== 显示扫描结果 =====
     function showScanResult() {
       const card = document.getElementById('resultCard');
+      const p = lastScannedProduct;
       
-      if (lastScannedProduct) {
+      if (p) {
         card.innerHTML = `
-          <div class="name">✅ ${lastScannedProduct.name}</div>
-          <div class="spec">${lastScannedProduct.spec}</div>
-          <div class="code">${lastScannedCode}</div>
+          <div class="info-grid">
+            <div class="info-item">
+              <div class="label">款号</div>
+              <div class="value code">${p.styleNo}</div>
+            </div>
+            <div class="info-item">
+              <div class="label">品名</div>
+              <div class="value">${p.name}</div>
+            </div>
+            <div class="info-item">
+              <div class="label">品牌</div>
+              <div class="value">${p.brand}</div>
+            </div>
+            <div class="info-item">
+              <div class="label">品类</div>
+              <div class="value">${p.category}</div>
+            </div>
+            <div class="info-item">
+              <div class="label">颜色</div>
+              <div class="value">${p.color} <span style="font-size:11px;color:#94a3b8;">${p.colorCode}</span></div>
+            </div>
+            <div class="info-item">
+              <div class="label">尺码</div>
+              <div class="value">${p.size}</div>
+            </div>
+            <div class="info-item">
+              <div class="label">季节</div>
+              <div class="value">${p.season}季</div>
+            </div>
+            <div class="info-item">
+              <div class="label">吊牌价</div>
+              <div class="value" style="color:#ef4444;">¥${p.price}</div>
+            </div>
+          </div>
         `;
       } else {
         card.innerHTML = `
-          <div class="not-found">❌ 未找到该商品</div>
-          <div class="code">条码: ${lastScannedCode}</div>
-          <div style="margin-top:8px;font-size:13px;color:#6b7280;">请在代码的 PRODUCTS 中添加此条码</div>
+          <div class="not-found">
+            ❌ 未找到该条码<br>
+            <span style="font-size:12px;font-family:monospace;">${lastScannedCode}</span><br>
+            <span style="font-size:12px;color:#94a3b8;">请在 PRODUCTS 中添加此商品</span>
+          </div>
         `;
       }
       
       document.getElementById('scanResult').style.display = 'block';
       document.getElementById('quantity').value = 1;
-      
-      // 滚动到结果区域
       document.getElementById('scanResult').scrollIntoView({ behavior: 'smooth' });
     }
 
-    // ===== 数量调整 =====
     function changeQty(delta) {
       const input = document.getElementById('quantity');
-      let val = parseInt(input.value) || 1;
-      val = Math.max(1, val + delta);
-      input.value = val;
+      input.value = Math.max(1, (parseInt(input.value) || 1) + delta);
     }
 
     function validateQty() {
-      const input = document.getElementById('quantity');
-      if (parseInt(input.value) < 1) input.value = 1;
+      if (parseInt(document.getElementById('quantity').value) < 1) {
+        document.getElementById('quantity').value = 1;
+      }
     }
 
-    // ===== 提交入库 =====
-    function submitInbound() {
-      if (!lastScannedCode) {
-        alert('请先扫码');
-        return;
-      }
+    // ========== 提交入库 ==========
+    async function submitInbound() {
+      if (!lastScannedCode) { alert('请先扫码'); return; }
       
       const quantity = parseInt(document.getElementById('quantity').value) || 1;
-      const product = lastScannedProduct || { name: '未知商品', spec: '' };
+      const p = lastScannedProduct || { styleNo: '未知', name: '未知商品', color: '', colorCode: '', size: '', brand: '', category: '', season: '', price: 0 };
       
       const record = {
         id: Date.now(),
         code: lastScannedCode,
-        name: product.name,
-        spec: product.spec,
+        styleNo: p.styleNo || '',
+        name: p.name || '未知商品',
+        color: p.color || '',
+        colorCode: p.colorCode || '',
+        size: p.size || '',
+        brand: p.brand || '',
+        category: p.category || '',
+        season: p.season || '',
+        price: p.price || 0,
         quantity: quantity,
-        time: new Date().toLocaleString('zh-CN')
+        time: new Date().toLocaleString('zh-CN'),
       };
       
+      localQueue.push(record);
       records.unshift(record);
-      saveRecords();
-      renderHistory();
+      saveLocal();
+      renderAll();
       
-      // 重置
+      try {
+        updateSyncUI('syncing');
+        await syncWithCloud();
+        showToast(`✅ ${record.name} ${record.color}/${record.size} ×${quantity} 入库成功`);
+      } catch (err) {
+        updateSyncUI('offline');
+        showToast(`⚠️ 已保存本地，等待同步`);
+      }
+      
       lastScannedCode = '';
       lastScannedProduct = null;
       document.getElementById('scanResult').style.display = 'none';
-      
-      // 弹个提示
-      showToast(`✅ ${product.name} ×${quantity} 入库成功`);
     }
 
-    // ===== Toast 提示 =====
-    function showToast(msg) {
-      const toast = document.createElement('div');
-      toast.textContent = msg;
-      toast.style.cssText = `
-        position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
-        background: #1f2937; color: #fff; padding: 12px 24px;
-        border-radius: 25px; font-size: 15px; z-index: 9999;
-        animation: fadeInOut 2s forwards;
-      `;
-      document.body.appendChild(toast);
-      setTimeout(() => toast.remove(), 2000);
+    // ========== 渲染 ==========
+    function renderAll() {
+      renderHistory();
+      renderStats();
     }
 
-    // ===== 渲染历史记录 =====
     function renderHistory() {
       const container = document.getElementById('history');
+      document.getElementById('recordCount').textContent = `${records.length}条`;
       
       if (records.length === 0) {
-        container.innerHTML = '<div class="empty-state">暂无入库记录，请先扫码</div>';
+        container.innerHTML = '<div class="empty-state">📭 暂无入库记录</div>';
         return;
       }
       
-      container.innerHTML = records.map((r, index) => `
-        <div class="history-item">
-          <div>
-            <div class="h-name">${r.name} × ${r.quantity}</div>
-            <div class="h-meta">${r.code} | ${r.time}</div>
+      container.innerHTML = records.map((r, i) => `
+        <div class="record-card">
+          <div class="record-left">
+            <div class="sku">${r.name}</div>
+            <div class="sku-code">${r.styleNo} | ${r.color}/${r.size} | ${r.brand} | ${r.season}季</div>
           </div>
-          <button class="delete-btn" onclick="deleteRecord(${index})">删除</button>
+          <div class="record-right">
+            <div class="qty">×${r.quantity}</div>
+            <div class="time">${r.time}</div>
+          </div>
+          <button class="delete-btn" onclick="deleteRecord(${i})">✕</button>
         </div>
       `).join('');
     }
 
-    // ===== 删除单条记录 =====
-    function deleteRecord(index) {
-      if (confirm('确定删除这条记录？')) {
-        records.splice(index, 1);
-        saveRecords();
-        renderHistory();
-      }
+    function renderStats() {
+      const totalQty = records.reduce((sum, r) => sum + r.quantity, 0);
+      const uniqueCodes = new Set(records.map(r => r.code)).size;
+      
+      const today = new Date().toLocaleDateString('zh-CN');
+      const todayQty = records
+        .filter(r => r.time && r.time.includes(today))
+        .reduce((sum, r) => sum + r.quantity, 0);
+      
+      document.getElementById('statTotal').textContent = totalQty;
+      document.getElementById('statSKU').textContent = uniqueCodes;
+      document.getElementById('statToday').textContent = todayQty;
+      document.getElementById('statsArea').style.display = records.length > 0 ? 'flex' : 'none';
     }
 
-    // ===== 清空全部 =====
-    function clearAll() {
-      if (records.length === 0) return;
-      if (confirm('确定清空全部入库记录？此操作不可恢复。')) {
-        records = [];
-        saveRecords();
-        renderHistory();
-      }
-    }
-
-    // ===== 导出 CSV =====
-    function exportData() {
-      if (records.length === 0) {
-        alert('没有数据可导出');
-        return;
+    async function deleteRecord(index) {
+      if (!confirm('确定删除这条记录？')) return;
+      const deleted = records[index];
+      records.splice(index, 1);
+      localQueue = localQueue.filter(r => r.id !== deleted.id);
+      
+      try {
+        updateSyncUI('syncing');
+        await pushData(records, cloudSha);
+        updateSyncUI('online');
+      } catch (err) {
+        updateSyncUI('offline');
       }
       
-      let csv = '商品名称,条码,规格,数量,时间\n';
+      saveLocal();
+      renderAll();
+    }
+
+    async function clearAll() {
+      if (records.length === 0) return;
+      if (!confirm('确定清空全部入库记录？云端数据也将被清除。')) return;
+      
+      records = [];
+      localQueue = [];
+      
+      try {
+        updateSyncUI('syncing');
+        await pushData([], cloudSha);
+        updateSyncUI('online');
+        showToast('🗑 已清空');
+      } catch (err) {
+        updateSyncUI('offline');
+        showToast('⚠️ 清空成功但同步失败');
+      }
+      
+      saveLocal();
+      renderAll();
+    }
+
+    function exportData() {
+      if (records.length === 0) { alert('没有数据'); return; }
+      
+      let csv = '款号,品名,品牌,品类,颜色,色号,尺码,季节,吊牌价,入库数量,时间\n';
       records.forEach(r => {
-        csv += `${r.name},${r.code},${r.spec},${r.quantity},${r.time}\n`;
+        csv += `${r.styleNo},${r.name},${r.brand},${r.category},${r.color},${r.colorCode},${r.size},${r.season},${r.price},${r.quantity},${r.time}\n`;
       });
       
       const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url;
-      a.download = `入库记录_${new Date().toLocaleDateString()}.csv`;
+      a.href = URL.createObjectURL(blob);
+      a.download = `服装入库记录_${new Date().toLocaleDateString('zh-CN')}.csv`;
       a.click();
-      URL.revokeObjectURL(url);
-      
-      showToast('📥 CSV 已下载');
     }
 
-    // ===== 存储 =====
-    function saveRecords() {
-      localStorage.setItem('pwa_inbound_records', JSON.stringify(records));
+    function showToast(msg) {
+      const toast = document.createElement('div');
+      toast.textContent = msg;
+      toast.style.cssText = `
+        position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+        background: #1e293b; color: #fff; padding: 12px 22px;
+        border-radius: 25px; font-size: 14px; z-index: 9999;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        animation: fadeInOut 2.5s forwards;
+      `;
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 2500);
     }
 
-    // ===== PWA 安装 =====
-    window.addEventListener('beforeinstallprompt', (e) => {
-      e.preventDefault();
-      deferredPrompt = e;
-      document.getElementById('installPrompt').style.display = 'block';
-    });
-
-    function installPWA() {
-      if (deferredPrompt) {
-        deferredPrompt.prompt();
-        deferredPrompt.userChoice.then(() => {
-          deferredPrompt = null;
-          document.getElementById('installPrompt').style.display = 'none';
-        });
-      }
+    // ========== 初始化 ==========
+    async function init() {
+      loadLocal();
+      records = getLocalCache();
+      renderAll();
+      await syncWithCloud();
     }
 
-    // 已安装后隐藏提示
-    window.addEventListener('appinstalled', () => {
-      document.getElementById('installPrompt').style.display = 'none';
-    });
-
-    // ===== 初始化 =====
-    renderHistory();
+    init();
   </script>
 </body>
 </html>
