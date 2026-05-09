@@ -27,7 +27,11 @@
       --shadow: 0 1px 3px rgba(0,0,0,0.08);
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
@@ -38,99 +42,324 @@
       margin: 0 auto;
       min-height: 100vh;
       padding-bottom: 40px;
+      line-height: 1.4;
     }
 
-    .header { text-align: center; padding: 16px 0 12px; }
-    .header h1 { font-size: 21px; font-weight: 700; }
+    .header {
+      text-align: center;
+      padding: 16px 0 12px;
+    }
 
-    .top-btns { display: flex; gap: 8px; margin-bottom: 10px; }
-    .top-btns .btn { flex: 1; font-size: 13px; padding: 11px 6px; white-space: nowrap; }
+    .header h1 {
+      font-size: 21px;
+      font-weight: 700;
+    }
+
+    .top-btns {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .top-btns .btn {
+      flex: 1;
+      font-size: 13px;
+      padding: 11px 6px;
+      white-space: nowrap;
+    }
 
     .btn {
-      display: block; width: 100%; padding: 13px; font-size: 16px;
-      font-weight: 600; border: none; border-radius: 12px; cursor: pointer;
-      transition: all 0.2s; text-align: center;
+      display: block;
+      width: 100%;
+      padding: 13px;
+      font-size: 16px;
+      font-weight: 600;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-align: center;
     }
-    .btn:active { transform: scale(0.97); opacity: 0.85; }
-    .btn-primary { background: var(--primary); color: #fff; }
-    .btn-success { background: var(--success); color: #fff; }
-    .btn-outline { background: var(--card); color: var(--primary); border: 2px solid var(--primary); }
-    .btn-install { background: #fff; color: #8b5cf6; border: 2px solid #8b5cf6; }
-    .btn-download { background: #fff; color: #f59e0b; border: 2px solid #f59e0b; }
-    .btn-danger { background: var(--card); color: var(--danger); border: 2px solid #fca5a5; }
-    .btn-sm { padding: 8px 14px; font-size: 13px; width: auto; display: inline-block; }
+
+    .btn:active {
+      transform: scale(0.97);
+      opacity: 0.85;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .btn-success {
+      background: var(--success);
+      color: #fff;
+    }
+
+    .btn-outline {
+      background: var(--card);
+      color: var(--primary);
+      border: 2px solid var(--primary);
+    }
+
+    .btn-install {
+      background: #fff;
+      color: #8b5cf6;
+      border: 2px solid #8b5cf6;
+    }
+
+    .btn-download {
+      background: #fff;
+      color: #f59e0b;
+      border: 2px solid #f59e0b;
+    }
+
+    .btn-danger {
+      background: var(--card);
+      color: var(--danger);
+      border: 2px solid #fca5a5;
+    }
+
+    .btn-sm {
+      padding: 8px 14px;
+      font-size: 13px;
+      width: auto;
+      display: inline-block;
+    }
 
     #installGuide {
-      display: none; background: #fef3c7; padding: 10px 12px; border-radius: 10px;
-      margin-bottom: 10px; text-align: center; font-size: 12px; color: #92400e;
+      display: none;
+      background: #fef3c7;
+      padding: 10px 12px;
+      border-radius: 10px;
+      margin-bottom: 10px;
+      text-align: center;
+      font-size: 12px;
+      color: #92400e;
     }
 
     #reader {
-      width: 100%; border-radius: 12px; overflow: hidden; margin: 10px 0;
-      border: 2px solid var(--primary); display: none;
+      width: 100%;
+      border-radius: 12px;
+      overflow: hidden;
+      margin: 10px 0;
+      border: 2px solid var(--primary);
+      display: none;
     }
 
-    .close-scan { text-align: center; margin-top: 6px; display: none; }
+    .close-scan {
+      text-align: center;
+      margin-top: 6px;
+      display: none;
+    }
 
-    .card { background: var(--card); padding: 14px; border-radius: 12px; margin: 10px 0; box-shadow: var(--shadow); }
-    .card-title { font-size: 15px; font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+    .card {
+      background: var(--card);
+      padding: 14px;
+      border-radius: 12px;
+      margin: 10px 0;
+      box-shadow: var(--shadow);
+    }
 
-    .form-group { margin-bottom: 10px; }
+    .card-title {
+      font-size: 15px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .form-group {
+      margin-bottom: 10px;
+    }
+
     .form-group label {
-      display: block; font-size: 12px; font-weight: 600; color: var(--text-secondary);
-      margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.5px;
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 3px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
-    .form-group input, .form-group select {
-      width: 100%; padding: 11px 12px; font-size: 15px; border: 2px solid var(--border);
-      border-radius: 10px; background: var(--input-bg); color: var(--text);
-    }
-    .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--primary); background: #fff; }
-    .form-group input[readonly] { background: #e8ecf2; color: #6b7280; font-family: 'SF Mono', 'Consolas', monospace; }
 
-    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+    .form-group input,
+    .form-group select {
+      width: 100%;
+      padding: 11px 12px;
+      font-size: 15px;
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      background: var(--input-bg);
+      color: var(--text);
+      transition: border-color 0.2s;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus {
+      outline: none;
+      border-color: var(--primary);
+      background: #fff;
+    }
+
+    .form-group input[readonly] {
+      background: #e8ecf2;
+      color: #6b7280;
+      font-family: 'SF Mono', 'Consolas', monospace;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .form-row-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+    }
 
     .scanned-badge {
-      display: inline-block; background: #d1fae5; color: #065f46;
-      padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 600;
+      display: inline-block;
+      background: #d1fae5;
+      color: #065f46;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
     }
 
-    .stats { display: flex; gap: 8px; margin: 10px 0; }
-    .stat-item {
-      flex: 1; background: var(--card); padding: 10px; border-radius: 10px;
-      text-align: center; box-shadow: var(--shadow);
+    .stats {
+      display: flex;
+      gap: 8px;
+      margin: 10px 0;
     }
-    .stat-item .num { font-size: 24px; font-weight: 800; color: var(--primary); }
-    .stat-item .lbl { font-size: 11px; color: var(--text-secondary); }
+
+    .stat-item {
+      flex: 1;
+      background: var(--card);
+      padding: 10px;
+      border-radius: 10px;
+      text-align: center;
+      box-shadow: var(--shadow);
+    }
+
+    .stat-item .num {
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--primary);
+    }
+
+    .stat-item .lbl {
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
 
     .section-header {
-      display: flex; justify-content: space-between; align-items: center; margin: 16px 0 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 16px 0 8px;
     }
-    .section-header h3 { font-size: 15px; font-weight: 700; }
-    .section-header span { font-size: 12px; color: var(--text-secondary); }
+
+    .section-header h3 {
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    .section-header span {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
 
     .record-card {
-      background: var(--card); padding: 12px; margin: 6px 0; border-radius: 10px; box-shadow: var(--shadow);
+      background: var(--card);
+      padding: 12px;
+      margin: 6px 0;
+      border-radius: 10px;
+      box-shadow: var(--shadow);
     }
-    .record-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
-    .record-header .barcode { font-family: 'SF Mono', 'Consolas', monospace; font-size: 14px; font-weight: 700; color: var(--primary); }
-    .record-header .time { font-size: 11px; color: #94a3b8; }
-    .record-detail { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; font-size: 11px; }
-    .record-detail .field { background: var(--input-bg); padding: 5px 7px; border-radius: 6px; }
-    .record-detail .f-label { color: var(--text-secondary); font-size: 10px; }
-    .record-detail .f-value { font-weight: 600; margin-top: 1px; }
-    .record-actions { display: flex; gap: 6px; margin-top: 8px; justify-content: flex-end; }
 
-    .empty-state { text-align: center; color: #94a3b8; padding: 36px; }
-    .empty-state .icon { font-size: 42px; margin-bottom: 8px; }
+    .record-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 8px;
+    }
+
+    .record-header .barcode {
+      font-family: 'SF Mono', 'Consolas', monospace;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    .record-header .time {
+      font-size: 11px;
+      color: #94a3b8;
+    }
+
+    .record-detail {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 5px;
+      font-size: 11px;
+    }
+
+    .record-detail .field {
+      background: var(--input-bg);
+      padding: 5px 7px;
+      border-radius: 6px;
+    }
+
+    .record-detail .f-label {
+      color: var(--text-secondary);
+      font-size: 10px;
+    }
+
+    .record-detail .f-value {
+      font-weight: 600;
+      margin-top: 1px;
+      word-break: break-all;
+    }
+
+    .record-actions {
+      display: flex;
+      gap: 6px;
+      margin-top: 8px;
+      justify-content: flex-end;
+    }
+
+    .empty-state {
+      text-align: center;
+      color: #94a3b8;
+      padding: 36px;
+    }
+
+    .empty-state .icon {
+      font-size: 42px;
+      margin-bottom: 8px;
+    }
 
     .toast {
-      position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
-      background: #1e293b; color: #fff; padding: 12px 22px; border-radius: 25px;
-      font-size: 14px; font-weight: 600; z-index: 9999;
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1e293b;
+      color: #fff;
+      padding: 12px 22px;
+      border-radius: 25px;
+      font-size: 14px;
+      font-weight: 600;
+      z-index: 9999;
       box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-      animation: fadeInOut 2.5s forwards; white-space: nowrap;
+      animation: fadeInOut 2.5s forwards;
+      white-space: nowrap;
     }
+
     @keyframes fadeInOut {
       0% { opacity: 0; transform: translateX(-50%) translateY(20px); }
       15% { opacity: 1; transform: translateX(-50%) translateY(0); }
@@ -139,22 +368,63 @@
     }
 
     .modal-overlay {
-      display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0,0,0,0.5); z-index: 999; justify-content: center; align-items: center;
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 999;
+      justify-content: center;
+      align-items: center;
     }
-    .modal-overlay.show { display: flex; }
+
+    .modal-overlay.show {
+      display: flex;
+    }
+
     .modal {
-      background: #fff; padding: 22px; border-radius: 16px; text-align: center;
-      margin: 0 20px; max-width: 330px; width: 100%;
+      background: #fff;
+      padding: 22px;
+      border-radius: 16px;
+      text-align: center;
+      margin: 0 20px;
+      max-width: 330px;
+      width: 100%;
     }
-    .modal h4 { margin-bottom: 6px; }
-    .modal p { color: var(--text-secondary); font-size: 13px; margin-bottom: 14px; }
-    .modal .modal-actions { display: flex; gap: 8px; }
-    .modal .modal-actions .btn { flex: 1; }
+
+    .modal h4 {
+      margin-bottom: 6px;
+      font-size: 16px;
+    }
+
+    .modal p {
+      color: var(--text-secondary);
+      font-size: 13px;
+      margin-bottom: 14px;
+    }
+
+    .modal .modal-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .modal .modal-actions .btn {
+      flex: 1;
+    }
+
+    /* 扫描状态提示 */
+    .scan-status {
+      text-align: center;
+      padding: 8px;
+      font-size: 12px;
+      color: var(--text-secondary);
+      display: none;
+    }
   </style>
 </head>
 <body>
-
   <div class="header">
     <h1>👕 服装扫码入库系统</h1>
   </div>
@@ -169,6 +439,7 @@
     <button class="btn btn-install" id="installBtn" onclick="installApp()" style="display:none;">⬇️ 安装</button>
   </div>
 
+  <div class="scan-status" id="scanStatus">正在启动摄像头...</div>
   <div class="close-scan" id="closeScanArea">
     <button class="btn btn-outline btn-sm" onclick="stopScan()">✕ 关闭扫码</button>
   </div>
@@ -258,17 +529,27 @@
   </div>
 
   <script>
-    // ==================== 全局状态 ====================
-    let html5QrCode = null;
-    let records = [];
-    let editingIndex = -1;
-    let deferredPrompt = null;
-    let autoInstallPrompt = null;
-    let isStandalone = false;
+    // ==================== 全局配置 ====================
+    const CONFIG = {
+      MAX_SEQUENCE: 200,
+      STORAGE_KEY: 'garment_inbound_records',
+      SCAN_SUCCESS_VIBRATE: 50
+    };
 
-    const SEQUENCE_OPTIONS = Array.from({ length: 200 }, (_, i) => i + 1);
+    // ==================== 全局状态 ====================
+    const state = {
+      html5QrCode: null,
+      records: [],
+      editingIndex: -1,
+      deferredPrompt: null,
+      autoInstallPrompt: null,
+      isStandalone: false,
+      isScanning: false
+    };
 
     // ==================== 初始化 ====================
+    document.addEventListener('DOMContentLoaded', init);
+    
     function init() {
       loadRecords();
       populateSequenceOptions();
@@ -277,39 +558,39 @@
       renderStats();
     }
 
+    // 生成序号下拉选项
     function populateSequenceOptions() {
       const select = document.getElementById('sequenceNo');
-      SEQUENCE_OPTIONS.forEach(num => {
+      for (let i = 1; i <= CONFIG.MAX_SEQUENCE; i++) {
         const option = document.createElement('option');
-        option.value = num;
-        option.textContent = num;
+        option.value = i;
+        option.textContent = i;
         select.appendChild(option);
-      });
+      }
     }
 
-    // ==================== PWA 安装检测（自动弹出）====================
+    // ==================== PWA 安装相关 ====================
     function checkInstallState() {
-      if (window.matchMedia('(display-mode: standalone)').matches) isStandalone = true;
-      if (navigator.standalone) isStandalone = true;
+      state.isStandalone = window.matchMedia('(display-mode: standalone)').matches || !!navigator.standalone;
     }
 
-    window.addEventListener('beforeinstallprompt', (e) => {
+    window.addEventListener('beforeinstallprompt', e => {
       e.preventDefault();
-      autoInstallPrompt = e;
-      deferredPrompt = e;
-      if (!isStandalone) {
+      state.autoInstallPrompt = e;
+      state.deferredPrompt = e;
+      
+      if (!state.isStandalone) {
         document.getElementById('installBtn').style.display = 'block';
-        document.getElementById('installGuide').style.display = 'none';
-        // 自动弹出安装提示
+        // 自动弹出安装
         setTimeout(() => {
-          if (autoInstallPrompt && !isStandalone) {
-            autoInstallPrompt.prompt();
-            autoInstallPrompt.userChoice.then((choiceResult) => {
-              if (choiceResult.outcome === 'accepted') {
-                showToast('✅ 正在安装...');
+          if (state.autoInstallPrompt) {
+            state.autoInstallPrompt.prompt();
+            state.autoInstallPrompt.userChoice.then(res => {
+              if (res.outcome === 'accepted') {
+                showToast('✅ 正在安装应用');
                 document.getElementById('installBtn').style.display = 'none';
               }
-              autoInstallPrompt = null;
+              state.autoInstallPrompt = null;
             });
           }
         }, 500);
@@ -317,92 +598,119 @@
     });
 
     function installApp() {
-      if (deferredPrompt) {
-        deferredPrompt.prompt();
-        deferredPrompt.userChoice.then((choiceResult) => {
-          if (choiceResult.outcome === 'accepted') showToast('✅ 正在安装...');
-          deferredPrompt = null;
-        });
-      } else if (autoInstallPrompt) {
-        autoInstallPrompt.prompt();
-        autoInstallPrompt.userChoice.then((choiceResult) => {
-          if (choiceResult.outcome === 'accepted') showToast('✅ 正在安装...');
-          autoInstallPrompt = null;
+      const prompt = state.deferredPrompt || state.autoInstallPrompt;
+      if (prompt) {
+        prompt.prompt();
+        prompt.userChoice.then(res => {
+          if (res.outcome === 'accepted') showToast('✅ 安装中...');
+          state.deferredPrompt = null;
+          state.autoInstallPrompt = null;
         });
       } else {
-        document.getElementById('installGuide').style.display = 'block';
-        document.getElementById('installGuide').scrollIntoView({ behavior: 'smooth' });
+        const guide = document.getElementById('installGuide');
+        guide.style.display = 'block';
+        guide.scrollIntoView({ behavior: 'smooth' });
       }
     }
 
     window.addEventListener('appinstalled', () => {
       document.getElementById('installBtn').style.display = 'none';
       document.getElementById('installGuide').style.display = 'none';
-      isStandalone = true;
-      showToast('✅ 安装完成');
+      state.isStandalone = true;
+      showToast('✅ 应用安装完成');
     });
 
-    // iOS 或不支持的浏览器：1秒后自动显示手动安装引导
+    // 加载完成显示手动安装指引
     window.addEventListener('load', () => {
       setTimeout(() => {
-        if (!autoInstallPrompt && !isStandalone) {
+        if (!state.autoInstallPrompt && !state.isStandalone) {
           document.getElementById('installGuide').style.display = 'block';
         }
       }, 1000);
     });
 
-    // ==================== 扫码 ====================
+    // ==================== 扫码功能 ====================
     async function startScan() {
+      if (state.isScanning) return;
+      
       try {
+        state.isScanning = true;
+        const scanStatus = document.getElementById('scanStatus');
+        scanStatus.style.display = 'block';
+        scanStatus.textContent = '正在启动摄像头...';
+        
+        // 显示扫码UI
         document.getElementById('reader').style.display = 'block';
         document.getElementById('scanBtn').style.display = 'none';
         document.getElementById('closeScanArea').style.display = 'block';
         document.getElementById('formCard').style.display = 'none';
 
-        html5QrCode = new Html5Qrcode("reader");
-        await html5QrCode.start(
+        // 初始化扫码器
+        state.html5QrCode = new Html5Qrcode("reader");
+        await state.html5QrCode.start(
           { facingMode: "environment" },
           { fps: 10, qrbox: { width: 280, height: 200 } },
-          (decodedText) => {
-            const barcode = decodedText.trim();
-            stopScan();
-            resetScanUI();
-            document.getElementById('barcodeId').value = barcode;
-            document.getElementById('scannedBadge').style.display = 'inline-block';
-            document.getElementById('inboundTime').value = new Date().toLocaleString('zh-CN');
-            document.getElementById('formCard').style.display = 'block';
-            document.getElementById('formCard').scrollIntoView({ behavior: 'smooth' });
-            if (navigator.vibrate) navigator.vibrate(50);
-            showToast('✅ 扫码成功');
-          },
+          onScanSuccess,
           () => {}
         );
+        
+        scanStatus.textContent = '请将条码对准扫描框';
       } catch (err) {
-        showToast('⚠️ 摄像头启动失败');
+        console.error('扫码启动失败:', err);
+        showToast('⚠️ 摄像头启动失败，请检查权限');
         resetScanUI();
       }
     }
 
+    // 扫码成功回调
+    function onScanSuccess(decodedText) {
+      const barcode = decodedText.trim();
+      if (!barcode) return;
+      
+      stopScan();
+      resetScanUI();
+      
+      // 填充表单
+      document.getElementById('barcodeId').value = barcode;
+      document.getElementById('scannedBadge').style.display = 'inline-block';
+      document.getElementById('inboundTime').value = new Date().toLocaleString('zh-CN');
+      
+      // 显示表单
+      document.getElementById('formCard').style.display = 'block';
+      document.getElementById('formCard').scrollIntoView({ behavior: 'smooth' });
+      
+      // 震动反馈
+      if (navigator.vibrate) navigator.vibrate(CONFIG.SCAN_SUCCESS_VIBRATE);
+      showToast('✅ 扫码成功');
+    }
+
     function stopScan() {
-      if (html5QrCode) {
-        html5QrCode.stop().then(() => {
+      if (state.html5QrCode && state.isScanning) {
+        state.html5QrCode.stop().then(() => {
           document.getElementById('reader').style.display = 'none';
-        }).catch(() => {});
+        }).catch(err => console.error('停止扫码失败:', err));
+        state.isScanning = false;
       }
     }
 
     function resetScanUI() {
+      state.isScanning = false;
+      document.getElementById('scanStatus').style.display = 'none';
       document.getElementById('scanBtn').style.display = 'block';
       document.getElementById('closeScanArea').style.display = 'none';
     }
 
-    // ==================== 提交入库 ====================
+    // ==================== 表单提交 ====================
     function submitInbound() {
       const barcodeId = document.getElementById('barcodeId').value.trim();
-      if (!barcodeId) { showToast('⚠️ 请先扫码获取条码 ID'); return; }
+      if (!barcodeId) {
+        showToast('⚠️ 请先扫码获取条码ID');
+        return;
+      }
 
+      // 构建记录
       const record = {
-        id: editingIndex >= 0 ? records[editingIndex].id : Date.now(),
+        id: state.editingIndex >= 0 ? state.records[state.editingIndex].id : Date.now(),
         barcodeId,
         sequenceNo: document.getElementById('sequenceNo').value,
         size: document.getElementById('size').value,
@@ -413,27 +721,32 @@
         colorName: document.getElementById('colorName').value.trim(),
         fabricA: document.getElementById('fabricA').value.trim(),
         fabricB: document.getElementById('fabricB').value.trim(),
-        quantity: parseInt(document.getElementById('quantity').value) || 1,
+        quantity: Math.max(1, parseInt(document.getElementById('quantity').value) || 1),
         inboundTime: new Date().toLocaleString('zh-CN'),
       };
 
-      if (editingIndex >= 0) {
-        records[editingIndex] = record;
-        editingIndex = -1;
-        showToast('✅ 记录已更新');
+      // 编辑/新增逻辑
+      if (state.editingIndex >= 0) {
+        state.records[state.editingIndex] = record;
+        state.editingIndex = -1;
+        showToast('✅ 记录更新成功');
       } else {
-        records.unshift(record);
+        state.records.unshift(record);
         showToast('✅ 入库成功');
       }
 
+      // 保存并刷新
       saveRecords();
       resetForm();
       renderHistory();
       renderStats();
+      
+      // 隐藏表单
       document.getElementById('formCard').style.display = 'none';
       document.getElementById('scanBtn').style.display = 'block';
     }
 
+    // 重置表单
     function resetForm() {
       document.getElementById('barcodeId').value = '';
       document.getElementById('sequenceNo').value = '';
@@ -448,25 +761,32 @@
       document.getElementById('quantity').value = 1;
       document.getElementById('inboundTime').value = '';
       document.getElementById('scannedBadge').style.display = 'none';
-      editingIndex = -1;
+      state.editingIndex = -1;
     }
 
-    // ==================== 编辑 & 删除 ====================
+    // ==================== 记录操作 ====================
     function editRecord(index) {
-      const r = records[index];
-      editingIndex = index;
-      document.getElementById('barcodeId').value = r.barcodeId;
-      document.getElementById('sequenceNo').value = r.sequenceNo;
-      document.getElementById('size').value = r.size;
-      document.getElementById('bundleNo').value = r.bundleNo;
-      document.getElementById('batchNo').value = r.batchNo;
-      document.getElementById('styleNo').value = r.styleNo;
-      document.getElementById('colorCode').value = r.colorCode;
-      document.getElementById('colorName').value = r.colorName;
-      document.getElementById('fabricA').value = r.fabricA;
-      document.getElementById('fabricB').value = r.fabricB;
-      document.getElementById('quantity').value = r.quantity;
-      document.getElementById('inboundTime').value = r.inboundTime;
+      const record = state.records[index];
+      state.editingIndex = index;
+      
+      // 填充表单数据
+      Object.entries({
+        barcodeId: record.barcodeId,
+        sequenceNo: record.sequenceNo,
+        size: record.size,
+        bundleNo: record.bundleNo,
+        batchNo: record.batchNo,
+        styleNo: record.styleNo,
+        colorCode: record.colorCode,
+        colorName: record.colorName,
+        fabricA: record.fabricA,
+        fabricB: record.fabricB,
+        quantity: record.quantity,
+        inboundTime: record.inboundTime
+      }).forEach(([id, value]) => {
+        document.getElementById(id).value = value || '';
+      });
+
       document.getElementById('scannedBadge').style.display = 'inline-block';
       document.getElementById('formCard').style.display = 'block';
       document.getElementById('scanBtn').style.display = 'none';
@@ -476,7 +796,7 @@
 
     function deleteRecord(index) {
       if (confirm('确定删除这条入库记录吗？')) {
-        records.splice(index, 1);
+        state.records.splice(index, 1);
         saveRecords();
         renderHistory();
         renderStats();
@@ -484,6 +804,7 @@
       }
     }
 
+    // 清空确认弹窗
     function showClearModal() {
       document.getElementById('clearModal').classList.add('show');
     }
@@ -493,7 +814,7 @@
     }
 
     function clearAll() {
-      records = [];
+      state.records = [];
       saveRecords();
       renderHistory();
       renderStats();
@@ -503,25 +824,36 @@
 
     // ==================== 本地存储 ====================
     function saveRecords() {
-      localStorage.setItem('garment_inbound_records', JSON.stringify(records));
+      try {
+        localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(state.records));
+      } catch (e) {
+        console.error('保存记录失败:', e);
+        showToast('⚠️ 保存失败，存储空间可能已满');
+      }
     }
 
     function loadRecords() {
-      const data = localStorage.getItem('garment_inbound_records');
-      records = data ? JSON.parse(data) : [];
+      try {
+        const data = localStorage.getItem(CONFIG.STORAGE_KEY);
+        state.records = data ? JSON.parse(data) : [];
+      } catch (e) {
+        console.error('加载记录失败:', e);
+        state.records = [];
+      }
     }
 
-    // ==================== 渲染 ====================
+    // ==================== 页面渲染 ====================
     function renderHistory() {
       const container = document.getElementById('history');
-      document.getElementById('recordCount').textContent = `${records.length} 条`;
+      const count = state.records.length;
+      document.getElementById('recordCount').textContent = `${count} 条`;
 
-      if (records.length === 0) {
+      if (count === 0) {
         container.innerHTML = `<div class="empty-state"><div class="icon">📭</div><p>暂无入库记录</p></div>`;
         return;
       }
 
-      container.innerHTML = records.map((r, i) => `
+      container.innerHTML = state.records.map((r, i) => `
         <div class="record-card">
           <div class="record-header">
             <span class="barcode">🔢 ${r.barcodeId}</span>
@@ -546,20 +878,31 @@
     }
 
     function renderStats() {
-      const totalQty = records.reduce((sum, r) => sum + (r.quantity || 1), 0);
-      const uniqueBarcodes = new Set(records.map(r => r.barcodeId)).size;
+      // 总件数
+      const totalQty = state.records.reduce((sum, r) => sum + (r.quantity || 1), 0);
+      // 唯一条码数
+      const uniqueBarcodes = new Set(state.records.map(r => r.barcodeId)).size;
+      // 今日入库数
       const today = new Date().toLocaleDateString('zh-CN');
-      const todayQty = records.filter(r => r.inboundTime && r.inboundTime.includes(today)).reduce((sum, r) => sum + (r.quantity || 1), 0);
+      const todayQty = state.records
+        .filter(r => r.inboundTime?.includes(today))
+        .reduce((sum, r) => sum + (r.quantity || 1), 0);
+
+      // 更新DOM
       document.getElementById('statTotal').textContent = totalQty;
       document.getElementById('statBarcodes').textContent = uniqueBarcodes;
       document.getElementById('statToday').textContent = todayQty;
     }
 
-    // ==================== 导出 Excel ====================
+    // ==================== 导出Excel ====================
     function exportToExcel() {
-      if (records.length === 0) { showToast('⚠️ 没有数据可导出'); return; }
+      if (state.records.length === 0) {
+        showToast('⚠️ 没有数据可导出');
+        return;
+      }
 
-      const data = records.map(r => ({
+      // 格式化数据
+      const data = state.records.map(r => ({
         '条码ID': r.barcodeId,
         '序号': r.sequenceNo,
         '尺码': r.size,
@@ -574,32 +917,39 @@
         '入库时间': r.inboundTime,
       }));
 
+      // 创建工作表
       const ws = XLSX.utils.json_to_sheet(data);
       ws['!cols'] = [
         { wch: 16 }, { wch: 8 }, { wch: 8 }, { wch: 10 },
         { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 10 },
-        { wch: 30 }, { wch: 30 }, { wch: 8 }, { wch: 20 },
+        { wch: 30 }, { wch: 30 }, { wch: 8 }, { wch: 20 }
       ];
+
+      // 创建工作簿
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, '入库记录');
-      const fileName = `服装入库记录_${new Date().toLocaleDateString('zh-CN').replace(/\//g, '-')}.xlsx`;
-      XLSX.writeFile(wb, fileName);
+      
+      // 生成文件名并下载
+      const dateStr = new Date().toLocaleDateString('zh-CN').replace(/\//g, '-');
+      XLSX.writeFile(wb, `服装入库记录_${dateStr}.xlsx`);
       showToast('📥 导出成功');
     }
 
-    // ==================== Toast ====================
+    // ==================== 消息提示 ====================
     function showToast(msg) {
+      // 移除已有提示
       const existing = document.querySelector('.toast');
       if (existing) existing.remove();
+      
+      // 创建新提示
       const toast = document.createElement('div');
       toast.className = 'toast';
       toast.textContent = msg;
       document.body.appendChild(toast);
+      
+      // 自动移除
       setTimeout(() => toast.remove(), 2500);
     }
-
-    // ==================== 启动 ====================
-    init();
   </script>
 </body>
 </html>
