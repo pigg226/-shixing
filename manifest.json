@@ -1,10 +1,10 @@
 {
   "name": "服装扫码入库系统",
-  "short_name": "服装入库",
+  "short_name": "扫码入库",
   "description": "服装行业扫码入库工具",
   "start_url": "./",
   "display": "standalone",
-  "background_color": "#f1f5f9",
+  "background_color": "#f0f2f5",
   "theme_color": "#1e293b",
   "orientation": "portrait",
   "icons": [
