@@ -486,46 +486,7 @@
       });
     }
 
-    // ==================== PWA 安装检测 ====================
-    function checkInstallState() {
-      if (window.matchMedia('(display-mode: standalone)').matches) {
-        isStandalone = true;
-      }
-      if (navigator.standalone) {
-        isStandalone = true;
-      }
-    }
-
-    window.addEventListener('beforeinstallprompt', (e) => {
-      e.preventDefault();
-      deferredPrompt = e;
-      if (!isStandalone) {
-        document.getElementById('installBtn').style.display = 'block';
-        document.getElementById('installGuide').style.display = 'none';
-      }
-    });
-
-    function installApp() {
-      if (deferredPrompt) {
-        deferredPrompt.prompt();
-        deferredPrompt.userChoice.then((choiceResult) => {
-          if (choiceResult.outcome === 'accepted') {
-            showToast('✅ 正在安装...');
-            document.getElementById('installBtn').style.display = 'none';
-          }
-          deferredPrompt = null;
-        });
-      } else {
-        document.getElementById('installGuide').style.display = 'block';
-        document.getElementById('installGuide').scrollIntoView({ behavior: 'smooth' });
-      }
-    }
-
-    window.addEventListener('appinstalled', () => {
-      document.getElementById('installBtn').style.display = 'none';
-      document.getElementById('installGuide').style.display = 'none';
-      isStandalone = true;
-      showToast('✅ 安装完成');
+  // ==================== PWA 安装检测 ====================
     });
 
     // 不支持 beforeinstallprompt 时，1 秒后显示引导
