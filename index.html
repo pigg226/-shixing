@@ -10,9 +10,7 @@
   <meta name="apple-mobile-web-app-title" content="扫码入库">
   <meta name="theme-color" content="#1e293b">
   
-  <!-- SheetJS 导出 xlsx -->
   <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
-  <!-- html5-qrcode 扫码 -->
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   
   <style>
@@ -42,38 +40,16 @@
       padding-bottom: 40px;
     }
 
-    /* 头部 */
-    .header {
-      text-align: center;
-      padding: 16px 0 12px;
-    }
+    .header { text-align: center; padding: 16px 0 12px; }
     .header h1 { font-size: 21px; font-weight: 700; }
 
-    /* 顶部三按钮 */
-    .top-btns {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 10px;
-    }
-    .top-btns .btn {
-      flex: 1;
-      font-size: 13px;
-      padding: 11px 6px;
-      white-space: nowrap;
-    }
+    .top-btns { display: flex; gap: 8px; margin-bottom: 10px; }
+    .top-btns .btn { flex: 1; font-size: 13px; padding: 11px 6px; white-space: nowrap; }
 
-    /* 按钮 */
     .btn {
-      display: block;
-      width: 100%;
-      padding: 13px;
-      font-size: 16px;
-      font-weight: 600;
-      border: none;
-      border-radius: 12px;
-      cursor: pointer;
-      transition: all 0.2s;
-      text-align: center;
+      display: block; width: 100%; padding: 13px; font-size: 16px;
+      font-weight: 600; border: none; border-radius: 12px; cursor: pointer;
+      transition: all 0.2s; text-align: center;
     }
     .btn:active { transform: scale(0.97); opacity: 0.85; }
     .btn-primary { background: var(--primary); color: #fff; }
@@ -84,184 +60,76 @@
     .btn-danger { background: var(--card); color: var(--danger); border: 2px solid #fca5a5; }
     .btn-sm { padding: 8px 14px; font-size: 13px; width: auto; display: inline-block; }
 
-    /* 安装引导提示 */
     #installGuide {
-      display: none;
-      background: #fef3c7;
-      padding: 10px 12px;
-      border-radius: 10px;
-      margin-bottom: 10px;
-      text-align: center;
-      font-size: 12px;
-      color: #92400e;
+      display: none; background: #fef3c7; padding: 10px 12px; border-radius: 10px;
+      margin-bottom: 10px; text-align: center; font-size: 12px; color: #92400e;
     }
 
-    /* 扫码区域 */
     #reader {
-      width: 100%;
-      border-radius: 12px;
-      overflow: hidden;
-      margin: 10px 0;
-      border: 2px solid var(--primary);
-      display: none;
+      width: 100%; border-radius: 12px; overflow: hidden; margin: 10px 0;
+      border: 2px solid var(--primary); display: none;
     }
 
-    /* 关闭扫码 */
-    .close-scan {
-      text-align: center;
-      margin-top: 6px;
-      display: none;
-    }
+    .close-scan { text-align: center; margin-top: 6px; display: none; }
 
-    /* 卡片 */
-    .card {
-      background: var(--card);
-      padding: 14px;
-      border-radius: 12px;
-      margin: 10px 0;
-      box-shadow: var(--shadow);
-    }
-    .card-title {
-      font-size: 15px;
-      font-weight: 700;
-      margin-bottom: 12px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
+    .card { background: var(--card); padding: 14px; border-radius: 12px; margin: 10px 0; box-shadow: var(--shadow); }
+    .card-title { font-size: 15px; font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
 
-    /* 表单 */
-    .form-group {
-      margin-bottom: 10px;
-    }
+    .form-group { margin-bottom: 10px; }
     .form-group label {
-      display: block;
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--text-secondary);
-      margin-bottom: 3px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
+      display: block; font-size: 12px; font-weight: 600; color: var(--text-secondary);
+      margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.5px;
     }
-    .form-group input,
-    .form-group select {
-      width: 100%;
-      padding: 11px 12px;
-      font-size: 15px;
-      border: 2px solid var(--border);
-      border-radius: 10px;
-      background: var(--input-bg);
-      color: var(--text);
+    .form-group input, .form-group select {
+      width: 100%; padding: 11px 12px; font-size: 15px; border: 2px solid var(--border);
+      border-radius: 10px; background: var(--input-bg); color: var(--text);
     }
-    .form-group input:focus,
-    .form-group select:focus {
-      outline: none;
-      border-color: var(--primary);
-      background: #fff;
-    }
-    .form-group input[readonly] {
-      background: #e8ecf2;
-      color: #6b7280;
-      font-family: 'SF Mono', 'Consolas', monospace;
-    }
+    .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--primary); background: #fff; }
+    .form-group input[readonly] { background: #e8ecf2; color: #6b7280; font-family: 'SF Mono', 'Consolas', monospace; }
 
     .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
 
-    /* 已扫码标记 */
     .scanned-badge {
-      display: inline-block;
-      background: #d1fae5;
-      color: #065f46;
-      padding: 2px 8px;
-      border-radius: 6px;
-      font-size: 11px;
-      font-weight: 600;
+      display: inline-block; background: #d1fae5; color: #065f46;
+      padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 600;
     }
 
-    /* 统计 */
     .stats { display: flex; gap: 8px; margin: 10px 0; }
     .stat-item {
-      flex: 1;
-      background: var(--card);
-      padding: 10px;
-      border-radius: 10px;
-      text-align: center;
-      box-shadow: var(--shadow);
+      flex: 1; background: var(--card); padding: 10px; border-radius: 10px;
+      text-align: center; box-shadow: var(--shadow);
     }
     .stat-item .num { font-size: 24px; font-weight: 800; color: var(--primary); }
     .stat-item .lbl { font-size: 11px; color: var(--text-secondary); }
 
-    /* 记录列表 */
     .section-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin: 16px 0 8px;
+      display: flex; justify-content: space-between; align-items: center; margin: 16px 0 8px;
     }
     .section-header h3 { font-size: 15px; font-weight: 700; }
     .section-header span { font-size: 12px; color: var(--text-secondary); }
 
     .record-card {
-      background: var(--card);
-      padding: 12px;
-      margin: 6px 0;
-      border-radius: 10px;
-      box-shadow: var(--shadow);
+      background: var(--card); padding: 12px; margin: 6px 0; border-radius: 10px; box-shadow: var(--shadow);
     }
-    .record-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 8px;
-    }
-    .record-header .barcode {
-      font-family: 'SF Mono', 'Consolas', monospace;
-      font-size: 14px;
-      font-weight: 700;
-      color: var(--primary);
-    }
+    .record-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+    .record-header .barcode { font-family: 'SF Mono', 'Consolas', monospace; font-size: 14px; font-weight: 700; color: var(--primary); }
     .record-header .time { font-size: 11px; color: #94a3b8; }
-    .record-detail {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 5px;
-      font-size: 11px;
-    }
-    .record-detail .field {
-      background: var(--input-bg);
-      padding: 5px 7px;
-      border-radius: 6px;
-    }
+    .record-detail { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; font-size: 11px; }
+    .record-detail .field { background: var(--input-bg); padding: 5px 7px; border-radius: 6px; }
     .record-detail .f-label { color: var(--text-secondary); font-size: 10px; }
     .record-detail .f-value { font-weight: 600; margin-top: 1px; }
-    .record-actions {
-      display: flex;
-      gap: 6px;
-      margin-top: 8px;
-      justify-content: flex-end;
-    }
+    .record-actions { display: flex; gap: 6px; margin-top: 8px; justify-content: flex-end; }
 
-    /* 空状态 */
     .empty-state { text-align: center; color: #94a3b8; padding: 36px; }
     .empty-state .icon { font-size: 42px; margin-bottom: 8px; }
 
-    /* Toast */
     .toast {
-      position: fixed;
-      bottom: 30px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: #1e293b;
-      color: #fff;
-      padding: 12px 22px;
-      border-radius: 25px;
-      font-size: 14px;
-      font-weight: 600;
-      z-index: 9999;
+      position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+      background: #1e293b; color: #fff; padding: 12px 22px; border-radius: 25px;
+      font-size: 14px; font-weight: 600; z-index: 9999;
       box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-      animation: fadeInOut 2.5s forwards;
-      white-space: nowrap;
+      animation: fadeInOut 2.5s forwards; white-space: nowrap;
     }
     @keyframes fadeInOut {
       0% { opacity: 0; transform: translateX(-50%) translateY(20px); }
@@ -270,25 +138,14 @@
       100% { opacity: 0; }
     }
 
-    /* 清空弹窗 */
     .modal-overlay {
-      display: none;
-      position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0,0,0,0.5);
-      z-index: 999;
-      justify-content: center;
-      align-items: center;
+      display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5); z-index: 999; justify-content: center; align-items: center;
     }
     .modal-overlay.show { display: flex; }
     .modal {
-      background: #fff;
-      padding: 22px;
-      border-radius: 16px;
-      text-align: center;
-      margin: 0 20px;
-      max-width: 330px;
-      width: 100%;
+      background: #fff; padding: 22px; border-radius: 16px; text-align: center;
+      margin: 0 20px; max-width: 330px; width: 100%;
     }
     .modal h4 { margin-bottom: 6px; }
     .modal p { color: var(--text-secondary); font-size: 13px; margin-bottom: 14px; }
@@ -298,38 +155,26 @@
 </head>
 <body>
 
-  <!-- 头部 -->
   <div class="header">
     <h1>👕 服装扫码入库系统</h1>
   </div>
 
-  <!-- 安装引导（iOS 等不支持的浏览器显示） -->
   <div id="installGuide">
     💡 点击 <b>分享</b> → 滑动找到 <b>「添加到主屏幕」</b> 即可安装
   </div>
 
-  <!-- 顶部三按钮：扫码 / 下载 / 安装 -->
   <div class="top-btns">
-    <button class="btn btn-primary" onclick="startScan()" id="scanBtn">
-      📷 扫码
-    </button>
-    <button class="btn btn-download" onclick="exportToExcel()">
-      📥 下载
-    </button>
-    <button class="btn btn-install" id="installBtn" onclick="installApp()" style="display:none;">
-      ⬇️ 安装
-    </button>
+    <button class="btn btn-primary" onclick="startScan()" id="scanBtn">📷 扫码</button>
+    <button class="btn btn-download" onclick="exportToExcel()">📥 下载</button>
+    <button class="btn btn-install" id="installBtn" onclick="installApp()" style="display:none;">⬇️ 安装</button>
   </div>
 
-  <!-- 关闭扫码 -->
   <div class="close-scan" id="closeScanArea">
     <button class="btn btn-outline btn-sm" onclick="stopScan()">✕ 关闭扫码</button>
   </div>
 
-  <!-- 扫码器 -->
   <div id="reader"></div>
 
-  <!-- 录入表单 -->
   <div class="card" id="formCard" style="display:none;">
     <div class="card-title">
       📝 入库信息录入
@@ -363,88 +208,44 @@
     </div>
 
     <div class="form-row-3">
-      <div class="form-group">
-        <label>🏷️ 扎号</label>
-        <input type="text" id="bundleNo" placeholder="扎号">
-      </div>
-      <div class="form-group">
-        <label>📦 批号</label>
-        <input type="text" id="batchNo" placeholder="批号">
-      </div>
-      <div class="form-group">
-        <label>👔 款号</label>
-        <input type="text" id="styleNo" placeholder="款号">
-      </div>
+      <div class="form-group"><label>🏷️ 扎号</label><input type="text" id="bundleNo" placeholder="扎号"></div>
+      <div class="form-group"><label>📦 批号</label><input type="text" id="batchNo" placeholder="批号"></div>
+      <div class="form-group"><label>👔 款号</label><input type="text" id="styleNo" placeholder="款号"></div>
     </div>
 
     <div class="form-row">
-      <div class="form-group">
-        <label>🎨 色号</label>
-        <input type="text" id="colorCode" placeholder="如：02-269">
-      </div>
-      <div class="form-group">
-        <label>🖌️ 颜色</label>
-        <input type="text" id="colorName" placeholder="如：花灰">
-      </div>
+      <div class="form-group"><label>🎨 色号</label><input type="text" id="colorCode" placeholder="如：02-269"></div>
+      <div class="form-group"><label>🖌️ 颜色</label><input type="text" id="colorName" placeholder="如：花灰"></div>
     </div>
 
-    <div class="form-group">
-      <label>🧵 A料信息</label>
-      <input type="text" id="fabricA" placeholder="如：02-269 花灰:05PB001A19直">
-    </div>
-    <div class="form-group">
-      <label>🧵 B料信息</label>
-      <input type="text" id="fabricB" placeholder="B料信息（如无则不填）">
-    </div>
+    <div class="form-group"><label>🧵 A料信息</label><input type="text" id="fabricA" placeholder="如：02-269 花灰:05PB001A19直"></div>
+    <div class="form-group"><label>🧵 B料信息</label><input type="text" id="fabricB" placeholder="B料信息（如无则不填）"></div>
 
     <div class="form-row">
-      <div class="form-group">
-        <label>📊 数量</label>
-        <input type="number" id="quantity" value="1" min="1">
-      </div>
-      <div class="form-group">
-        <label>🕐 入库时间</label>
-        <input type="text" id="inboundTime" readonly placeholder="自动生成">
-      </div>
+      <div class="form-group"><label>📊 数量</label><input type="number" id="quantity" value="1" min="1"></div>
+      <div class="form-group"><label>🕐 入库时间</label><input type="text" id="inboundTime" readonly placeholder="自动生成"></div>
     </div>
 
     <button class="btn btn-success" onclick="submitInbound()">✅ 确认入库</button>
   </div>
 
-  <!-- 统计 -->
   <div class="stats">
-    <div class="stat-item">
-      <div class="num" id="statTotal">0</div>
-      <div class="lbl">总件数</div>
-    </div>
-    <div class="stat-item">
-      <div class="num" id="statBarcodes">0</div>
-      <div class="lbl">已录入条码</div>
-    </div>
-    <div class="stat-item">
-      <div class="num" id="statToday">0</div>
-      <div class="lbl">今日入库</div>
-    </div>
+    <div class="stat-item"><div class="num" id="statTotal">0</div><div class="lbl">总件数</div></div>
+    <div class="stat-item"><div class="num" id="statBarcodes">0</div><div class="lbl">已录入条码</div></div>
+    <div class="stat-item"><div class="num" id="statToday">0</div><div class="lbl">今日入库</div></div>
   </div>
 
-  <!-- 记录列表 -->
   <div class="section-header">
     <h3>📋 入库记录</h3>
     <span id="recordCount">0 条</span>
   </div>
   <div id="history"></div>
 
-  <!-- 底部操作 -->
   <div style="display:flex;gap:10px;margin-top:14px;">
-    <button class="btn btn-download" onclick="exportToExcel()" style="flex:1;">
-      📥 导出表格 (.xlsx)
-    </button>
-    <button class="btn btn-danger" onclick="showClearModal()" style="flex:1;">
-      🗑️ 清空记录
-    </button>
+    <button class="btn btn-download" onclick="exportToExcel()" style="flex:1;">📥 导出表格 (.xlsx)</button>
+    <button class="btn btn-danger" onclick="showClearModal()" style="flex:1;">🗑️ 清空记录</button>
   </div>
 
-  <!-- 清空弹窗 -->
   <div class="modal-overlay" id="clearModal">
     <div class="modal">
       <h4>⚠️ 确认清空</h4>
@@ -462,9 +263,9 @@
     let records = [];
     let editingIndex = -1;
     let deferredPrompt = null;
+    let autoInstallPrompt = null;
     let isStandalone = false;
 
-    // 序号选项
     const SEQUENCE_OPTIONS = Array.from({ length: 200 }, (_, i) => i + 1);
 
     // ==================== 初始化 ====================
@@ -486,13 +287,65 @@
       });
     }
 
-  // ==================== PWA 安装检测 ====================
+    // ==================== PWA 安装检测（自动弹出）====================
+    function checkInstallState() {
+      if (window.matchMedia('(display-mode: standalone)').matches) isStandalone = true;
+      if (navigator.standalone) isStandalone = true;
+    }
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      autoInstallPrompt = e;
+      deferredPrompt = e;
+      if (!isStandalone) {
+        document.getElementById('installBtn').style.display = 'block';
+        document.getElementById('installGuide').style.display = 'none';
+        // 自动弹出安装提示
+        setTimeout(() => {
+          if (autoInstallPrompt && !isStandalone) {
+            autoInstallPrompt.prompt();
+            autoInstallPrompt.userChoice.then((choiceResult) => {
+              if (choiceResult.outcome === 'accepted') {
+                showToast('✅ 正在安装...');
+                document.getElementById('installBtn').style.display = 'none';
+              }
+              autoInstallPrompt = null;
+            });
+          }
+        }, 500);
+      }
     });
 
-    // 不支持 beforeinstallprompt 时，1 秒后显示引导
+    function installApp() {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then((choiceResult) => {
+          if (choiceResult.outcome === 'accepted') showToast('✅ 正在安装...');
+          deferredPrompt = null;
+        });
+      } else if (autoInstallPrompt) {
+        autoInstallPrompt.prompt();
+        autoInstallPrompt.userChoice.then((choiceResult) => {
+          if (choiceResult.outcome === 'accepted') showToast('✅ 正在安装...');
+          autoInstallPrompt = null;
+        });
+      } else {
+        document.getElementById('installGuide').style.display = 'block';
+        document.getElementById('installGuide').scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+
+    window.addEventListener('appinstalled', () => {
+      document.getElementById('installBtn').style.display = 'none';
+      document.getElementById('installGuide').style.display = 'none';
+      isStandalone = true;
+      showToast('✅ 安装完成');
+    });
+
+    // iOS 或不支持的浏览器：1秒后自动显示手动安装引导
     window.addEventListener('load', () => {
       setTimeout(() => {
-        if (!deferredPrompt && !isStandalone) {
+        if (!autoInstallPrompt && !isStandalone) {
           document.getElementById('installGuide').style.display = 'block';
         }
       }, 1000);
