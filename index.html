@@ -414,7 +414,6 @@
       flex: 1;
     }
 
-    /* 扫描状态提示 */
     .scan-status {
       text-align: center;
       padding: 8px;
@@ -581,7 +580,6 @@
       
       if (!state.isStandalone) {
         document.getElementById('installBtn').style.display = 'block';
-        // 自动弹出安装
         setTimeout(() => {
           if (state.autoInstallPrompt) {
             state.autoInstallPrompt.prompt();
@@ -620,7 +618,6 @@
       showToast('✅ 应用安装完成');
     });
 
-    // 加载完成显示手动安装指引
     window.addEventListener('load', () => {
       setTimeout(() => {
         if (!state.autoInstallPrompt && !state.isStandalone) {
@@ -629,40 +626,51 @@
       }, 1000);
     });
 
-    // ==================== 扫码功能 ====================
+    // 页面卸载强制释放摄像头
+    window.addEventListener('beforeunload', () => {
+      if (state.html5QrCode) {
+        try {
+          state.html5QrCode.stop();
+        } catch (e) {}
+      }
+    });
+
+    // ==================== 扫码功能【已修复重启慢问题】 ====================
     async function startScan() {
       if (state.isScanning) return;
-      
-      try {
-        state.isScanning = true;
-        const scanStatus = document.getElementById('scanStatus');
-        scanStatus.style.display = 'block';
-        scanStatus.textContent = '正在启动摄像头...';
-        
-        // 显示扫码UI
-        document.getElementById('reader').style.display = 'block';
-        document.getElementById('scanBtn').style.display = 'none';
-        document.getElementById('closeScanArea').style.display = 'block';
-        document.getElementById('formCard').style.display = 'none';
 
-        // 初始化扫码器
-        state.html5QrCode = new Html5Qrcode("reader");
-        await state.html5QrCode.start(
-          { facingMode: "environment" },
-          { fps: 10, qrbox: { width: 280, height: 200 } },
-          onScanSuccess,
-          () => {}
-        );
-        
-        scanStatus.textContent = '请将条码对准扫描框';
-      } catch (err) {
-        console.error('扫码启动失败:', err);
-        showToast('⚠️ 摄像头启动失败，请检查权限');
-        resetScanUI();
+      // 彻底销毁旧实例、释放摄像头、清空DOM残留
+      if (state.html5QrCode) {
+        try {
+          await state.html5QrCode.stop();
+        } catch (e) {}
+        state.html5QrCode = null;
       }
+      const readerEl = document.getElementById('reader');
+      readerEl.innerHTML = '';
+      readerEl.style.display = 'block';
+
+      state.isScanning = true;
+      const scanStatus = document.getElementById('scanStatus');
+      scanStatus.style.display = 'block';
+      scanStatus.textContent = '正在启动摄像头...';
+
+      document.getElementById('scanBtn').style.display = 'none';
+      document.getElementById('closeScanArea').style.display = 'block';
+      document.getElementById('formCard').style.display = 'none';
+
+      // 每次全新实例
+      state.html5QrCode = new Html5Qrcode("reader");
+      await state.html5QrCode.start(
+        { facingMode: "environment" },
+        { fps: 15, qrbox: { width: 280, height: 200 } },
+        onScanSuccess,
+        () => {}
+      );
+
+      scanStatus.textContent = '请将条码对准扫描框';
     }
 
-    // 扫码成功回调
     function onScanSuccess(decodedText) {
       const barcode = decodedText.trim();
       if (!barcode) return;
@@ -670,34 +678,40 @@
       stopScan();
       resetScanUI();
       
-      // 填充表单
       document.getElementById('barcodeId').value = barcode;
       document.getElementById('scannedBadge').style.display = 'inline-block';
       document.getElementById('inboundTime').value = new Date().toLocaleString('zh-CN');
       
-      // 显示表单
       document.getElementById('formCard').style.display = 'block';
       document.getElementById('formCard').scrollIntoView({ behavior: 'smooth' });
       
-      // 震动反馈
       if (navigator.vibrate) navigator.vibrate(CONFIG.SCAN_SUCCESS_VIBRATE);
       showToast('✅ 扫码成功');
     }
 
     function stopScan() {
       if (state.html5QrCode && state.isScanning) {
-        state.html5QrCode.stop().then(() => {
-          document.getElementById('reader').style.display = 'none';
-        }).catch(err => console.error('停止扫码失败:', err));
+        state.html5QrCode.stop()
+          .then(() => {
+            document.getElementById('reader').style.display = 'none';
+          })
+          .catch(err => console.error('停止扫码失败:', err))
+          .finally(() => {
+            state.html5QrCode = null;
+            state.isScanning = false;
+          });
+      } else {
         state.isScanning = false;
       }
     }
 
     function resetScanUI() {
       state.isScanning = false;
+      state.html5QrCode = null;
       document.getElementById('scanStatus').style.display = 'none';
       document.getElementById('scanBtn').style.display = 'block';
       document.getElementById('closeScanArea').style.display = 'none';
+      document.getElementById('reader').style.display = 'none';
     }
 
     // ==================== 表单提交 ====================
@@ -708,7 +722,6 @@
         return;
       }
 
-      // 构建记录
       const record = {
         id: state.editingIndex >= 0 ? state.records[state.editingIndex].id : Date.now(),
         barcodeId,
@@ -725,7 +738,6 @@
         inboundTime: new Date().toLocaleString('zh-CN'),
       };
 
-      // 编辑/新增逻辑
       if (state.editingIndex >= 0) {
         state.records[state.editingIndex] = record;
         state.editingIndex = -1;
@@ -735,18 +747,15 @@
         showToast('✅ 入库成功');
       }
 
-      // 保存并刷新
       saveRecords();
       resetForm();
       renderHistory();
       renderStats();
       
-      // 隐藏表单
       document.getElementById('formCard').style.display = 'none';
       document.getElementById('scanBtn').style.display = 'block';
     }
 
-    // 重置表单
     function resetForm() {
       document.getElementById('barcodeId').value = '';
       document.getElementById('sequenceNo').value = '';
@@ -769,7 +778,6 @@
       const record = state.records[index];
       state.editingIndex = index;
       
-      // 填充表单数据
       Object.entries({
         barcodeId: record.barcodeId,
         sequenceNo: record.sequenceNo,
@@ -804,7 +812,6 @@
       }
     }
 
-    // 清空确认弹窗
     function showClearModal() {
       document.getElementById('clearModal').classList.add('show');
     }
@@ -878,17 +885,13 @@
     }
 
     function renderStats() {
-      // 总件数
       const totalQty = state.records.reduce((sum, r) => sum + (r.quantity || 1), 0);
-      // 唯一条码数
       const uniqueBarcodes = new Set(state.records.map(r => r.barcodeId)).size;
-      // 今日入库数
       const today = new Date().toLocaleDateString('zh-CN');
       const todayQty = state.records
         .filter(r => r.inboundTime?.includes(today))
         .reduce((sum, r) => sum + (r.quantity || 1), 0);
 
-      // 更新DOM
       document.getElementById('statTotal').textContent = totalQty;
       document.getElementById('statBarcodes').textContent = uniqueBarcodes;
       document.getElementById('statToday').textContent = todayQty;
@@ -901,7 +904,6 @@
         return;
       }
 
-      // 格式化数据
       const data = state.records.map(r => ({
         '条码ID': r.barcodeId,
         '序号': r.sequenceNo,
@@ -917,7 +919,6 @@
         '入库时间': r.inboundTime,
       }));
 
-      // 创建工作表
       const ws = XLSX.utils.json_to_sheet(data);
       ws['!cols'] = [
         { wch: 16 }, { wch: 8 }, { wch: 8 }, { wch: 10 },
@@ -925,11 +926,9 @@
         { wch: 30 }, { wch: 30 }, { wch: 8 }, { wch: 20 }
       ];
 
-      // 创建工作簿
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, '入库记录');
       
-      // 生成文件名并下载
       const dateStr = new Date().toLocaleDateString('zh-CN').replace(/\//g, '-');
       XLSX.writeFile(wb, `服装入库记录_${dateStr}.xlsx`);
       showToast('📥 导出成功');
@@ -937,17 +936,14 @@
 
     // ==================== 消息提示 ====================
     function showToast(msg) {
-      // 移除已有提示
       const existing = document.querySelector('.toast');
       if (existing) existing.remove();
       
-      // 创建新提示
       const toast = document.createElement('div');
       toast.className = 'toast';
       toast.textContent = msg;
       document.body.appendChild(toast);
       
-      // 自动移除
       setTimeout(() => toast.remove(), 2500);
     }
   </script>
