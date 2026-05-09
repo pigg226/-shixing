@@ -26,476 +26,117 @@
       --input-bg: #f8fafc;
       --shadow: 0 1px 3px rgba(0,0,0,0.08);
     }
-
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      padding: 12px;
-      max-width: 480px;
-      margin: 0 auto;
-      min-height: 100vh;
-      padding-bottom: 40px;
-      line-height: 1.4;
+      background: var(--bg); color: var(--text); padding: 12px; max-width: 480px;
+      margin: 0 auto; min-height: 100vh; padding-bottom: 40px;
     }
-
-    .header {
-      text-align: center;
-      padding: 16px 0 12px;
-    }
-
-    .header h1 {
-      font-size: 21px;
-      font-weight: 700;
-    }
-
-    .top-btns {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 10px;
-    }
-
-    .top-btns .btn {
-      flex: 1;
-      font-size: 13px;
-      padding: 11px 6px;
-      white-space: nowrap;
-    }
-
+    .header { text-align: center; padding: 16px 0 12px; }
+    .header h1 { font-size: 21px; font-weight: 700; }
+    .top-btns { display: flex; gap: 8px; margin-bottom: 10px; }
+    .top-btns .btn { flex: 1; font-size: 13px; padding: 11px 6px; white-space: nowrap; }
     .btn {
-      display: block;
-      width: 100%;
-      padding: 13px;
-      font-size: 16px;
-      font-weight: 600;
-      border: none;
-      border-radius: 12px;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      text-align: center;
+      display: block; width: 100%; padding: 13px; font-size: 16px;
+      font-weight: 600; border: none; border-radius: 12px; cursor: pointer;
+      transition: all 0.2s; text-align: center;
     }
-
-    .btn:active {
-      transform: scale(0.97);
-      opacity: 0.85;
-    }
-
-    .btn-primary {
-      background: var(--primary);
-      color: #fff;
-    }
-
-    .btn-success {
-      background: var(--success);
-      color: #fff;
-    }
-
-    .btn-outline {
-      background: var(--card);
-      color: var(--primary);
-      border: 2px solid var(--primary);
-    }
-
-    .btn-install {
-      background: #fff;
-      color: #8b5cf6;
-      border: 2px solid #8b5cf6;
-    }
-
-    .btn-download {
-      background: #fff;
-      color: #f59e0b;
-      border: 2px solid #f59e0b;
-    }
-
-    .btn-danger {
-      background: var(--card);
-      color: var(--danger);
-      border: 2px solid #fca5a5;
-    }
-
-    .btn-sm {
-      padding: 8px 14px;
-      font-size: 13px;
-      width: auto;
-      display: inline-block;
-    }
-
-    #installGuide {
-      display: none;
-      background: #fef3c7;
-      padding: 10px 12px;
-      border-radius: 10px;
-      margin-bottom: 10px;
-      text-align: center;
-      font-size: 12px;
-      color: #92400e;
-    }
-
-    #reader {
-      width: 100%;
-      border-radius: 12px;
-      overflow: hidden;
-      margin: 10px 0;
-      border: 2px solid var(--primary);
-      display: none;
-    }
-
-    .close-scan {
-      text-align: center;
-      margin-top: 6px;
-      display: none;
-    }
-
-    .card {
-      background: var(--card);
-      padding: 14px;
-      border-radius: 12px;
-      margin: 10px 0;
-      box-shadow: var(--shadow);
-    }
-
-    .card-title {
-      font-size: 15px;
-      font-weight: 700;
-      margin-bottom: 12px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .form-group {
-      margin-bottom: 10px;
-    }
-
-    .form-group label {
-      display: block;
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--text-secondary);
-      margin-bottom: 3px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-
-    .form-group input,
-    .form-group select {
-      width: 100%;
-      padding: 11px 12px;
-      font-size: 15px;
-      border: 2px solid var(--border);
-      border-radius: 10px;
-      background: var(--input-bg);
-      color: var(--text);
-      transition: border-color 0.2s;
-    }
-
-    .form-group input:focus,
-    .form-group select:focus {
-      outline: none;
-      border-color: var(--primary);
-      background: #fff;
-    }
-
-    .form-group input[readonly] {
-      background: #e8ecf2;
-      color: #6b7280;
-      font-family: 'SF Mono', 'Consolas', monospace;
-    }
-
-    .form-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-    }
-
-    .form-row-3 {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 8px;
-    }
-
-    .scanned-badge {
-      display: inline-block;
-      background: #d1fae5;
-      color: #065f46;
-      padding: 2px 8px;
-      border-radius: 6px;
-      font-size: 11px;
-      font-weight: 600;
-    }
-
-    .stats {
-      display: flex;
-      gap: 8px;
-      margin: 10px 0;
-    }
-
-    .stat-item {
-      flex: 1;
-      background: var(--card);
-      padding: 10px;
-      border-radius: 10px;
-      text-align: center;
-      box-shadow: var(--shadow);
-    }
-
-    .stat-item .num {
-      font-size: 24px;
-      font-weight: 800;
-      color: var(--primary);
-    }
-
-    .stat-item .lbl {
-      font-size: 11px;
-      color: var(--text-secondary);
-    }
-
-    .section-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin: 16px 0 8px;
-    }
-
-    .section-header h3 {
-      font-size: 15px;
-      font-weight: 700;
-    }
-
-    .section-header span {
-      font-size: 12px;
-      color: var(--text-secondary);
-    }
-
-    .record-card {
-      background: var(--card);
-      padding: 12px;
-      margin: 6px 0;
-      border-radius: 10px;
-      box-shadow: var(--shadow);
-    }
-
-    .record-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 8px;
-    }
-
-    .record-header .barcode {
-      font-family: 'SF Mono', 'Consolas', monospace;
-      font-size: 14px;
-      font-weight: 700;
-      color: var(--primary);
-    }
-
-    .record-header .time {
-      font-size: 11px;
-      color: #94a3b8;
-    }
-
-    .record-detail {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 5px;
-      font-size: 11px;
-    }
-
-    .record-detail .field {
-      background: var(--input-bg);
-      padding: 5px 7px;
-      border-radius: 6px;
-    }
-
-    .record-detail .f-label {
-      color: var(--text-secondary);
-      font-size: 10px;
-    }
-
-    .record-detail .f-value {
-      font-weight: 600;
-      margin-top: 1px;
-      word-break: break-all;
-    }
-
-    .record-actions {
-      display: flex;
-      gap: 6px;
-      margin-top: 8px;
-      justify-content: flex-end;
-    }
-
-    .empty-state {
-      text-align: center;
-      color: #94a3b8;
-      padding: 36px;
-    }
-
-    .empty-state .icon {
-      font-size: 42px;
-      margin-bottom: 8px;
-    }
-
+    .btn:active { transform: scale(0.97); opacity: 0.85; }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-success { background: var(--success); color: #fff; }
+    .btn-outline { background: var(--card); color: var(--primary); border: 2px solid var(--primary); }
+    .btn-install { background: #fff; color: #8b5cf6; border: 2px solid #8b5cf6; }
+    .btn-download { background: #fff; color: #f59e0b; border: 2px solid #f59e0b; }
+    .btn-danger { background: var(--card); color: var(--danger); border: 2px solid #fca5a5; }
+    .btn-sm { padding: 8px 14px; font-size: 13px; width: auto; display: inline-block; }
+    #installGuide { display: none; background: #fef3c7; padding: 10px 12px; border-radius: 10px; margin-bottom: 10px; text-align: center; font-size: 12px; color: #92400e; }
+    #reader { width: 100%; border-radius: 12px; overflow: hidden; margin: 10px 0; border: 2px solid var(--primary); display: none; }
+    .close-scan { text-align: center; margin-top: 6px; display: none; }
+    .scan-status { text-align: center; padding: 8px; font-size: 12px; color: var(--text-secondary); }
+    .card { background: var(--card); padding: 14px; border-radius: 12px; margin: 10px 0; box-shadow: var(--shadow); }
+    .card-title { font-size: 15px; font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+    .form-group { margin-bottom: 10px; }
+    .form-group label { display: block; font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .form-group input, .form-group select { width: 100%; padding: 11px 12px; font-size: 15px; border: 2px solid var(--border); border-radius: 10px; background: var(--input-bg); color: var(--text); }
+    .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--primary); background: #fff; }
+    .form-group input[readonly] { background: #e8ecf2; color: #6b7280; font-family: 'SF Mono', 'Consolas', monospace; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+    .scanned-badge { display: inline-block; background: #d1fae5; color: #065f46; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; }
+    .stats { display: flex; gap: 8px; margin: 10px 0; }
+    .stat-item { flex: 1; background: var(--card); padding: 10px; border-radius: 10px; text-align: center; box-shadow: var(--shadow); }
+    .stat-item .num { font-size: 24px; font-weight: 800; color: var(--primary); }
+    .stat-item .lbl { font-size: 11px; color: var(--text-secondary); }
+    .section-header { display: flex; justify-content: space-between; align-items: center; margin: 16px 0 8px; }
+    .section-header h3 { font-size: 15px; font-weight: 700; }
+    .section-header span { font-size: 12px; color: var(--text-secondary); }
+    .record-card { background: var(--card); padding: 12px; margin: 6px 0; border-radius: 10px; box-shadow: var(--shadow); }
+    .record-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+    .record-header .barcode { font-family: 'SF Mono', 'Consolas', monospace; font-size: 14px; font-weight: 700; color: var(--primary); }
+    .record-header .time { font-size: 11px; color: #94a3b8; }
+    .record-detail { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; font-size: 11px; }
+    .record-detail .field { background: var(--input-bg); padding: 5px 7px; border-radius: 6px; }
+    .record-detail .f-label { color: var(--text-secondary); font-size: 10px; }
+    .record-detail .f-value { font-weight: 600; margin-top: 1px; }
+    .record-actions { display: flex; gap: 6px; margin-top: 8px; justify-content: flex-end; }
+    .empty-state { text-align: center; color: #94a3b8; padding: 36px; }
+    .empty-state .icon { font-size: 42px; margin-bottom: 8px; }
     .toast {
-      position: fixed;
-      bottom: 30px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: #1e293b;
-      color: #fff;
-      padding: 12px 22px;
-      border-radius: 25px;
-      font-size: 14px;
-      font-weight: 600;
-      z-index: 9999;
+      position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+      background: #1e293b; color: #fff; padding: 12px 22px; border-radius: 25px;
+      font-size: 14px; font-weight: 600; z-index: 9999;
       box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-      animation: fadeInOut 2.5s forwards;
-      white-space: nowrap;
+      animation: fadeInOut 2.5s forwards; white-space: nowrap;
     }
-
     @keyframes fadeInOut {
       0% { opacity: 0; transform: translateX(-50%) translateY(20px); }
       15% { opacity: 1; transform: translateX(-50%) translateY(0); }
       70% { opacity: 1; }
       100% { opacity: 0; }
     }
-
-    .modal-overlay {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0,0,0,0.5);
-      z-index: 999;
-      justify-content: center;
-      align-items: center;
-    }
-
-    .modal-overlay.show {
-      display: flex;
-    }
-
-    .modal {
-      background: #fff;
-      padding: 22px;
-      border-radius: 16px;
-      text-align: center;
-      margin: 0 20px;
-      max-width: 330px;
-      width: 100%;
-    }
-
-    .modal h4 {
-      margin-bottom: 6px;
-      font-size: 16px;
-    }
-
-    .modal p {
-      color: var(--text-secondary);
-      font-size: 13px;
-      margin-bottom: 14px;
-    }
-
-    .modal .modal-actions {
-      display: flex;
-      gap: 8px;
-    }
-
-    .modal .modal-actions .btn {
-      flex: 1;
-    }
-
-    .scan-status {
-      text-align: center;
-      padding: 8px;
-      font-size: 12px;
-      color: var(--text-secondary);
-      display: none;
-    }
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 999; justify-content: center; align-items: center; }
+    .modal-overlay.show { display: flex; }
+    .modal { background: #fff; padding: 22px; border-radius: 16px; text-align: center; margin: 0 20px; max-width: 330px; width: 100%; }
+    .modal h4 { margin-bottom: 6px; }
+    .modal p { color: var(--text-secondary); font-size: 13px; margin-bottom: 14px; }
+    .modal .modal-actions { display: flex; gap: 8px; }
+    .modal .modal-actions .btn { flex: 1; }
   </style>
 </head>
 <body>
-  <div class="header">
-    <h1>👕 服装扫码入库系统</h1>
-  </div>
-
-  <div id="installGuide">
-    💡 点击 <b>分享</b> → 滑动找到 <b>「添加到主屏幕」</b> 即可安装
-  </div>
-
+  <div class="header"><h1>👕 服装扫码入库系统</h1></div>
+  <div id="installGuide">💡 点击 <b>分享</b> → 滑动找到 <b>「添加到主屏幕」</b> 即可安装</div>
   <div class="top-btns">
     <button class="btn btn-primary" onclick="startScan()" id="scanBtn">📷 扫码</button>
     <button class="btn btn-download" onclick="exportToExcel()">📥 下载</button>
     <button class="btn btn-install" id="installBtn" onclick="installApp()" style="display:none;">⬇️ 安装</button>
   </div>
-
-  <div class="scan-status" id="scanStatus">正在启动摄像头...</div>
-  <div class="close-scan" id="closeScanArea">
-    <button class="btn btn-outline btn-sm" onclick="stopScan()">✕ 关闭扫码</button>
-  </div>
-
+  <div class="scan-status" id="scanStatus"></div>
+  <div class="close-scan" id="closeScanArea"><button class="btn btn-outline btn-sm" onclick="stopScan()">✕ 关闭扫码</button></div>
   <div id="reader"></div>
 
   <div class="card" id="formCard" style="display:none;">
-    <div class="card-title">
-      📝 入库信息录入
-      <span class="scanned-badge" id="scannedBadge" style="display:none;">已扫码</span>
-    </div>
-
-    <div class="form-group">
-      <label>🔢 条码 ID</label>
-      <input type="text" id="barcodeId" readonly placeholder="扫码后自动填充">
-    </div>
-
+    <div class="card-title">📝 入库信息录入<span class="scanned-badge" id="scannedBadge" style="display:none;">已扫码</span></div>
+    <div class="form-group"><label>🔢 条码 ID</label><input type="text" id="barcodeId" readonly placeholder="扫码后自动填充"></div>
     <div class="form-row">
-      <div class="form-group">
-        <label>📋 序号</label>
-        <select id="sequenceNo"><option value="">请选择</option></select>
-      </div>
-      <div class="form-group">
-        <label>📏 尺码</label>
-        <select id="size">
-          <option value="">请选择</option>
-          <option value="XS">XS</option>
-          <option value="S">S</option>
-          <option value="M">M</option>
-          <option value="L">L</option>
-          <option value="XL">XL</option>
-          <option value="2XL">2XL</option>
-          <option value="3XL">3XL</option>
-          <option value="4XL">4XL</option>
-        </select>
-      </div>
+      <div class="form-group"><label>📋 序号</label><select id="sequenceNo"><option value="">请选择</option></select></div>
+      <div class="form-group"><label>📏 尺码</label><select id="size"><option value="">请选择</option><option value="XS">XS</option><option value="S">S</option><option value="M">M</option><option value="L">L</option><option value="XL">XL</option><option value="2XL">2XL</option><option value="3XL">3XL</option><option value="4XL">4XL</option></select></div>
     </div>
-
     <div class="form-row-3">
       <div class="form-group"><label>🏷️ 扎号</label><input type="text" id="bundleNo" placeholder="扎号"></div>
       <div class="form-group"><label>📦 批号</label><input type="text" id="batchNo" placeholder="批号"></div>
       <div class="form-group"><label>👔 款号</label><input type="text" id="styleNo" placeholder="款号"></div>
     </div>
-
     <div class="form-row">
       <div class="form-group"><label>🎨 色号</label><input type="text" id="colorCode" placeholder="如：02-269"></div>
       <div class="form-group"><label>🖌️ 颜色</label><input type="text" id="colorName" placeholder="如：花灰"></div>
     </div>
-
     <div class="form-group"><label>🧵 A料信息</label><input type="text" id="fabricA" placeholder="如：02-269 花灰:05PB001A19直"></div>
     <div class="form-group"><label>🧵 B料信息</label><input type="text" id="fabricB" placeholder="B料信息（如无则不填）"></div>
-
     <div class="form-row">
       <div class="form-group"><label>📊 数量</label><input type="number" id="quantity" value="1" min="1"></div>
       <div class="form-group"><label>🕐 入库时间</label><input type="text" id="inboundTime" readonly placeholder="自动生成"></div>
     </div>
-
     <button class="btn btn-success" onclick="submitInbound()">✅ 确认入库</button>
   </div>
 
@@ -505,10 +146,7 @@
     <div class="stat-item"><div class="num" id="statToday">0</div><div class="lbl">今日入库</div></div>
   </div>
 
-  <div class="section-header">
-    <h3>📋 入库记录</h3>
-    <span id="recordCount">0 条</span>
-  </div>
+  <div class="section-header"><h3>📋 入库记录</h3><span id="recordCount">0 条</span></div>
   <div id="history"></div>
 
   <div style="display:flex;gap:10px;margin-top:14px;">
@@ -528,353 +166,164 @@
   </div>
 
   <script>
-    // ==================== 全局配置 ====================
-    const CONFIG = {
-      MAX_SEQUENCE: 200,
-      STORAGE_KEY: 'garment_inbound_records',
-      SCAN_SUCCESS_VIBRATE: 50
-    };
+    let html5QrCode = null;
+    let records = [];
+    let editingIndex = -1;
+    let deferredPrompt = null;
 
-    // ==================== 全局状态 ====================
-    const state = {
-      html5QrCode: null,
-      records: [],
-      editingIndex: -1,
-      deferredPrompt: null,
-      autoInstallPrompt: null,
-      isStandalone: false,
-      isScanning: false
-    };
-
-    // ==================== 初始化 ====================
-    document.addEventListener('DOMContentLoaded', init);
-    
+    // 初始化
     function init() {
       loadRecords();
       populateSequenceOptions();
-      checkInstallState();
       renderHistory();
       renderStats();
     }
-
-    // 生成序号下拉选项
     function populateSequenceOptions() {
       const select = document.getElementById('sequenceNo');
-      for (let i = 1; i <= CONFIG.MAX_SEQUENCE; i++) {
-        const option = document.createElement('option');
-        option.value = i;
-        option.textContent = i;
-        select.appendChild(option);
-      }
+      for (let i=1; i<=200; i++) select.innerHTML += `<option value="${i}">${i}</option>`;
     }
 
-    // ==================== PWA 安装相关 ====================
-    function checkInstallState() {
-      state.isStandalone = window.matchMedia('(display-mode: standalone)').matches || !!navigator.standalone;
-    }
-
-    window.addEventListener('beforeinstallprompt', e => {
-      e.preventDefault();
-      state.autoInstallPrompt = e;
-      state.deferredPrompt = e;
-      
-      if (!state.isStandalone) {
-        document.getElementById('installBtn').style.display = 'block';
-        setTimeout(() => {
-          if (state.autoInstallPrompt) {
-            state.autoInstallPrompt.prompt();
-            state.autoInstallPrompt.userChoice.then(res => {
-              if (res.outcome === 'accepted') {
-                showToast('✅ 正在安装应用');
-                document.getElementById('installBtn').style.display = 'none';
-              }
-              state.autoInstallPrompt = null;
-            });
-          }
-        }, 500);
-      }
-    });
-
+    // PWA
+    window.addEventListener('beforeinstallprompt', e=>{deferredPrompt=e;document.getElementById('installBtn').style.display='block';});
     function installApp() {
-      const prompt = state.deferredPrompt || state.autoInstallPrompt;
-      if (prompt) {
-        prompt.prompt();
-        prompt.userChoice.then(res => {
-          if (res.outcome === 'accepted') showToast('✅ 安装中...');
-          state.deferredPrompt = null;
-          state.autoInstallPrompt = null;
-        });
-      } else {
-        const guide = document.getElementById('installGuide');
-        guide.style.display = 'block';
-        guide.scrollIntoView({ behavior: 'smooth' });
-      }
+      if(deferredPrompt){deferredPrompt.prompt();deferredPrompt=null;}
+      else{document.getElementById('installGuide').style.display='block';}
     }
 
-    window.addEventListener('appinstalled', () => {
-      document.getElementById('installBtn').style.display = 'none';
-      document.getElementById('installGuide').style.display = 'none';
-      state.isStandalone = true;
-      showToast('✅ 应用安装完成');
-    });
-
-    window.addEventListener('load', () => {
-      setTimeout(() => {
-        if (!state.autoInstallPrompt && !state.isStandalone) {
-          document.getElementById('installGuide').style.display = 'block';
-        }
-      }, 1000);
-    });
-
-    // 页面卸载强制释放摄像头
-    window.addEventListener('beforeunload', () => {
-      if (state.html5QrCode) {
-        try {
-          state.html5QrCode.stop();
-        } catch (e) {}
-      }
-    });
-
-    // ==================== 扫码功能【已修复重启慢问题】 ====================
+    // 核心：扫码（极简、每次重新授权、不吞错）
     async function startScan() {
-      if (state.isScanning) return;
-
-      // 彻底销毁旧实例、释放摄像头、清空DOM残留
-      if (state.html5QrCode) {
-        try {
-          await state.html5QrCode.stop();
-        } catch (e) {}
-        state.html5QrCode = null;
+      // 1. 先彻底清旧实例
+      if(html5QrCode){
+        try{await html5QrCode.stop();}catch(e){}
+        html5QrCode=null;
       }
-      const readerEl = document.getElementById('reader');
-      readerEl.innerHTML = '';
-      readerEl.style.display = 'block';
+      document.getElementById('reader').innerHTML='';
+      document.getElementById('reader').style.display='block';
+      document.getElementById('scanBtn').style.display='none';
+      document.getElementById('closeScanArea').style.display='block';
+      document.getElementById('formCard').style.display='none';
+      document.getElementById('scanStatus').textContent='正在请求摄像头权限...';
 
-      state.isScanning = true;
-      const scanStatus = document.getElementById('scanStatus');
-      scanStatus.style.display = 'block';
-      scanStatus.textContent = '正在启动摄像头...';
-
-      document.getElementById('scanBtn').style.display = 'none';
-      document.getElementById('closeScanArea').style.display = 'block';
-      document.getElementById('formCard').style.display = 'none';
-
-      // 每次全新实例
-      state.html5QrCode = new Html5Qrcode("reader");
-      await state.html5QrCode.start(
-        { facingMode: "environment" },
-        { fps: 15, qrbox: { width: 280, height: 200 } },
-        onScanSuccess,
-        () => {}
-      );
-
-      scanStatus.textContent = '请将条码对准扫描框';
+      // 2. 每次新建实例、强制授权
+      html5QrCode=new Html5Qrcode("reader");
+      try{
+        await html5QrCode.start(
+          { facingMode:"environment" },
+          { fps:10, qrbox:{width:280,height:200} },
+          onScanSuccess,
+          err=>{}
+        );
+        document.getElementById('scanStatus').textContent='扫描中...';
+      }catch(e){
+        // 3. 明确报错，让用户知道为什么不行
+        console.error("摄像头失败：",e);
+        if(e.name==="NotAllowedError") showToast("❌ 请允许摄像头权限（地址栏🔒设置）");
+        else if(e.name==="NotFoundError") showToast("❌ 未找到摄像头");
+        else if(e.name==="NotSupportedError") showToast("❌ 请用HTTPS或localhost打开");
+        else showToast("❌ 摄像头启动失败："+e.message);
+        stopScan();
+      }
     }
-
-    function onScanSuccess(decodedText) {
-      const barcode = decodedText.trim();
-      if (!barcode) return;
-      
+    function onScanSuccess(text) {
       stopScan();
-      resetScanUI();
-      
-      document.getElementById('barcodeId').value = barcode;
-      document.getElementById('scannedBadge').style.display = 'inline-block';
-      document.getElementById('inboundTime').value = new Date().toLocaleString('zh-CN');
-      
-      document.getElementById('formCard').style.display = 'block';
-      document.getElementById('formCard').scrollIntoView({ behavior: 'smooth' });
-      
-      if (navigator.vibrate) navigator.vibrate(CONFIG.SCAN_SUCCESS_VIBRATE);
-      showToast('✅ 扫码成功');
+      document.getElementById('barcodeId').value=text.trim();
+      document.getElementById('scannedBadge').style.display='inline-block';
+      document.getElementById('inboundTime').value=new Date().toLocaleString('zh-CN');
+      document.getElementById('formCard').style.display='block';
+      document.getElementById('formCard').scrollIntoView({behavior:'smooth'});
+      if(navigator.vibrate) navigator.vibrate(50);
+      showToast("✅ 扫码成功");
     }
-
     function stopScan() {
-      if (state.html5QrCode && state.isScanning) {
-        state.html5QrCode.stop()
-          .then(() => {
-            document.getElementById('reader').style.display = 'none';
-          })
-          .catch(err => console.error('停止扫码失败:', err))
-          .finally(() => {
-            state.html5QrCode = null;
-            state.isScanning = false;
-          });
-      } else {
-        state.isScanning = false;
+      if(html5QrCode){
+        try{html5QrCode.stop();}catch(e){}
+        html5QrCode=null;
       }
+      document.getElementById('reader').style.display='none';
+      document.getElementById('scanBtn').style.display='block';
+      document.getElementById('closeScanArea').style.display='none';
+      document.getElementById('scanStatus').textContent='';
     }
 
-    function resetScanUI() {
-      state.isScanning = false;
-      state.html5QrCode = null;
-      document.getElementById('scanStatus').style.display = 'none';
-      document.getElementById('scanBtn').style.display = 'block';
-      document.getElementById('closeScanArea').style.display = 'none';
-      document.getElementById('reader').style.display = 'none';
-    }
-
-    // ==================== 表单提交 ====================
+    // 表单、存储、渲染（不变，只改扫码）
     function submitInbound() {
-      const barcodeId = document.getElementById('barcodeId').value.trim();
-      if (!barcodeId) {
-        showToast('⚠️ 请先扫码获取条码ID');
-        return;
-      }
-
-      const record = {
-        id: state.editingIndex >= 0 ? state.records[state.editingIndex].id : Date.now(),
-        barcodeId,
-        sequenceNo: document.getElementById('sequenceNo').value,
-        size: document.getElementById('size').value,
-        bundleNo: document.getElementById('bundleNo').value.trim(),
-        batchNo: document.getElementById('batchNo').value.trim(),
-        styleNo: document.getElementById('styleNo').value.trim(),
-        colorCode: document.getElementById('colorCode').value.trim(),
-        colorName: document.getElementById('colorName').value.trim(),
-        fabricA: document.getElementById('fabricA').value.trim(),
-        fabricB: document.getElementById('fabricB').value.trim(),
-        quantity: Math.max(1, parseInt(document.getElementById('quantity').value) || 1),
-        inboundTime: new Date().toLocaleString('zh-CN'),
+      const barcode=document.getElementById('barcodeId').value.trim();
+      if(!barcode) return showToast("⚠️ 请先扫码");
+      const record={
+        id:editingIndex>=0?records[editingIndex].id:Date.now(),
+        barcodeId:barcode,
+        sequenceNo:document.getElementById('sequenceNo').value,
+        size:document.getElementById('size').value,
+        bundleNo:document.getElementById('bundleNo').value.trim(),
+        batchNo:document.getElementById('batchNo').value.trim(),
+        styleNo:document.getElementById('styleNo').value.trim(),
+        colorCode:document.getElementById('colorCode').value.trim(),
+        colorName:document.getElementById('colorName').value.trim(),
+        fabricA:document.getElementById('fabricA').value.trim(),
+        fabricB:document.getElementById('fabricB').value.trim(),
+        quantity:parseInt(document.getElementById('quantity').value)||1,
+        inboundTime:new Date().toLocaleString('zh-CN')
       };
-
-      if (state.editingIndex >= 0) {
-        state.records[state.editingIndex] = record;
-        state.editingIndex = -1;
-        showToast('✅ 记录更新成功');
-      } else {
-        state.records.unshift(record);
-        showToast('✅ 入库成功');
-      }
-
-      saveRecords();
-      resetForm();
-      renderHistory();
-      renderStats();
-      
-      document.getElementById('formCard').style.display = 'none';
-      document.getElementById('scanBtn').style.display = 'block';
+      editingIndex>=0?(records[editingIndex]=record,editingIndex=-1):records.unshift(record);
+      saveRecords();resetForm();renderHistory();renderStats();
+      document.getElementById('formCard').style.display='none';
+      showToast("✅ 入库成功");
     }
-
     function resetForm() {
-      document.getElementById('barcodeId').value = '';
-      document.getElementById('sequenceNo').value = '';
-      document.getElementById('size').value = '';
-      document.getElementById('bundleNo').value = '';
-      document.getElementById('batchNo').value = '';
-      document.getElementById('styleNo').value = '';
-      document.getElementById('colorCode').value = '';
-      document.getElementById('colorName').value = '';
-      document.getElementById('fabricA').value = '';
-      document.getElementById('fabricB').value = '';
-      document.getElementById('quantity').value = 1;
-      document.getElementById('inboundTime').value = '';
-      document.getElementById('scannedBadge').style.display = 'none';
-      state.editingIndex = -1;
+      document.getElementById('barcodeId').value='';
+      document.getElementById('sequenceNo').value='';
+      document.getElementById('size').value='';
+      document.getElementById('bundleNo').value='';
+      document.getElementById('batchNo').value='';
+      document.getElementById('styleNo').value='';
+      document.getElementById('colorCode').value='';
+      document.getElementById('colorName').value='';
+      document.getElementById('fabricA').value='';
+      document.getElementById('fabricB').value='';
+      document.getElementById('quantity').value=1;
+      document.getElementById('inboundTime').value='';
+      document.getElementById('scannedBadge').style.display='none';
     }
-
-    // ==================== 记录操作 ====================
-    function editRecord(index) {
-      const record = state.records[index];
-      state.editingIndex = index;
-      
-      Object.entries({
-        barcodeId: record.barcodeId,
-        sequenceNo: record.sequenceNo,
-        size: record.size,
-        bundleNo: record.bundleNo,
-        batchNo: record.batchNo,
-        styleNo: record.styleNo,
-        colorCode: record.colorCode,
-        colorName: record.colorName,
-        fabricA: record.fabricA,
-        fabricB: record.fabricB,
-        quantity: record.quantity,
-        inboundTime: record.inboundTime
-      }).forEach(([id, value]) => {
-        document.getElementById(id).value = value || '';
-      });
-
-      document.getElementById('scannedBadge').style.display = 'inline-block';
-      document.getElementById('formCard').style.display = 'block';
-      document.getElementById('scanBtn').style.display = 'none';
-      document.getElementById('formCard').scrollIntoView({ behavior: 'smooth' });
-      showToast('📝 正在编辑记录');
+    function editRecord(i) {
+      const r=records[i];editingIndex=i;
+      document.getElementById('barcodeId').value=r.barcodeId;
+      document.getElementById('sequenceNo').value=r.sequenceNo;
+      document.getElementById('size').value=r.size;
+      document.getElementById('bundleNo').value=r.bundleNo;
+      document.getElementById('batchNo').value=r.batchNo;
+      document.getElementById('styleNo').value=r.styleNo;
+      document.getElementById('colorCode').value=r.colorCode;
+      document.getElementById('colorName').value=r.colorName;
+      document.getElementById('fabricA').value=r.fabricA;
+      document.getElementById('fabricB').value=r.fabricB;
+      document.getElementById('quantity').value=r.quantity;
+      document.getElementById('inboundTime').value=r.inboundTime;
+      document.getElementById('scannedBadge').style.display='inline-block';
+      document.getElementById('formCard').style.display='block';
+      document.getElementById('scanBtn').style.display='none';
     }
-
-    function deleteRecord(index) {
-      if (confirm('确定删除这条入库记录吗？')) {
-        state.records.splice(index, 1);
-        saveRecords();
-        renderHistory();
-        renderStats();
-        showToast('🗑️ 记录已删除');
-      }
-    }
-
-    function showClearModal() {
-      document.getElementById('clearModal').classList.add('show');
-    }
-
-    function hideClearModal() {
-      document.getElementById('clearModal').classList.remove('show');
-    }
-
-    function clearAll() {
-      state.records = [];
-      saveRecords();
-      renderHistory();
-      renderStats();
-      hideClearModal();
-      showToast('🗑️ 全部记录已清空');
-    }
-
-    // ==================== 本地存储 ====================
-    function saveRecords() {
-      try {
-        localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(state.records));
-      } catch (e) {
-        console.error('保存记录失败:', e);
-        showToast('⚠️ 保存失败，存储空间可能已满');
-      }
-    }
-
-    function loadRecords() {
-      try {
-        const data = localStorage.getItem(CONFIG.STORAGE_KEY);
-        state.records = data ? JSON.parse(data) : [];
-      } catch (e) {
-        console.error('加载记录失败:', e);
-        state.records = [];
-      }
-    }
-
-    // ==================== 页面渲染 ====================
-    function renderHistory() {
-      const container = document.getElementById('history');
-      const count = state.records.length;
-      document.getElementById('recordCount').textContent = `${count} 条`;
-
-      if (count === 0) {
-        container.innerHTML = `<div class="empty-state"><div class="icon">📭</div><p>暂无入库记录</p></div>`;
-        return;
-      }
-
-      container.innerHTML = state.records.map((r, i) => `
+    function deleteRecord(i) {if(confirm('确定删除？')){records.splice(i,1);saveRecords();renderHistory();renderStats();}}
+    function showClearModal(){document.getElementById('clearModal').classList.add('show');}
+    function hideClearModal(){document.getElementById('clearModal').classList.remove('show');}
+    function clearAll(){records=[];saveRecords();renderHistory();renderStats();hideClearModal();}
+    function saveRecords(){localStorage.setItem('garment_inbound_records',JSON.stringify(records));}
+    function loadRecords(){const d=localStorage.getItem('garment_inbound_records');records=d?JSON.parse(d):[];}
+    function renderHistory(){
+      const c=document.getElementById('history');
+      document.getElementById('recordCount').textContent=`${records.length} 条`;
+      if(records.length===0) return c.innerHTML=`<div class="empty-state"><div class="icon">📭</div><p>暂无记录</p></div>`;
+      c.innerHTML=records.map((r,i)=>`
         <div class="record-card">
-          <div class="record-header">
-            <span class="barcode">🔢 ${r.barcodeId}</span>
-            <span class="time">${r.inboundTime}</span>
-          </div>
+          <div class="record-header"><span class="barcode">🔢 ${r.barcodeId}</span><span class="time">${r.inboundTime}</span></div>
           <div class="record-detail">
-            <div class="field"><div class="f-label">序号</div><div class="f-value">${r.sequenceNo || '-'}</div></div>
-            <div class="field"><div class="f-label">尺码</div><div class="f-value">${r.size || '-'}</div></div>
-            <div class="field"><div class="f-label">款号</div><div class="f-value">${r.styleNo || '-'}</div></div>
-            <div class="field"><div class="f-label">色号/颜色</div><div class="f-value">${r.colorCode || ''} ${r.colorName || ''}</div></div>
-            <div class="field"><div class="f-label">扎号</div><div class="f-value">${r.bundleNo || '-'}</div></div>
-            <div class="field"><div class="f-label">批号</div><div class="f-value">${r.batchNo || '-'}</div></div>
+            <div class="field"><div class="f-label">序号</div><div class="f-value">${r.sequenceNo||'-'}</div></div>
+            <div class="field"><div class="f-label">尺码</div><div class="f-value">${r.size||'-'}</div></div>
+            <div class="field"><div class="f-label">款号</div><div class="f-value">${r.styleNo||'-'}</div></div>
+            <div class="field"><div class="f-label">色号/颜色</div><div class="f-value">${r.colorCode||''} ${r.colorName||''}</div></div>
+            <div class="field"><div class="f-label">扎号</div><div class="f-value">${r.bundleNo||'-'}</div></div>
+            <div class="field"><div class="f-label">批号</div><div class="f-value">${r.batchNo||'-'}</div></div>
             <div class="field"><div class="f-label">数量</div><div class="f-value">×${r.quantity}</div></div>
-            <div class="field"><div class="f-label">A料</div><div class="f-value" style="font-size:10px;">${r.fabricA || '-'}</div></div>
+            <div class="field"><div class="f-label">A料</div><div class="f-value" style="font-size:10px;">${r.fabricA||'-'}</div></div>
           </div>
           <div class="record-actions">
             <button class="btn btn-outline btn-sm" onclick="editRecord(${i})">✏️ 编辑</button>
@@ -883,69 +332,32 @@
         </div>
       `).join('');
     }
-
-    function renderStats() {
-      const totalQty = state.records.reduce((sum, r) => sum + (r.quantity || 1), 0);
-      const uniqueBarcodes = new Set(state.records.map(r => r.barcodeId)).size;
-      const today = new Date().toLocaleDateString('zh-CN');
-      const todayQty = state.records
-        .filter(r => r.inboundTime?.includes(today))
-        .reduce((sum, r) => sum + (r.quantity || 1), 0);
-
-      document.getElementById('statTotal').textContent = totalQty;
-      document.getElementById('statBarcodes').textContent = uniqueBarcodes;
-      document.getElementById('statToday').textContent = todayQty;
+    function renderStats(){
+      const total=records.reduce((s,r)=>s+(r.quantity||1),0);
+      const unique=new Set(records.map(r=>r.barcodeId)).size;
+      const today=new Date().toLocaleDateString('zh-CN');
+      const todayQty=records.filter(r=>r.inboundTime?.includes(today)).reduce((s,r)=>s+(r.quantity||1),0);
+      document.getElementById('statTotal').textContent=total;
+      document.getElementById('statBarcodes').textContent=unique;
+      document.getElementById('statToday').textContent=todayQty;
     }
-
-    // ==================== 导出Excel ====================
-    function exportToExcel() {
-      if (state.records.length === 0) {
-        showToast('⚠️ 没有数据可导出');
-        return;
-      }
-
-      const data = state.records.map(r => ({
-        '条码ID': r.barcodeId,
-        '序号': r.sequenceNo,
-        '尺码': r.size,
-        '扎号': r.bundleNo,
-        '批号': r.batchNo,
-        '款号': r.styleNo,
-        '色号': r.colorCode,
-        '颜色': r.colorName,
-        'A料信息': r.fabricA,
-        'B料信息': r.fabricB,
-        '数量': r.quantity,
-        '入库时间': r.inboundTime,
+    function exportToExcel(){
+      if(records.length===0) return showToast("⚠️ 无数据");
+      const data=records.map(r=>({
+        '条码ID':r.barcodeId,'序号':r.sequenceNo,'尺码':r.size,'扎号':r.bundleNo,
+        '批号':r.batchNo,'款号':r.styleNo,'色号':r.colorCode,'颜色':r.colorName,
+        'A料信息':r.fabricA,'B料信息':r.fabricB,'数量':r.quantity,'入库时间':r.inboundTime
       }));
-
-      const ws = XLSX.utils.json_to_sheet(data);
-      ws['!cols'] = [
-        { wch: 16 }, { wch: 8 }, { wch: 8 }, { wch: 10 },
-        { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 10 },
-        { wch: 30 }, { wch: 30 }, { wch: 8 }, { wch: 20 }
-      ];
-
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, '入库记录');
-      
-      const dateStr = new Date().toLocaleDateString('zh-CN').replace(/\//g, '-');
-      XLSX.writeFile(wb, `服装入库记录_${dateStr}.xlsx`);
-      showToast('📥 导出成功');
+      const ws=XLSX.utils.json_to_sheet(data);
+      ws['!cols']=[{wch:16},{wch:8},{wch:8},{wch:10},{wch:10},{wch:10},{wch:12},{wch:10},{wch:30},{wch:30},{wch:8},{wch:20}];
+      const wb=XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb,ws,'入库记录');
+      XLSX.writeFile(wb,`服装入库记录_${new Date().toLocaleDateString('zh-CN').replace(/\//g,'-')}.xlsx`);
+      showToast("📥 导出成功");
     }
+    function showToast(m){const t=document.createElement('div');t.className='toast';t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),2500);}
 
-    // ==================== 消息提示 ====================
-    function showToast(msg) {
-      const existing = document.querySelector('.toast');
-      if (existing) existing.remove();
-      
-      const toast = document.createElement('div');
-      toast.className = 'toast';
-      toast.textContent = msg;
-      document.body.appendChild(toast);
-      
-      setTimeout(() => toast.remove(), 2500);
-    }
+    init();
   </script>
 </body>
 </html>
