@@ -3,740 +3,851 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>服装扫码入库</title>
-  
+  <title>服装扫码入库系统</title>
   <link rel="manifest" href="manifest.json">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="服装入库">
+  <meta name="apple-mobile-web-app-title" content="扫码入库">
   <meta name="theme-color" content="#1e293b">
   
+  <!-- SheetJS 用于导出 xlsx -->
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js">
+  </script>
+  <!-- html5-qrcode 扫码库 -->
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js">
+  </script>
+  
   <style>
+    :root {
+      --bg: #f0f2f5;
+      --card: #ffffff;
+      --primary: #3b82f6;
+      --success: #10b981;
+      --danger: #ef4444;
+      --text: #1e293b;
+      --text-secondary: #64748b;
+      --border: #e2e8f0;
+      --input-bg: #f8fafc;
+      --shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
+
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      padding: 12px;
-      max-width: 500px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 16px;
+      max-width: 480px;
       margin: 0 auto;
-      background: #f1f5f9;
       min-height: 100vh;
-      color: #1e293b;
+      padding-bottom: 40px;
     }
-    
-    /* 顶部栏 */
+
+    /* 头部 */
     .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 12px;
+      text-align: center;
+      padding: 20px 0 16px;
     }
-    .header h2 { font-size: 20px; }
-    .sync-badge {
-      padding: 4px 10px;
-      border-radius: 12px;
-      font-size: 12px;
-      font-weight: 600;
+    .header h1 {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text);
     }
-    .sync-online { background: #d1fae5; color: #065f46; }
-    .sync-offline { background: #fee2e2; color: #991b1b; }
-    .sync-syncing { background: #fef3c7; color: #92400e; }
-    
+    .header .subtitle {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+
     /* 按钮 */
     .btn {
+      display: block;
       width: 100%;
-      padding: 13px;
+      padding: 14px;
       font-size: 16px;
-      border: none;
-      border-radius: 10px;
-      margin: 6px 0;
       font-weight: 600;
+      border: none;
+      border-radius: 12px;
       cursor: pointer;
-      transition: all 0.15s;
+      transition: all 0.2s;
+      text-align: center;
     }
     .btn:active { transform: scale(0.97); opacity: 0.85; }
-    .btn-primary { background: #3b82f6; color: #fff; }
-    .btn-success { background: #10b981; color: #fff; }
-    .btn-outline { background: #fff; color: #3b82f6; border: 2px solid #3b82f6; }
-    .btn-danger { background: #fff; color: #ef4444; border: 2px solid #fca5a5; }
     
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-success { background: var(--success); color: #fff; }
+    .btn-outline {
+      background: var(--card);
+      color: var(--primary);
+      border: 2px solid var(--primary);
+    }
+    .btn-danger {
+      background: var(--card);
+      color: var(--danger);
+      border: 2px solid #fca5a5;
+    }
+    .btn-sm {
+      padding: 8px 16px;
+      font-size: 13px;
+      width: auto;
+      display: inline-block;
+    }
+
     /* 扫码区域 */
     #reader {
       width: 100%;
-      border-radius: 10px;
+      border-radius: 12px;
       overflow: hidden;
-      margin: 10px 0;
+      margin: 12px 0;
+      border: 2px solid var(--primary);
       display: none;
-      border: 2px solid #3b82f6;
     }
-    
+    #reader video { border-radius: 12px; }
+
     /* 卡片 */
     .card {
-      background: #fff;
-      padding: 14px;
-      border-radius: 10px;
-      margin: 10px 0;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+      background: var(--card);
+      padding: 16px;
+      border-radius: 12px;
+      margin: 12px 0;
+      box-shadow: var(--shadow);
     }
-    
-    /* 服装信息表格 */
-    .info-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
+    .card-title {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
       gap: 8px;
-      font-size: 14px;
     }
-    .info-item {
-      background: #f8fafc;
-      padding: 10px 12px;
-      border-radius: 8px;
+
+    /* 表单 */
+    .form-group {
+      margin-bottom: 12px;
     }
-    .info-item .label {
-      font-size: 11px;
-      color: #94a3b8;
+    .form-group label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 4px;
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
-    .info-item .value {
-      font-weight: 700;
-      font-size: 16px;
-      margin-top: 2px;
-    }
-    .info-item .value.code { font-family: 'SF Mono', monospace; font-size: 13px; color: #64748b; }
-    
-    .not-found {
-      text-align: center;
-      color: #ef4444;
-      font-weight: 600;
-      padding: 20px;
-    }
-    
-    /* 数量控制 */
-    .qty-row {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin: 10px 0;
-    }
-    .qty-row label {
-      font-weight: 600;
-      font-size: 14px;
-      white-space: nowrap;
-    }
-    .qty-row input {
-      flex: 1;
-      padding: 12px;
-      font-size: 18px;
-      border: 2px solid #e2e8f0;
-      border-radius: 10px;
-      text-align: center;
-      font-weight: 700;
-    }
-    .qty-btn {
-      width: 44px;
-      height: 44px;
-      font-size: 22px;
-      border: 2px solid #e2e8f0;
-      border-radius: 10px;
-      background: #fff;
-      cursor: pointer;
-      font-weight: 700;
-      color: #3b82f6;
-    }
-    
-    /* 历史记录 */
-    .section-title {
-      font-size: 16px;
-      font-weight: 700;
-      margin: 16px 0 8px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .record-card {
-      background: #fff;
+    .form-group input,
+    .form-group select {
+      width: 100%;
       padding: 12px 14px;
-      margin: 6px 0;
-      border-radius: 10px;
-      font-size: 13px;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .record-left .sku {
-      font-weight: 700;
       font-size: 15px;
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      background: var(--input-bg);
+      color: var(--text);
+      transition: border-color 0.2s;
     }
-    .record-left .sku-code {
-      color: #94a3b8;
-      font-family: monospace;
+    .form-group input:focus,
+    .form-group select:focus {
+      outline: none;
+      border-color: var(--primary);
+      background: #fff;
+    }
+    .form-group input[readonly] {
+      background: #e8ecf2;
+      color: #6b7280;
+      font-family: 'SF Mono', 'Consolas', monospace;
+      letter-spacing: 0.5px;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .form-row-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+    }
+
+    /* 扫描结果高亮 */
+    .scanned-badge {
+      display: inline-block;
+      background: #d1fae5;
+      color: #065f46;
+      padding: 2px 8px;
+      border-radius: 6px;
       font-size: 11px;
+      font-weight: 600;
+      margin-left: 6px;
     }
-    .record-right {
-      text-align: right;
-    }
-    .record-right .qty {
-      font-weight: 700;
-      font-size: 18px;
-      color: #10b981;
-    }
-    .record-right .time {
-      font-size: 11px;
-      color: #cbd5e1;
-    }
-    .delete-btn {
-      background: none;
-      border: none;
-      color: #f87171;
-      font-size: 18px;
-      cursor: pointer;
-      padding: 4px 8px;
-    }
-    
-    .empty-state {
-      text-align: center;
-      color: #94a3b8;
-      padding: 32px;
-      font-size: 14px;
-    }
-    
-    /* 底部操作 */
-    .bottom-actions {
-      display: flex;
-      gap: 8px;
-      margin: 14px 0;
-    }
-    .bottom-actions .btn {
-      flex: 1;
-      font-size: 13px;
-      padding: 10px;
-    }
-    
-    /* 统计 */
+
+    /* 统计区 */
     .stats {
       display: flex;
       gap: 8px;
-      margin-bottom: 10px;
+      margin: 12px 0;
     }
     .stat-item {
       flex: 1;
-      background: #fff;
-      padding: 10px;
-      border-radius: 8px;
+      background: var(--card);
+      padding: 12px;
+      border-radius: 10px;
       text-align: center;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+      box-shadow: var(--shadow);
     }
     .stat-item .num {
-      font-size: 24px;
+      font-size: 26px;
       font-weight: 800;
-      color: #3b82f6;
+      color: var(--primary);
     }
     .stat-item .lbl {
       font-size: 11px;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    /* 记录列表 */
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 20px 0 10px;
+    }
+    .section-header h3 {
+      font-size: 16px;
+      font-weight: 700;
+    }
+    .section-header span {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .record-card {
+      background: var(--card);
+      padding: 14px;
+      margin: 8px 0;
+      border-radius: 10px;
+      box-shadow: var(--shadow);
+      position: relative;
+    }
+    .record-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 8px;
+    }
+    .record-header .barcode {
+      font-family: 'SF Mono', 'Consolas', monospace;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--primary);
+    }
+    .record-header .time {
+      font-size: 11px;
       color: #94a3b8;
     }
+    .record-detail {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+      font-size: 12px;
+    }
+    .record-detail .field {
+      background: var(--input-bg);
+      padding: 6px 8px;
+      border-radius: 6px;
+    }
+    .record-detail .field .f-label {
+      color: var(--text-secondary);
+      font-size: 10px;
+    }
+    .record-detail .field .f-value {
+      font-weight: 600;
+      margin-top: 2px;
+    }
+    .record-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+      justify-content: flex-end;
+    }
+
+    .empty-state {
+      text-align: center;
+      color: #94a3b8;
+      padding: 40px 20px;
+    }
+    .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+    .empty-state p { font-size: 14px; }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1e293b;
+      color: #fff;
+      padding: 12px 24px;
+      border-radius: 25px;
+      font-size: 14px;
+      font-weight: 600;
+      z-index: 9999;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      animation: fadeInOut 2.5s forwards;
+      white-space: nowrap;
+    }
+    @keyframes fadeInOut {
+      0% { opacity: 0; transform: translateX(-50%) translateY(20px); }
+      15% { opacity: 1; transform: translateX(-50%) translateY(0); }
+      70% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+
+    /* 关闭扫码按钮 */
+    .close-scan {
+      text-align: center;
+      margin-top: 8px;
+      display: none;
+    }
+
+    /* 删除确认 */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 999;
+      justify-content: center;
+      align-items: center;
+    }
+    .modal-overlay.show { display: flex; }
+    .modal {
+      background: #fff;
+      padding: 24px;
+      border-radius: 16px;
+      text-align: center;
+      margin: 0 20px;
+      max-width: 350px;
+      width: 100%;
+    }
+    .modal h4 { margin-bottom: 8px; }
+    .modal p { color: var(--text-secondary); font-size: 14px; margin-bottom: 16px; }
+    .modal .modal-actions {
+      display: flex;
+      gap: 10px;
+    }
+    .modal .modal-actions .btn { flex: 1; }
   </style>
 </head>
 <body>
 
+  <!-- 头部 -->
   <div class="header">
-    <h2>👕 服装扫码入库</h2>
-    <span id="syncStatus" class="sync-badge sync-syncing">⏳ 同步中</span>
+    <h1>👕 服装扫码入库系统</h1>
+    <div class="subtitle">扫码 → 录入 → 保存 → 导出</div>
   </div>
-  
-  <!-- 扫码器 -->
-  <button class="btn btn-primary" onclick="startScan()" id="scanBtn">📷 扫码入库</button>
-  <button class="btn btn-outline" onclick="stopScan()" id="stopBtn" style="display:none;">✕ 关闭扫码</button>
+
+  <!-- 扫码按钮 -->
+  <button class="btn btn-primary" onclick="startScan()" id="scanBtn">
+    📷 扫码入库
+  </button>
+  <div class="close-scan" id="closeScanArea">
+    <button class="btn btn-outline btn-sm" onclick="stopScan()">✕ 关闭扫码</button>
+  </div>
   <div id="reader"></div>
-  
-  <!-- 扫描结果 -->
-  <div id="scanResult" style="display:none;">
-    <div class="card" id="resultCard">
-      <!-- 动态渲染 -->
+
+  <!-- 录入表单 -->
+  <div class="card" id="formCard" style="display:none;">
+    <div class="card-title">
+      📝 入库信息录入
+      <span class="scanned-badge" id="scannedBadge" style="display:none;">已扫码</span>
     </div>
-    <div class="qty-row">
-      <label>入库数量</label>
-      <button class="qty-btn" onclick="changeQty(-1)">−</button>
-      <input type="number" id="quantity" value="1" min="1" onchange="validateQty()">
-      <button class="qty-btn" onclick="changeQty(1)">+</button>
+
+    <!-- 条码 ID（自动填充，只读） -->
+    <div class="form-group">
+      <label>🔢 条码 ID</label>
+      <input type="text" id="barcodeId" readonly placeholder="扫码后自动填充">
     </div>
-    <button class="btn btn-success" onclick="submitInbound()">✅ 确认入库</button>
+
+    <!-- 序号 + 尺码 -->
+    <div class="form-row">
+      <div class="form-group">
+        <label>📋 序号</label>
+        <select id="sequenceNo">
+          <option value="">请选择</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>📏 尺码</label>
+        <select id="size">
+          <option value="">请选择</option>
+          <option value="XS">XS</option>
+          <option value="S">S</option>
+          <option value="M">M</option>
+          <option value="L">L</option>
+          <option value="XL">XL</option>
+          <option value="2XL">2XL</option>
+          <option value="3XL">3XL</option>
+          <option value="4XL">4XL</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- 扎号 + 批号 + 款号 -->
+    <div class="form-row-3">
+      <div class="form-group">
+        <label>🏷️ 扎号</label>
+        <input type="text" id="bundleNo" placeholder="扎号">
+      </div>
+      <div class="form-group">
+        <label>📦 批号</label>
+        <input type="text" id="batchNo" placeholder="批号">
+      </div>
+      <div class="form-group">
+        <label>👔 款号</label>
+        <input type="text" id="styleNo" placeholder="款号">
+      </div>
+    </div>
+
+    <!-- 色号 + 颜色 -->
+    <div class="form-row">
+      <div class="form-group">
+        <label>🎨 色号</label>
+        <input type="text" id="colorCode" placeholder="如：02-269">
+      </div>
+      <div class="form-group">
+        <label>🖌️ 颜色</label>
+        <input type="text" id="colorName" placeholder="如：花灰">
+      </div>
+    </div>
+
+    <!-- 面料 A/B -->
+    <div class="form-group">
+      <label>🧵 A料信息</label>
+      <input type="text" id="fabricA" placeholder="如：02-269 花灰:05PB001A19直">
+    </div>
+    <div class="form-group">
+      <label>🧵 B料信息</label>
+      <input type="text" id="fabricB" placeholder="B料信息（如无则不填）">
+    </div>
+
+    <!-- 数量 + 入库时间 -->
+    <div class="form-row">
+      <div class="form-group">
+        <label>📊 数量</label>
+        <input type="number" id="quantity" value="1" min="1">
+      </div>
+      <div class="form-group">
+        <label>🕐 入库时间</label>
+        <input type="text" id="inboundTime" readonly placeholder="自动生成">
+      </div>
+    </div>
+
+    <button class="btn btn-success" onclick="submitInbound()">
+      ✅ 确认入库
+    </button>
   </div>
-  
+
   <!-- 统计 -->
-  <div class="stats" id="statsArea" style="display:none;">
+  <div class="stats">
     <div class="stat-item">
       <div class="num" id="statTotal">0</div>
       <div class="lbl">总件数</div>
     </div>
     <div class="stat-item">
-      <div class="num" id="statSKU">0</div>
-      <div class="lbl">SKU 数</div>
+      <div class="num" id="statBarcodes">0</div>
+      <div class="lbl">已录入条码</div>
     </div>
     <div class="stat-item">
       <div class="num" id="statToday">0</div>
       <div class="lbl">今日入库</div>
     </div>
   </div>
-  
-  <!-- 历史记录 -->
-  <div class="section-title">
-    <span>📋 入库记录</span>
-    <span style="font-weight:normal;color:#94a3b8;font-size:13px;" id="recordCount">0条</span>
+
+  <!-- 记录列表 -->
+  <div class="section-header">
+    <h3>📋 入库记录</h3>
+    <span id="recordCount">0 条</span>
   </div>
   <div id="history"></div>
-  
-  <div class="bottom-actions">
-    <button class="btn btn-outline" onclick="exportData()">📤 导出 CSV</button>
-    <button class="btn btn-danger" onclick="clearAll()">🗑 清空</button>
+
+  <!-- 底部操作 -->
+  <div style="display:flex;gap:10px;margin-top:16px;">
+    <button class="btn btn-outline" onclick="exportToExcel()" style="flex:1;">
+      📥 导出表格 (.xlsx)
+    </button>
+    <button class="btn btn-danger" onclick="showClearModal()" style="flex:1;">
+      🗑️ 清空记录
+    </button>
   </div>
 
-  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <!-- 清空确认弹窗 -->
+  <div class="modal-overlay" id="clearModal">
+    <div class="modal">
+      <h4>⚠️ 确认清空</h4>
+      <p>此操作将删除全部入库记录，不可恢复。建议先导出备份。</p>
+      <div class="modal-actions">
+        <button class="btn btn-outline btn-sm" onclick="hideClearModal()">取消</button>
+        <button class="btn btn-danger btn-sm" onclick="clearAll()">确认清空</button>
+      </div>
+    </div>
+  </div>
+
   <script>
-    // ========== 配置 ==========
-    const API_BASE = 'https://scan-api.1612952561.workers.dev/';  // ← 改成你的 Worker 网址
-    
-    // ========== 服装商品主表 ==========
-    // 条码规则：款号(6位)+色号(3位)+尺码(3位) = 12位
-    // 例如：AW2401-001-L00 → AW2401001L00
-    const PRODUCTS = {
-      // 示例商品
-      'AW2401BLKS00': {
-        styleNo: 'AW2401',        // 款号
-        name: '韩版宽松卫衣',
-        brand: '自有品牌',
-        color: '黑色',
-        colorCode: 'BLK',
-        size: 'S',
-        category: '上衣',
-        season: '秋',
-        price: 299
-      },
-      'AW2401BLKM00': {
-        styleNo: 'AW2401',
-        name: '韩版宽松卫衣',
-        brand: '自有品牌',
-        color: '黑色',
-        colorCode: 'BLK',
-        size: 'M',
-        category: '上衣',
-        season: '秋',
-        price: 299
-      },
-      'AW2401WHTL00': {
-        styleNo: 'AW2401',
-        name: '韩版宽松卫衣',
-        brand: '自有品牌',
-        color: '白色',
-        colorCode: 'WHT',
-        size: 'L',
-        category: '上衣',
-        season: '秋',
-        price: 299
-      },
-      'SS2402BLUM00': {
-        styleNo: 'SS2402',
-        name: '直筒休闲裤',
-        brand: '代理品牌A',
-        color: '深蓝',
-        colorCode: 'BLU',
-        size: 'M',
-        category: '裤子',
-        season: '春',
-        price: 399
-      },
-      'SS2403REDL00': {
-        styleNo: 'SS2403',
-        name: 'A字连衣裙',
-        brand: '自有品牌',
-        color: '红色',
-        colorCode: 'RED',
-        size: 'L',
-        category: '裙子',
-        season: '夏',
-        price: 499
-      },
-      // 添加更多你的商品...
-    };
-
-    // ========== 状态 ==========
+    // ==================== 全局状态 ====================
     let html5QrCode = null;
-    let lastScannedCode = '';
-    let lastScannedProduct = null;
     let records = [];
-    let localQueue = [];
-    let cloudSha = null;
-    let syncStatus = 'syncing';
+    let editingIndex = -1; // -1 表示新增模式
 
-    // ========== API 调用 ==========
-    async function fetchData() {
-      const res = await fetch(`${API_BASE}/data`);
-      if (!res.ok) throw new Error('Fetch failed');
-      const data = await res.json();
-      cloudSha = data._sha;
-      return data.records || [];
+    // 序号选项（动态生成 1-200，可根据实际调整）
+    const SEQUENCE_OPTIONS = Array.from({ length: 200 }, (_, i) => i + 1);
+
+    // ==================== 初始化 ====================
+    function init() {
+      loadRecords();
+      populateSequenceOptions();
+      renderHistory();
+      renderStats();
     }
 
-    async function pushData(records, sha) {
-      const res = await fetch(`${API_BASE}/data`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ records, sha: sha || cloudSha }),
+    function populateSequenceOptions() {
+      const select = document.getElementById('sequenceNo');
+      SEQUENCE_OPTIONS.forEach(num => {
+        const option = document.createElement('option');
+        option.value = num;
+        option.textContent = num;
+        select.appendChild(option);
       });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || 'Push failed');
-      }
-      const data = await res.json();
-      if (data.sha) cloudSha = data.sha;
     }
 
-    // ========== 同步 ==========
-    function updateSyncUI(status) {
-      syncStatus = status;
-      const el = document.getElementById('syncStatus');
-      switch(status) {
-        case 'online':
-          el.className = 'sync-badge sync-online';
-          el.textContent = '☁️ 已同步';
-          break;
-        case 'syncing':
-          el.className = 'sync-badge sync-syncing';
-          el.textContent = '⏳ 同步中';
-          break;
-        case 'offline':
-          el.className = 'sync-badge sync-offline';
-          el.textContent = '⚠️ 未同步';
-          break;
-      }
-    }
-
-    async function syncWithCloud() {
-      updateSyncUI('syncing');
-      try {
-        const cloudRecords = await fetchData();
-        
-        // 合并：去重 + 本地未同步优先
-        const mergedMap = {};
-        cloudRecords.forEach(r => mergedMap[r.id] = r);
-        localQueue.forEach(r => mergedMap[r.id] = r);
-
-        const merged = Object.values(mergedMap).sort((a, b) => b.id - a.id);
-        
-        // 如果有本地未同步数据，推送到云端
-        const cloudIds = new Set(cloudRecords.map(r => r.id));
-        const newLocal = localQueue.filter(r => !cloudIds.has(r.id));
-        
-        if (newLocal.length > 0) {
-          const uploadData = [...cloudRecords, ...newLocal];
-          await pushData(uploadData, cloudSha);
-        }
-        
-        records = merged;
-        localQueue = [];
-        saveLocal();
-        updateSyncUI('online');
-        renderAll();
-      } catch (err) {
-        console.error('同步失败:', err);
-        updateSyncUI('offline');
-        if (records.length === 0) {
-          records = getLocalCache();
-          renderAll();
-        }
-      }
-    }
-
-    function saveLocal() {
-      localStorage.setItem('garment_queue', JSON.stringify(localQueue));
-      localStorage.setItem('garment_cache', JSON.stringify(records));
-    }
-
-    function loadLocal() {
-      localQueue = JSON.parse(localStorage.getItem('garment_queue') || '[]');
-    }
-
-    function getLocalCache() {
-      return JSON.parse(localStorage.getItem('garment_cache') || '[]');
-    }
-
-    // ========== 扫码 ==========
+    // ==================== 扫码 ====================
     async function startScan() {
       try {
         document.getElementById('reader').style.display = 'block';
         document.getElementById('scanBtn').style.display = 'none';
-        document.getElementById('stopBtn').style.display = 'block';
-        document.getElementById('scanResult').style.display = 'none';
+        document.getElementById('closeScanArea').style.display = 'block';
 
         html5QrCode = new Html5Qrcode("reader");
+        const config = {
+          fps: 10,
+          qrbox: { width: 280, height: 200 },
+          aspectRatio: 1.0,
+        };
+
         await html5QrCode.start(
           { facingMode: "environment" },
-          { fps: 10, qrbox: { width: 260, height: 180 } },
-          (decodedText) => {
-            if (decodedText === lastScannedCode) return;
-            lastScannedCode = decodedText.trim();
-            lastScannedProduct = PRODUCTS[lastScannedCode] || null;
-            
-            if (html5QrCode) {
-              html5QrCode.stop().then(() => {
-                document.getElementById('reader').style.display = 'none';
-              });
-            }
-            document.getElementById('scanBtn').style.display = 'block';
-            document.getElementById('stopBtn').style.display = 'none';
-            
-            showScanResult();
-            if (navigator.vibrate) navigator.vibrate(50);
-          },
-          () => {}
+          config,
+          onScanSuccess,
+          onScanFailure
         );
       } catch (err) {
-        alert('摄像头启动失败: ' + err.message);
-        document.getElementById('scanBtn').style.display = 'block';
-        document.getElementById('stopBtn').style.display = 'none';
+        showToast('⚠️ 摄像头启动失败: ' + err.message);
+        resetScanUI();
       }
+    }
+
+    function onScanSuccess(decodedText) {
+      // 取扫描到的条码
+      const barcode = decodedText.trim();
+      
+      // 关闭扫码
+      stopScan();
+      resetScanUI();
+
+      // 填充条码 ID
+      document.getElementById('barcodeId').value = barcode;
+      document.getElementById('scannedBadge').style.display = 'inline-block';
+      
+      // 自动填充入库时间
+      document.getElementById('inboundTime').value = new Date().toLocaleString('zh-CN');
+      
+      // 显示表单
+      document.getElementById('formCard').style.display = 'block';
+      document.getElementById('scanBtn').style.display = 'none';
+      
+      // 滚动到表单
+      document.getElementById('formCard').scrollIntoView({ behavior: 'smooth' });
+
+      // 震动反馈
+      if (navigator.vibrate) navigator.vibrate(50);
+      
+      showToast('✅ 扫码成功');
+    }
+
+    function onScanFailure(error) {
+      // 扫描失败是常态，不处理
     }
 
     function stopScan() {
       if (html5QrCode) {
         html5QrCode.stop().then(() => {
           document.getElementById('reader').style.display = 'none';
-        });
+        }).catch(() => {});
       }
+    }
+
+    function resetScanUI() {
       document.getElementById('scanBtn').style.display = 'block';
-      document.getElementById('stopBtn').style.display = 'none';
+      document.getElementById('closeScanArea').style.display = 'none';
     }
 
-    function showScanResult() {
-      const card = document.getElementById('resultCard');
-      const p = lastScannedProduct;
+    // ==================== 提交入库 ====================
+    function submitInbound() {
+      const barcodeId = document.getElementById('barcodeId').value.trim();
       
-      if (p) {
-        card.innerHTML = `
-          <div class="info-grid">
-            <div class="info-item">
-              <div class="label">款号</div>
-              <div class="value code">${p.styleNo}</div>
-            </div>
-            <div class="info-item">
-              <div class="label">品名</div>
-              <div class="value">${p.name}</div>
-            </div>
-            <div class="info-item">
-              <div class="label">品牌</div>
-              <div class="value">${p.brand}</div>
-            </div>
-            <div class="info-item">
-              <div class="label">品类</div>
-              <div class="value">${p.category}</div>
-            </div>
-            <div class="info-item">
-              <div class="label">颜色</div>
-              <div class="value">${p.color} <span style="font-size:11px;color:#94a3b8;">${p.colorCode}</span></div>
-            </div>
-            <div class="info-item">
-              <div class="label">尺码</div>
-              <div class="value">${p.size}</div>
-            </div>
-            <div class="info-item">
-              <div class="label">季节</div>
-              <div class="value">${p.season}季</div>
-            </div>
-            <div class="info-item">
-              <div class="label">吊牌价</div>
-              <div class="value" style="color:#ef4444;">¥${p.price}</div>
-            </div>
-          </div>
-        `;
-      } else {
-        card.innerHTML = `
-          <div class="not-found">
-            ❌ 未找到该条码<br>
-            <span style="font-size:12px;font-family:monospace;">${lastScannedCode}</span><br>
-            <span style="font-size:12px;color:#94a3b8;">请在 PRODUCTS 中添加此商品</span>
-          </div>
-        `;
-      }
-      
-      document.getElementById('scanResult').style.display = 'block';
-      document.getElementById('quantity').value = 1;
-      document.getElementById('scanResult').scrollIntoView({ behavior: 'smooth' });
-    }
-
-    function changeQty(delta) {
-      const input = document.getElementById('quantity');
-      input.value = Math.max(1, (parseInt(input.value) || 1) + delta);
-    }
-
-    function validateQty() {
-      if (parseInt(document.getElementById('quantity').value) < 1) {
-        document.getElementById('quantity').value = 1;
-      }
-    }
-
-    // ========== 提交入库 ==========
-    async function submitInbound() {
-      if (!lastScannedCode) { alert('请先扫码'); return; }
-      
-      const quantity = parseInt(document.getElementById('quantity').value) || 1;
-      const p = lastScannedProduct || { styleNo: '未知', name: '未知商品', color: '', colorCode: '', size: '', brand: '', category: '', season: '', price: 0 };
-      
-      const record = {
-        id: Date.now(),
-        code: lastScannedCode,
-        styleNo: p.styleNo || '',
-        name: p.name || '未知商品',
-        color: p.color || '',
-        colorCode: p.colorCode || '',
-        size: p.size || '',
-        brand: p.brand || '',
-        category: p.category || '',
-        season: p.season || '',
-        price: p.price || 0,
-        quantity: quantity,
-        time: new Date().toLocaleString('zh-CN'),
-      };
-      
-      localQueue.push(record);
-      records.unshift(record);
-      saveLocal();
-      renderAll();
-      
-      try {
-        updateSyncUI('syncing');
-        await syncWithCloud();
-        showToast(`✅ ${record.name} ${record.color}/${record.size} ×${quantity} 入库成功`);
-      } catch (err) {
-        updateSyncUI('offline');
-        showToast(`⚠️ 已保存本地，等待同步`);
-      }
-      
-      lastScannedCode = '';
-      lastScannedProduct = null;
-      document.getElementById('scanResult').style.display = 'none';
-    }
-
-    // ========== 渲染 ==========
-    function renderAll() {
-      renderHistory();
-      renderStats();
-    }
-
-    function renderHistory() {
-      const container = document.getElementById('history');
-      document.getElementById('recordCount').textContent = `${records.length}条`;
-      
-      if (records.length === 0) {
-        container.innerHTML = '<div class="empty-state">📭 暂无入库记录</div>';
+      if (!barcodeId) {
+        showToast('⚠️ 请先扫码获取条码 ID');
         return;
       }
+
+      const record = {
+        id: editingIndex >= 0 ? records[editingIndex].id : Date.now(),
+        barcodeId: barcodeId,
+        sequenceNo: document.getElementById('sequenceNo').value,
+        size: document.getElementById('size').value,
+        bundleNo: document.getElementById('bundleNo').value.trim(),
+        batchNo: document.getElementById('batchNo').value.trim(),
+        styleNo: document.getElementById('styleNo').value.trim(),
+        colorCode: document.getElementById('colorCode').value.trim(),
+        colorName: document.getElementById('colorName').value.trim(),
+        fabricA: document.getElementById('fabricA').value.trim(),
+        fabricB: document.getElementById('fabricB').value.trim(),
+        quantity: parseInt(document.getElementById('quantity').value) || 1,
+        inboundTime: new Date().toLocaleString('zh-CN'),
+      };
+
+      if (editingIndex >= 0) {
+        // 编辑模式
+        records[editingIndex] = record;
+        editingIndex = -1;
+        showToast('✅ 记录已更新');
+      } else {
+        // 新增模式
+        records.unshift(record);
+        showToast('✅ 入库成功');
+      }
+
+      saveRecords();
+      resetForm();
+      renderHistory();
+      renderStats();
+      document.getElementById('formCard').style.display = 'none';
+      document.getElementById('scanBtn').style.display = 'block';
+    }
+
+    function resetForm() {
+      document.getElementById('barcodeId').value = '';
+      document.getElementById('sequenceNo').value = '';
+      document.getElementById('size').value = '';
+      document.getElementById('bundleNo').value = '';
+      document.getElementById('batchNo').value = '';
+      document.getElementById('styleNo').value = '';
+      document.getElementById('colorCode').value = '';
+      document.getElementById('colorName').value = '';
+      document.getElementById('fabricA').value = '';
+      document.getElementById('fabricB').value = '';
+      document.getElementById('quantity').value = 1;
+      document.getElementById('inboundTime').value = '';
+      document.getElementById('scannedBadge').style.display = 'none';
+      editingIndex = -1;
+    }
+
+    // ==================== 编辑 & 删除 ====================
+    function editRecord(index) {
+      const record = records[index];
+      editingIndex = index;
+
+      document.getElementById('barcodeId').value = record.barcodeId;
+      document.getElementById('sequenceNo').value = record.sequenceNo;
+      document.getElementById('size').value = record.size;
+      document.getElementById('bundleNo').value = record.bundleNo;
+      document.getElementById('batchNo').value = record.batchNo;
+      document.getElementById('styleNo').value = record.styleNo;
+      document.getElementById('colorCode').value = record.colorCode;
+      document.getElementById('colorName').value = record.colorName;
+      document.getElementById('fabricA').value = record.fabricA;
+      document.getElementById('fabricB').value = record.fabricB;
+      document.getElementById('quantity').value = record.quantity;
+      document.getElementById('inboundTime').value = record.inboundTime;
+      document.getElementById('scannedBadge').style.display = 'inline-block';
+
+      document.getElementById('formCard').style.display = 'block';
+      document.getElementById('scanBtn').style.display = 'none';
+      document.getElementById('formCard').scrollIntoView({ behavior: 'smooth' });
       
+      showToast('📝 正在编辑记录');
+    }
+
+    function deleteRecord(index) {
+      if (confirm('确定删除这条入库记录吗？')) {
+        records.splice(index, 1);
+        saveRecords();
+        renderHistory();
+        renderStats();
+        showToast('🗑️ 记录已删除');
+      }
+    }
+
+    function showClearModal() {
+      document.getElementById('clearModal').classList.add('show');
+    }
+
+    function hideClearModal() {
+      document.getElementById('clearModal').classList.remove('show');
+    }
+
+    function clearAll() {
+      records = [];
+      saveRecords();
+      renderHistory();
+      renderStats();
+      hideClearModal();
+      showToast('🗑️ 全部记录已清空');
+    }
+
+    // ==================== 本地存储 ====================
+    function saveRecords() {
+      localStorage.setItem('garment_inbound_records', JSON.stringify(records));
+    }
+
+    function loadRecords() {
+      const data = localStorage.getItem('garment_inbound_records');
+      records = data ? JSON.parse(data) : [];
+    }
+
+    // ==================== 渲染 ====================
+    function renderHistory() {
+      const container = document.getElementById('history');
+      document.getElementById('recordCount').textContent = `${records.length} 条`;
+
+      if (records.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="icon">📭</div>
+            <p>暂无入库记录</p>
+            <p style="font-size:12px;margin-top:4px;">点击「扫码入库」开始</p>
+          </div>`;
+        return;
+      }
+
       container.innerHTML = records.map((r, i) => `
         <div class="record-card">
-          <div class="record-left">
-            <div class="sku">${r.name}</div>
-            <div class="sku-code">${r.styleNo} | ${r.color}/${r.size} | ${r.brand} | ${r.season}季</div>
+          <div class="record-header">
+            <span class="barcode">🔢 ${r.barcodeId}</span>
+            <span class="time">${r.inboundTime}</span>
           </div>
-          <div class="record-right">
-            <div class="qty">×${r.quantity}</div>
-            <div class="time">${r.time}</div>
+          <div class="record-detail">
+            <div class="field">
+              <div class="f-label">序号</div>
+              <div class="f-value">${r.sequenceNo || '-'}</div>
+            </div>
+            <div class="field">
+              <div class="f-label">尺码</div>
+              <div class="f-value">${r.size || '-'}</div>
+            </div>
+            <div class="field">
+              <div class="f-label">款号</div>
+              <div class="f-value">${r.styleNo || '-'}</div>
+            </div>
+            <div class="field">
+              <div class="f-label">色号/颜色</div>
+              <div class="f-value">${r.colorCode || ''} ${r.colorName || ''}</div>
+            </div>
+            <div class="field">
+              <div class="f-label">扎号</div>
+              <div class="f-value">${r.bundleNo || '-'}</div>
+            </div>
+            <div class="field">
+              <div class="f-label">批号</div>
+              <div class="f-value">${r.batchNo || '-'}</div>
+            </div>
+            <div class="field">
+              <div class="f-label">数量</div>
+              <div class="f-value">×${r.quantity}</div>
+            </div>
+            <div class="field">
+              <div class="f-label">A料</div>
+              <div class="f-value" style="font-size:10px;">${r.fabricA || '-'}</div>
+            </div>
           </div>
-          <button class="delete-btn" onclick="deleteRecord(${i})">✕</button>
+          <div class="record-actions">
+            <button class="btn btn-outline btn-sm" onclick="editRecord(${i})">✏️ 编辑</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteRecord(${i})">🗑️ 删除</button>
+          </div>
         </div>
       `).join('');
     }
 
     function renderStats() {
-      const totalQty = records.reduce((sum, r) => sum + r.quantity, 0);
-      const uniqueCodes = new Set(records.map(r => r.code)).size;
+      const totalQty = records.reduce((sum, r) => sum + (r.quantity || 1), 0);
+      const uniqueBarcodes = new Set(records.map(r => r.barcodeId)).size;
       
       const today = new Date().toLocaleDateString('zh-CN');
       const todayQty = records
-        .filter(r => r.time && r.time.includes(today))
-        .reduce((sum, r) => sum + r.quantity, 0);
-      
+        .filter(r => r.inboundTime && r.inboundTime.includes(today))
+        .reduce((sum, r) => sum + (r.quantity || 1), 0);
+
       document.getElementById('statTotal').textContent = totalQty;
-      document.getElementById('statSKU').textContent = uniqueCodes;
+      document.getElementById('statBarcodes').textContent = uniqueBarcodes;
       document.getElementById('statToday').textContent = todayQty;
-      document.getElementById('statsArea').style.display = records.length > 0 ? 'flex' : 'none';
     }
 
-    async function deleteRecord(index) {
-      if (!confirm('确定删除这条记录？')) return;
-      const deleted = records[index];
-      records.splice(index, 1);
-      localQueue = localQueue.filter(r => r.id !== deleted.id);
-      
-      try {
-        updateSyncUI('syncing');
-        await pushData(records, cloudSha);
-        updateSyncUI('online');
-      } catch (err) {
-        updateSyncUI('offline');
+    // ==================== 导出 Excel ====================
+    function exportToExcel() {
+      if (records.length === 0) {
+        showToast('⚠️ 没有数据可导出');
+        return;
       }
+
+      const data = records.map(r => ({
+        '条码ID': r.barcodeId,
+        '序号': r.sequenceNo,
+        '尺码': r.size,
+        '扎号': r.bundleNo,
+        '批号': r.batchNo,
+        '款号': r.styleNo,
+        '色号': r.colorCode,
+        '颜色': r.colorName,
+        'A料信息': r.fabricA,
+        'B料信息': r.fabricB,
+        '数量': r.quantity,
+        '入库时间': r.inboundTime,
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(data);
       
-      saveLocal();
-      renderAll();
+      // 设置列宽
+      ws['!cols'] = [
+        { wch: 16 }, { wch: 8 }, { wch: 8 }, { wch: 10 },
+        { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 10 },
+        { wch: 30 }, { wch: 30 }, { wch: 8 }, { wch: 20 },
+      ];
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, '入库记录');
+      
+      const fileName = `服装入库记录_${new Date().toLocaleDateString('zh-CN').replace(/\//g, '-')}.xlsx`;
+      XLSX.writeFile(wb, fileName);
+      
+      showToast('📥 导出成功');
     }
 
-    async function clearAll() {
-      if (records.length === 0) return;
-      if (!confirm('确定清空全部入库记录？云端数据也将被清除。')) return;
-      
-      records = [];
-      localQueue = [];
-      
-      try {
-        updateSyncUI('syncing');
-        await pushData([], cloudSha);
-        updateSyncUI('online');
-        showToast('🗑 已清空');
-      } catch (err) {
-        updateSyncUI('offline');
-        showToast('⚠️ 清空成功但同步失败');
-      }
-      
-      saveLocal();
-      renderAll();
-    }
-
-    function exportData() {
-      if (records.length === 0) { alert('没有数据'); return; }
-      
-      let csv = '款号,品名,品牌,品类,颜色,色号,尺码,季节,吊牌价,入库数量,时间\n';
-      records.forEach(r => {
-        csv += `${r.styleNo},${r.name},${r.brand},${r.category},${r.color},${r.colorCode},${r.size},${r.season},${r.price},${r.quantity},${r.time}\n`;
-      });
-      
-      const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = `服装入库记录_${new Date().toLocaleDateString('zh-CN')}.csv`;
-      a.click();
-    }
-
+    // ==================== Toast ====================
     function showToast(msg) {
+      const existing = document.querySelector('.toast');
+      if (existing) existing.remove();
+
       const toast = document.createElement('div');
+      toast.className = 'toast';
       toast.textContent = msg;
-      toast.style.cssText = `
-        position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
-        background: #1e293b; color: #fff; padding: 12px 22px;
-        border-radius: 25px; font-size: 14px; z-index: 9999;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-        animation: fadeInOut 2.5s forwards;
-      `;
       document.body.appendChild(toast);
+      
       setTimeout(() => toast.remove(), 2500);
     }
 
-    // ========== 初始化 ==========
-    async function init() {
-      loadLocal();
-      records = getLocalCache();
-      renderAll();
-      await syncWithCloud();
-    }
-
+    // ==================== 启动 ====================
     init();
   </script>
 </body>
