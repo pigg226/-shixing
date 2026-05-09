@@ -1,0 +1,18 @@
+{
+  "name": "扫码入库系统",
+  "short_name": "扫码入库",
+  "description": "简易扫码入库工具",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f9fafb",
+  "theme_color": "#3b82f6",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
