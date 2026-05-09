@@ -10,12 +10,10 @@
   <meta name="apple-mobile-web-app-title" content="扫码入库">
   <meta name="theme-color" content="#1e293b">
   
-  <!-- SheetJS 用于导出 xlsx -->
-  <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js">
-  </script>
-  <!-- html5-qrcode 扫码库 -->
-  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js">
-  </script>
+  <!-- SheetJS 导出 xlsx -->
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+  <!-- html5-qrcode 扫码 -->
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   
   <style>
     :root {
@@ -37,7 +35,7 @@
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
       background: var(--bg);
       color: var(--text);
-      padding: 16px;
+      padding: 12px;
       max-width: 480px;
       margin: 0 auto;
       min-height: 100vh;
@@ -47,24 +45,28 @@
     /* 头部 */
     .header {
       text-align: center;
-      padding: 20px 0 16px;
+      padding: 16px 0 12px;
     }
-    .header h1 {
-      font-size: 22px;
-      font-weight: 700;
-      color: var(--text);
+    .header h1 { font-size: 21px; font-weight: 700; }
+
+    /* 顶部三按钮 */
+    .top-btns {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 10px;
     }
-    .header .subtitle {
+    .top-btns .btn {
+      flex: 1;
       font-size: 13px;
-      color: var(--text-secondary);
-      margin-top: 4px;
+      padding: 11px 6px;
+      white-space: nowrap;
     }
 
     /* 按钮 */
     .btn {
       display: block;
       width: 100%;
-      padding: 14px;
+      padding: 13px;
       font-size: 16px;
       font-weight: 600;
       border: none;
@@ -74,24 +76,24 @@
       text-align: center;
     }
     .btn:active { transform: scale(0.97); opacity: 0.85; }
-    
     .btn-primary { background: var(--primary); color: #fff; }
     .btn-success { background: var(--success); color: #fff; }
-    .btn-outline {
-      background: var(--card);
-      color: var(--primary);
-      border: 2px solid var(--primary);
-    }
-    .btn-danger {
-      background: var(--card);
-      color: var(--danger);
-      border: 2px solid #fca5a5;
-    }
-    .btn-sm {
-      padding: 8px 16px;
-      font-size: 13px;
-      width: auto;
-      display: inline-block;
+    .btn-outline { background: var(--card); color: var(--primary); border: 2px solid var(--primary); }
+    .btn-install { background: #fff; color: #8b5cf6; border: 2px solid #8b5cf6; }
+    .btn-download { background: #fff; color: #f59e0b; border: 2px solid #f59e0b; }
+    .btn-danger { background: var(--card); color: var(--danger); border: 2px solid #fca5a5; }
+    .btn-sm { padding: 8px 14px; font-size: 13px; width: auto; display: inline-block; }
+
+    /* 安装引导提示 */
+    #installGuide {
+      display: none;
+      background: #fef3c7;
+      padding: 10px 12px;
+      border-radius: 10px;
+      margin-bottom: 10px;
+      text-align: center;
+      font-size: 12px;
+      color: #92400e;
     }
 
     /* 扫码区域 */
@@ -99,22 +101,28 @@
       width: 100%;
       border-radius: 12px;
       overflow: hidden;
-      margin: 12px 0;
+      margin: 10px 0;
       border: 2px solid var(--primary);
       display: none;
     }
-    #reader video { border-radius: 12px; }
+
+    /* 关闭扫码 */
+    .close-scan {
+      text-align: center;
+      margin-top: 6px;
+      display: none;
+    }
 
     /* 卡片 */
     .card {
       background: var(--card);
-      padding: 16px;
+      padding: 14px;
       border-radius: 12px;
-      margin: 12px 0;
+      margin: 10px 0;
       box-shadow: var(--shadow);
     }
     .card-title {
-      font-size: 16px;
+      font-size: 15px;
       font-weight: 700;
       margin-bottom: 12px;
       display: flex;
@@ -124,27 +132,26 @@
 
     /* 表单 */
     .form-group {
-      margin-bottom: 12px;
+      margin-bottom: 10px;
     }
     .form-group label {
       display: block;
-      font-size: 13px;
+      font-size: 12px;
       font-weight: 600;
       color: var(--text-secondary);
-      margin-bottom: 4px;
+      margin-bottom: 3px;
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
     .form-group input,
     .form-group select {
       width: 100%;
-      padding: 12px 14px;
+      padding: 11px 12px;
       font-size: 15px;
       border: 2px solid var(--border);
       border-radius: 10px;
       background: var(--input-bg);
       color: var(--text);
-      transition: border-color 0.2s;
     }
     .form-group input:focus,
     .form-group select:focus {
@@ -156,21 +163,12 @@
       background: #e8ecf2;
       color: #6b7280;
       font-family: 'SF Mono', 'Consolas', monospace;
-      letter-spacing: 0.5px;
     }
 
-    .form-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-    }
-    .form-row-3 {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 10px;
-    }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
 
-    /* 扫描结果高亮 */
+    /* 已扫码标记 */
     .scanned-badge {
       display: inline-block;
       background: #d1fae5;
@@ -179,57 +177,37 @@
       border-radius: 6px;
       font-size: 11px;
       font-weight: 600;
-      margin-left: 6px;
     }
 
-    /* 统计区 */
-    .stats {
-      display: flex;
-      gap: 8px;
-      margin: 12px 0;
-    }
+    /* 统计 */
+    .stats { display: flex; gap: 8px; margin: 10px 0; }
     .stat-item {
       flex: 1;
       background: var(--card);
-      padding: 12px;
+      padding: 10px;
       border-radius: 10px;
       text-align: center;
       box-shadow: var(--shadow);
     }
-    .stat-item .num {
-      font-size: 26px;
-      font-weight: 800;
-      color: var(--primary);
-    }
-    .stat-item .lbl {
-      font-size: 11px;
-      color: var(--text-secondary);
-      margin-top: 2px;
-    }
+    .stat-item .num { font-size: 24px; font-weight: 800; color: var(--primary); }
+    .stat-item .lbl { font-size: 11px; color: var(--text-secondary); }
 
     /* 记录列表 */
     .section-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin: 20px 0 10px;
+      margin: 16px 0 8px;
     }
-    .section-header h3 {
-      font-size: 16px;
-      font-weight: 700;
-    }
-    .section-header span {
-      font-size: 13px;
-      color: var(--text-secondary);
-    }
+    .section-header h3 { font-size: 15px; font-weight: 700; }
+    .section-header span { font-size: 12px; color: var(--text-secondary); }
 
     .record-card {
       background: var(--card);
-      padding: 14px;
-      margin: 8px 0;
+      padding: 12px;
+      margin: 6px 0;
       border-radius: 10px;
       box-shadow: var(--shadow);
-      position: relative;
     }
     .record-header {
       display: flex;
@@ -243,43 +221,30 @@
       font-weight: 700;
       color: var(--primary);
     }
-    .record-header .time {
-      font-size: 11px;
-      color: #94a3b8;
-    }
+    .record-header .time { font-size: 11px; color: #94a3b8; }
     .record-detail {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 6px;
-      font-size: 12px;
+      gap: 5px;
+      font-size: 11px;
     }
     .record-detail .field {
       background: var(--input-bg);
-      padding: 6px 8px;
+      padding: 5px 7px;
       border-radius: 6px;
     }
-    .record-detail .field .f-label {
-      color: var(--text-secondary);
-      font-size: 10px;
-    }
-    .record-detail .field .f-value {
-      font-weight: 600;
-      margin-top: 2px;
-    }
+    .record-detail .f-label { color: var(--text-secondary); font-size: 10px; }
+    .record-detail .f-value { font-weight: 600; margin-top: 1px; }
     .record-actions {
       display: flex;
-      gap: 8px;
-      margin-top: 10px;
+      gap: 6px;
+      margin-top: 8px;
       justify-content: flex-end;
     }
 
-    .empty-state {
-      text-align: center;
-      color: #94a3b8;
-      padding: 40px 20px;
-    }
-    .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
-    .empty-state p { font-size: 14px; }
+    /* 空状态 */
+    .empty-state { text-align: center; color: #94a3b8; padding: 36px; }
+    .empty-state .icon { font-size: 42px; margin-bottom: 8px; }
 
     /* Toast */
     .toast {
@@ -289,7 +254,7 @@
       transform: translateX(-50%);
       background: #1e293b;
       color: #fff;
-      padding: 12px 24px;
+      padding: 12px 22px;
       border-radius: 25px;
       font-size: 14px;
       font-weight: 600;
@@ -305,14 +270,7 @@
       100% { opacity: 0; }
     }
 
-    /* 关闭扫码按钮 */
-    .close-scan {
-      text-align: center;
-      margin-top: 8px;
-      display: none;
-    }
-
-    /* 删除确认 */
+    /* 清空弹窗 */
     .modal-overlay {
       display: none;
       position: fixed;
@@ -325,19 +283,16 @@
     .modal-overlay.show { display: flex; }
     .modal {
       background: #fff;
-      padding: 24px;
+      padding: 22px;
       border-radius: 16px;
       text-align: center;
       margin: 0 20px;
-      max-width: 350px;
+      max-width: 330px;
       width: 100%;
     }
-    .modal h4 { margin-bottom: 8px; }
-    .modal p { color: var(--text-secondary); font-size: 14px; margin-bottom: 16px; }
-    .modal .modal-actions {
-      display: flex;
-      gap: 10px;
-    }
+    .modal h4 { margin-bottom: 6px; }
+    .modal p { color: var(--text-secondary); font-size: 13px; margin-bottom: 14px; }
+    .modal .modal-actions { display: flex; gap: 8px; }
     .modal .modal-actions .btn { flex: 1; }
   </style>
 </head>
@@ -346,16 +301,32 @@
   <!-- 头部 -->
   <div class="header">
     <h1>👕 服装扫码入库系统</h1>
-    <div class="subtitle">扫码 → 录入 → 保存 → 导出</div>
   </div>
 
-  <!-- 扫码按钮 -->
-  <button class="btn btn-primary" onclick="startScan()" id="scanBtn">
-    📷 扫码入库
-  </button>
+  <!-- 安装引导（iOS 等不支持的浏览器显示） -->
+  <div id="installGuide">
+    💡 点击 <b>分享</b> → 滑动找到 <b>「添加到主屏幕」</b> 即可安装
+  </div>
+
+  <!-- 顶部三按钮：扫码 / 下载 / 安装 -->
+  <div class="top-btns">
+    <button class="btn btn-primary" onclick="startScan()" id="scanBtn">
+      📷 扫码
+    </button>
+    <button class="btn btn-download" onclick="exportToExcel()">
+      📥 下载
+    </button>
+    <button class="btn btn-install" id="installBtn" onclick="installApp()" style="display:none;">
+      ⬇️ 安装
+    </button>
+  </div>
+
+  <!-- 关闭扫码 -->
   <div class="close-scan" id="closeScanArea">
     <button class="btn btn-outline btn-sm" onclick="stopScan()">✕ 关闭扫码</button>
   </div>
+
+  <!-- 扫码器 -->
   <div id="reader"></div>
 
   <!-- 录入表单 -->
@@ -365,19 +336,15 @@
       <span class="scanned-badge" id="scannedBadge" style="display:none;">已扫码</span>
     </div>
 
-    <!-- 条码 ID（自动填充，只读） -->
     <div class="form-group">
       <label>🔢 条码 ID</label>
       <input type="text" id="barcodeId" readonly placeholder="扫码后自动填充">
     </div>
 
-    <!-- 序号 + 尺码 -->
     <div class="form-row">
       <div class="form-group">
         <label>📋 序号</label>
-        <select id="sequenceNo">
-          <option value="">请选择</option>
-        </select>
+        <select id="sequenceNo"><option value="">请选择</option></select>
       </div>
       <div class="form-group">
         <label>📏 尺码</label>
@@ -395,7 +362,6 @@
       </div>
     </div>
 
-    <!-- 扎号 + 批号 + 款号 -->
     <div class="form-row-3">
       <div class="form-group">
         <label>🏷️ 扎号</label>
@@ -411,7 +377,6 @@
       </div>
     </div>
 
-    <!-- 色号 + 颜色 -->
     <div class="form-row">
       <div class="form-group">
         <label>🎨 色号</label>
@@ -423,7 +388,6 @@
       </div>
     </div>
 
-    <!-- 面料 A/B -->
     <div class="form-group">
       <label>🧵 A料信息</label>
       <input type="text" id="fabricA" placeholder="如：02-269 花灰:05PB001A19直">
@@ -433,7 +397,6 @@
       <input type="text" id="fabricB" placeholder="B料信息（如无则不填）">
     </div>
 
-    <!-- 数量 + 入库时间 -->
     <div class="form-row">
       <div class="form-group">
         <label>📊 数量</label>
@@ -445,9 +408,7 @@
       </div>
     </div>
 
-    <button class="btn btn-success" onclick="submitInbound()">
-      ✅ 确认入库
-    </button>
+    <button class="btn btn-success" onclick="submitInbound()">✅ 确认入库</button>
   </div>
 
   <!-- 统计 -->
@@ -474,8 +435,8 @@
   <div id="history"></div>
 
   <!-- 底部操作 -->
-  <div style="display:flex;gap:10px;margin-top:16px;">
-    <button class="btn btn-outline" onclick="exportToExcel()" style="flex:1;">
+  <div style="display:flex;gap:10px;margin-top:14px;">
+    <button class="btn btn-download" onclick="exportToExcel()" style="flex:1;">
       📥 导出表格 (.xlsx)
     </button>
     <button class="btn btn-danger" onclick="showClearModal()" style="flex:1;">
@@ -483,7 +444,7 @@
     </button>
   </div>
 
-  <!-- 清空确认弹窗 -->
+  <!-- 清空弹窗 -->
   <div class="modal-overlay" id="clearModal">
     <div class="modal">
       <h4>⚠️ 确认清空</h4>
@@ -499,15 +460,18 @@
     // ==================== 全局状态 ====================
     let html5QrCode = null;
     let records = [];
-    let editingIndex = -1; // -1 表示新增模式
+    let editingIndex = -1;
+    let deferredPrompt = null;
+    let isStandalone = false;
 
-    // 序号选项（动态生成 1-200，可根据实际调整）
+    // 序号选项
     const SEQUENCE_OPTIONS = Array.from({ length: 200 }, (_, i) => i + 1);
 
     // ==================== 初始化 ====================
     function init() {
       loadRecords();
       populateSequenceOptions();
+      checkInstallState();
       renderHistory();
       renderStats();
     }
@@ -522,62 +486,87 @@
       });
     }
 
+    // ==================== PWA 安装检测 ====================
+    function checkInstallState() {
+      if (window.matchMedia('(display-mode: standalone)').matches) {
+        isStandalone = true;
+      }
+      if (navigator.standalone) {
+        isStandalone = true;
+      }
+    }
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      if (!isStandalone) {
+        document.getElementById('installBtn').style.display = 'block';
+        document.getElementById('installGuide').style.display = 'none';
+      }
+    });
+
+    function installApp() {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then((choiceResult) => {
+          if (choiceResult.outcome === 'accepted') {
+            showToast('✅ 正在安装...');
+            document.getElementById('installBtn').style.display = 'none';
+          }
+          deferredPrompt = null;
+        });
+      } else {
+        document.getElementById('installGuide').style.display = 'block';
+        document.getElementById('installGuide').scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+
+    window.addEventListener('appinstalled', () => {
+      document.getElementById('installBtn').style.display = 'none';
+      document.getElementById('installGuide').style.display = 'none';
+      isStandalone = true;
+      showToast('✅ 安装完成');
+    });
+
+    // 不支持 beforeinstallprompt 时，1 秒后显示引导
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        if (!deferredPrompt && !isStandalone) {
+          document.getElementById('installGuide').style.display = 'block';
+        }
+      }, 1000);
+    });
+
     // ==================== 扫码 ====================
     async function startScan() {
       try {
         document.getElementById('reader').style.display = 'block';
         document.getElementById('scanBtn').style.display = 'none';
         document.getElementById('closeScanArea').style.display = 'block';
+        document.getElementById('formCard').style.display = 'none';
 
         html5QrCode = new Html5Qrcode("reader");
-        const config = {
-          fps: 10,
-          qrbox: { width: 280, height: 200 },
-          aspectRatio: 1.0,
-        };
-
         await html5QrCode.start(
           { facingMode: "environment" },
-          config,
-          onScanSuccess,
-          onScanFailure
+          { fps: 10, qrbox: { width: 280, height: 200 } },
+          (decodedText) => {
+            const barcode = decodedText.trim();
+            stopScan();
+            resetScanUI();
+            document.getElementById('barcodeId').value = barcode;
+            document.getElementById('scannedBadge').style.display = 'inline-block';
+            document.getElementById('inboundTime').value = new Date().toLocaleString('zh-CN');
+            document.getElementById('formCard').style.display = 'block';
+            document.getElementById('formCard').scrollIntoView({ behavior: 'smooth' });
+            if (navigator.vibrate) navigator.vibrate(50);
+            showToast('✅ 扫码成功');
+          },
+          () => {}
         );
       } catch (err) {
-        showToast('⚠️ 摄像头启动失败: ' + err.message);
+        showToast('⚠️ 摄像头启动失败');
         resetScanUI();
       }
-    }
-
-    function onScanSuccess(decodedText) {
-      // 取扫描到的条码
-      const barcode = decodedText.trim();
-      
-      // 关闭扫码
-      stopScan();
-      resetScanUI();
-
-      // 填充条码 ID
-      document.getElementById('barcodeId').value = barcode;
-      document.getElementById('scannedBadge').style.display = 'inline-block';
-      
-      // 自动填充入库时间
-      document.getElementById('inboundTime').value = new Date().toLocaleString('zh-CN');
-      
-      // 显示表单
-      document.getElementById('formCard').style.display = 'block';
-      document.getElementById('scanBtn').style.display = 'none';
-      
-      // 滚动到表单
-      document.getElementById('formCard').scrollIntoView({ behavior: 'smooth' });
-
-      // 震动反馈
-      if (navigator.vibrate) navigator.vibrate(50);
-      
-      showToast('✅ 扫码成功');
-    }
-
-    function onScanFailure(error) {
-      // 扫描失败是常态，不处理
     }
 
     function stopScan() {
@@ -596,15 +585,11 @@
     // ==================== 提交入库 ====================
     function submitInbound() {
       const barcodeId = document.getElementById('barcodeId').value.trim();
-      
-      if (!barcodeId) {
-        showToast('⚠️ 请先扫码获取条码 ID');
-        return;
-      }
+      if (!barcodeId) { showToast('⚠️ 请先扫码获取条码 ID'); return; }
 
       const record = {
         id: editingIndex >= 0 ? records[editingIndex].id : Date.now(),
-        barcodeId: barcodeId,
+        barcodeId,
         sequenceNo: document.getElementById('sequenceNo').value,
         size: document.getElementById('size').value,
         bundleNo: document.getElementById('bundleNo').value.trim(),
@@ -619,12 +604,10 @@
       };
 
       if (editingIndex >= 0) {
-        // 编辑模式
         records[editingIndex] = record;
         editingIndex = -1;
         showToast('✅ 记录已更新');
       } else {
-        // 新增模式
         records.unshift(record);
         showToast('✅ 入库成功');
       }
@@ -656,27 +639,24 @@
 
     // ==================== 编辑 & 删除 ====================
     function editRecord(index) {
-      const record = records[index];
+      const r = records[index];
       editingIndex = index;
-
-      document.getElementById('barcodeId').value = record.barcodeId;
-      document.getElementById('sequenceNo').value = record.sequenceNo;
-      document.getElementById('size').value = record.size;
-      document.getElementById('bundleNo').value = record.bundleNo;
-      document.getElementById('batchNo').value = record.batchNo;
-      document.getElementById('styleNo').value = record.styleNo;
-      document.getElementById('colorCode').value = record.colorCode;
-      document.getElementById('colorName').value = record.colorName;
-      document.getElementById('fabricA').value = record.fabricA;
-      document.getElementById('fabricB').value = record.fabricB;
-      document.getElementById('quantity').value = record.quantity;
-      document.getElementById('inboundTime').value = record.inboundTime;
+      document.getElementById('barcodeId').value = r.barcodeId;
+      document.getElementById('sequenceNo').value = r.sequenceNo;
+      document.getElementById('size').value = r.size;
+      document.getElementById('bundleNo').value = r.bundleNo;
+      document.getElementById('batchNo').value = r.batchNo;
+      document.getElementById('styleNo').value = r.styleNo;
+      document.getElementById('colorCode').value = r.colorCode;
+      document.getElementById('colorName').value = r.colorName;
+      document.getElementById('fabricA').value = r.fabricA;
+      document.getElementById('fabricB').value = r.fabricB;
+      document.getElementById('quantity').value = r.quantity;
+      document.getElementById('inboundTime').value = r.inboundTime;
       document.getElementById('scannedBadge').style.display = 'inline-block';
-
       document.getElementById('formCard').style.display = 'block';
       document.getElementById('scanBtn').style.display = 'none';
       document.getElementById('formCard').scrollIntoView({ behavior: 'smooth' });
-      
       showToast('📝 正在编辑记录');
     }
 
@@ -723,12 +703,7 @@
       document.getElementById('recordCount').textContent = `${records.length} 条`;
 
       if (records.length === 0) {
-        container.innerHTML = `
-          <div class="empty-state">
-            <div class="icon">📭</div>
-            <p>暂无入库记录</p>
-            <p style="font-size:12px;margin-top:4px;">点击「扫码入库」开始</p>
-          </div>`;
+        container.innerHTML = `<div class="empty-state"><div class="icon">📭</div><p>暂无入库记录</p></div>`;
         return;
       }
 
@@ -739,38 +714,14 @@
             <span class="time">${r.inboundTime}</span>
           </div>
           <div class="record-detail">
-            <div class="field">
-              <div class="f-label">序号</div>
-              <div class="f-value">${r.sequenceNo || '-'}</div>
-            </div>
-            <div class="field">
-              <div class="f-label">尺码</div>
-              <div class="f-value">${r.size || '-'}</div>
-            </div>
-            <div class="field">
-              <div class="f-label">款号</div>
-              <div class="f-value">${r.styleNo || '-'}</div>
-            </div>
-            <div class="field">
-              <div class="f-label">色号/颜色</div>
-              <div class="f-value">${r.colorCode || ''} ${r.colorName || ''}</div>
-            </div>
-            <div class="field">
-              <div class="f-label">扎号</div>
-              <div class="f-value">${r.bundleNo || '-'}</div>
-            </div>
-            <div class="field">
-              <div class="f-label">批号</div>
-              <div class="f-value">${r.batchNo || '-'}</div>
-            </div>
-            <div class="field">
-              <div class="f-label">数量</div>
-              <div class="f-value">×${r.quantity}</div>
-            </div>
-            <div class="field">
-              <div class="f-label">A料</div>
-              <div class="f-value" style="font-size:10px;">${r.fabricA || '-'}</div>
-            </div>
+            <div class="field"><div class="f-label">序号</div><div class="f-value">${r.sequenceNo || '-'}</div></div>
+            <div class="field"><div class="f-label">尺码</div><div class="f-value">${r.size || '-'}</div></div>
+            <div class="field"><div class="f-label">款号</div><div class="f-value">${r.styleNo || '-'}</div></div>
+            <div class="field"><div class="f-label">色号/颜色</div><div class="f-value">${r.colorCode || ''} ${r.colorName || ''}</div></div>
+            <div class="field"><div class="f-label">扎号</div><div class="f-value">${r.bundleNo || '-'}</div></div>
+            <div class="field"><div class="f-label">批号</div><div class="f-value">${r.batchNo || '-'}</div></div>
+            <div class="field"><div class="f-label">数量</div><div class="f-value">×${r.quantity}</div></div>
+            <div class="field"><div class="f-label">A料</div><div class="f-value" style="font-size:10px;">${r.fabricA || '-'}</div></div>
           </div>
           <div class="record-actions">
             <button class="btn btn-outline btn-sm" onclick="editRecord(${i})">✏️ 编辑</button>
@@ -783,12 +734,8 @@
     function renderStats() {
       const totalQty = records.reduce((sum, r) => sum + (r.quantity || 1), 0);
       const uniqueBarcodes = new Set(records.map(r => r.barcodeId)).size;
-      
       const today = new Date().toLocaleDateString('zh-CN');
-      const todayQty = records
-        .filter(r => r.inboundTime && r.inboundTime.includes(today))
-        .reduce((sum, r) => sum + (r.quantity || 1), 0);
-
+      const todayQty = records.filter(r => r.inboundTime && r.inboundTime.includes(today)).reduce((sum, r) => sum + (r.quantity || 1), 0);
       document.getElementById('statTotal').textContent = totalQty;
       document.getElementById('statBarcodes').textContent = uniqueBarcodes;
       document.getElementById('statToday').textContent = todayQty;
@@ -796,10 +743,7 @@
 
     // ==================== 导出 Excel ====================
     function exportToExcel() {
-      if (records.length === 0) {
-        showToast('⚠️ 没有数据可导出');
-        return;
-      }
+      if (records.length === 0) { showToast('⚠️ 没有数据可导出'); return; }
 
       const data = records.map(r => ({
         '条码ID': r.barcodeId,
@@ -817,20 +761,15 @@
       }));
 
       const ws = XLSX.utils.json_to_sheet(data);
-      
-      // 设置列宽
       ws['!cols'] = [
         { wch: 16 }, { wch: 8 }, { wch: 8 }, { wch: 10 },
         { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 10 },
         { wch: 30 }, { wch: 30 }, { wch: 8 }, { wch: 20 },
       ];
-
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, '入库记录');
-      
       const fileName = `服装入库记录_${new Date().toLocaleDateString('zh-CN').replace(/\//g, '-')}.xlsx`;
       XLSX.writeFile(wb, fileName);
-      
       showToast('📥 导出成功');
     }
 
@@ -838,12 +777,10 @@
     function showToast(msg) {
       const existing = document.querySelector('.toast');
       if (existing) existing.remove();
-
       const toast = document.createElement('div');
       toast.className = 'toast';
       toast.textContent = msg;
       document.body.appendChild(toast);
-      
       setTimeout(() => toast.remove(), 2500);
     }
 
