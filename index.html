@@ -38,7 +38,7 @@
     .top-btns .btn { flex: 1; font-size: 13px; padding: 11px 6px; white-space: nowrap; }
     .btn {
       display: block; width: 100%; padding: 13px; font-size: 16px;
-      font-weight: 600; border: none; border-radius: 12px cursor: pointer;
+      font-weight: 600; border: none; border-radius: 12px; cursor: pointer;
       transition: all 0.2s; text-align: center;
     }
     .btn:active { transform: scale(0.97); opacity: 0.85; }
@@ -94,7 +94,7 @@
       70% { opacity: 1; }
       100% { opacity: 0; }
     }
-    .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 999; justify-content: center; align-items: center; }
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9999; justify-content: center; align-items: center; }
     .modal-overlay.show { display: flex; }
     .modal { background: #fff; padding: 22px; border-radius: 16px; text-align: center; margin: 0 20px; max-width: 330px; width: 100%; }
     .modal h4 { margin-bottom: 6px; }
@@ -151,13 +151,12 @@
   <div class="top-btns">
     <button class="btn btn-primary" onclick="startScan()" id="scanBtn">📷 单次扫码</button>
     <button class="btn btn-success" onclick="startContinuousScan()">🔄 连续扫码</button>
-    <button class="btn btn-download" onclick="exportToExcel()">📥 下载</button>
+    <button class="btn btn-download" onclick="exportToExcel()">📥 导出</button>
     <button class="btn btn-install" id="installBtn" onclick="installApp()" style="display:none;">⬇️ 安装</button>
   </div>
 
-  <!-- 连续扫码开关提示 -->
   <div class="switch-row">
-    <span class="switch-text">连续扫码沿用配置：</span>
+    <span class="switch-text">连续扫码沿用配置+序号自增：</span>
     <label class="switch">
       <input type="checkbox" id="keepConfigSwitch" checked>
       <span class="slider"></span>
@@ -195,20 +194,17 @@
     <button class="btn btn-success" onclick="submitInbound()">✅ 确认入库</button>
   </div>
 
-  <!-- 总统计 -->
   <div class="stats">
     <div class="stat-item"><div class="num" id="statTotal">0</div><div class="lbl">总件数</div></div>
     <div class="stat-item"><div class="num" id="statBarcodes">0</div><div class="lbl">已录入条码</div></div>
     <div class="stat-item"><div class="num" id="statToday">0</div><div class="lbl">今日入库</div></div>
   </div>
 
-  <!-- 月度入库总结 -->
   <div class="section-header">
     <h3>📅 月度入库总结</h3>
   </div>
   <div class="card" id="monthSummary"></div>
 
-  <!-- 入库记录 -->
   <div class="section-header">
     <h3>📋 入库记录</h3>
     <span id="recordCount">0 条</span>
@@ -220,6 +216,7 @@
     <button class="btn btn-danger" onclick="showClearModal()" style="flex:1;">🗑️ 清空记录</button>
   </div>
 
+  <!-- 普通清空弹窗 -->
   <div class="modal-overlay" id="clearModal">
     <div class="modal">
       <h4>⚠️ 确认清空</h4>
@@ -227,6 +224,18 @@
       <div class="modal-actions">
         <button class="btn btn-outline btn-sm" onclick="hideClearModal()">取消</button>
         <button class="btn btn-danger btn-sm" onclick="clearAll()">确认清空</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 重复条码弹窗：跳过 / 替换 -->
+  <div class="modal-overlay" id="dupModal">
+    <div class="modal">
+      <h4>⚠️ 条码已存在</h4>
+      <p id="dupMsg">该条码已录入，选择操作</p>
+      <div class="modal-actions">
+        <button class="btn btn-outline btn-sm" onclick="dupSkip()">跳过</button>
+        <button class="btn btn-primary btn-sm" onclick="dupReplace()">替换</button>
       </div>
     </div>
   </div>
@@ -240,6 +249,7 @@
     // 连续扫码配置缓存
     let lastConfig = {};
     let isContinuousMode = false;
+    let currentDupBarcode = '';
 
     // 初始化
     function init() {
@@ -277,19 +287,26 @@
       };
     }
 
-    // 复用上次配置
+    // 复用上次配置 + 序号自动+1
     function applyLastConfig() {
       if(!document.getElementById('keepConfigSwitch').checked) return;
       Object.keys(lastConfig).forEach(key=>{
         const el = document.getElementById(key);
-        if(el) el.value = lastConfig[key] || '';
+        if(el && key !== 'sequenceNo') el.value = lastConfig[key] || '';
       });
+      // 序号自动递增
+      let seq = parseInt(lastConfig.sequenceNo || "0");
+      if(!isNaN(seq)){
+        seq += 1;
+        document.getElementById('sequenceNo').value = seq;
+        lastConfig.sequenceNo = seq.toString();
+      }
     }
 
     // 开始连续扫码
     function startContinuousScan() {
       isContinuousMode = true;
-      showToast('🔄 已进入连续扫码模式');
+      showToast('🔄 已进入连续扫码模式，序号自动递增');
       startScan();
     }
 
@@ -328,11 +345,25 @@
     function onScanSuccess(text) {
       stopScan();
       const barcode = text.trim();
+      currentDupBarcode = barcode;
+
+      // 检测重复条码
+      const existIndex = records.findIndex(r => r.barcodeId === barcode);
+      if(existIndex > -1){
+        document.getElementById('dupMsg').innerText = `条码 ${barcode} 已存在，选择操作`;
+        document.getElementById('dupModal').classList.add('show');
+        return;
+      }
+
+      fillBarcodeForm(barcode);
+    }
+
+    // 填充条码到表单
+    function fillBarcodeForm(barcode){
       document.getElementById('barcodeId').value = barcode;
       document.getElementById('scannedBadge').style.display='inline-block';
       document.getElementById('inboundTime').value=new Date().toLocaleString('zh-CN');
 
-      // 连续扫码自动复用配置
       if(isContinuousMode){
         applyLastConfig();
       }
@@ -341,6 +372,23 @@
       document.getElementById('formCard').scrollIntoView({behavior:'smooth'});
       if(navigator.vibrate) navigator.vibrate(50);
       showToast("✅ 扫码成功，请确认入库");
+    }
+
+    // 重复条码 - 跳过
+    function dupSkip(){
+      document.getElementById('dupModal').classList.remove('show');
+      showToast("⏭️ 已跳过重复条码");
+      if(isContinuousMode){
+        setTimeout(()=>startContinuousScan(),500);
+      }
+    }
+
+    // 重复条码 - 替换
+    function dupReplace(){
+      document.getElementById('dupModal').classList.remove('show');
+      const idx = records.findIndex(r=>r.barcodeId === currentDupBarcode);
+      if(idx > -1) records.splice(idx,1);
+      fillBarcodeForm(currentDupBarcode);
     }
 
     function stopScan() {
@@ -360,11 +408,10 @@
       const barcode=document.getElementById('barcodeId').value.trim();
       if(!barcode) return showToast("⚠️ 请先扫码");
 
-      // 保存当前配置 供下一次连续扫码使用
       saveCurrentConfig();
 
       const record={
-        id:editingIndex>=0?records[editingIndex].id:Date.now(),
+        id:Date.now(),
         barcodeId:barcode,
         sequenceNo:document.getElementById('sequenceNo').value,
         size:document.getElementById('size').value,
@@ -378,12 +425,11 @@
         quantity:parseInt(document.getElementById('quantity').value)||1,
         inboundTime:new Date().toLocaleString('zh-CN')
       };
-      editingIndex>=0?(records[editingIndex]=record,editingIndex=-1):records.unshift(record);
+      records.unshift(record);
       saveRecords();resetForm();renderHistory();renderStats();renderMonthSummary();
       document.getElementById('formCard').style.display='none';
       showToast("✅ 入库成功");
 
-      // 连续扫码自动继续下一次扫码
       if(document.getElementById('keepConfigSwitch').checked){
         setTimeout(()=>{
           startContinuousScan();
@@ -394,7 +440,6 @@
     function resetForm() {
       document.getElementById('barcodeId').value='';
       document.getElementById('scannedBadge').style.display='none';
-      // 不清空配置字段，保留给连续扫码
     }
 
     function editRecord(i) {
@@ -502,20 +547,69 @@
       document.getElementById('statBarcodes').textContent=unique;
       document.getElementById('statToday').textContent=todayQty;
     }
+
+    // 导出Excel：明细 + 汇总两张表
     function exportToExcel(){
-      if(records.length===0) return showToast("⚠️ 无数据");
-      const data=records.map(r=>({
+      if(records.length===0) return showToast("⚠️ 无数据可导出");
+
+      // 1. 入库明细
+      const detailData=records.map(r=>({
         '条码ID':r.barcodeId,'序号':r.sequenceNo,'尺码':r.size,'扎号':r.bundleNo,
         '批号':r.batchNo,'款号':r.styleNo,'色号':r.colorCode,'颜色':r.colorName,
         'A料信息':r.fabricA,'B料信息':r.fabricB,'数量':r.quantity,'入库时间':r.inboundTime
       }));
-      const ws=XLSX.utils.json_to_sheet(data);
-      ws['!cols']=[{wch:16},{wch:8},{wch:8},{wch:10},{wch:10},{wch:10},{wch:12},{wch:10},{wch:30},{wch:30},{wch:8},{wch:20}];
-      const wb=XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb,ws,'入库记录');
-      XLSX.writeFile(wb,`服装入库记录_${new Date().toLocaleDateString('zh-CN').replace(/\//g,'-')}.xlsx`);
-      showToast("📥 导出成功");
+
+      // 2. 统计汇总
+      const monthMap = {};
+      records.forEach(r=>{
+        const date = new Date(r.inboundTime);
+        const monthKey = `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}`;
+        if(!monthMap[monthKey]){
+          monthMap[monthKey] = { 月份:monthKey, 总件数:0, 条码数:0, 单据条数:0, 条码集合:new Set() };
+        }
+        monthMap[monthKey].总件数 += r.quantity||1;
+        monthMap[monthKey].单据条数 += 1;
+        monthMap[monthKey].条码集合.add(r.barcodeId);
+      });
+      // 整理月度汇总行
+      const summaryData = [];
+      Object.values(monthMap).forEach(item=>{
+        summaryData.push({
+          月份:item.月份,
+          入库总件数:item.总件数,
+          条码个数:item.条码集合.size,
+          入库单据条数:item.单据条数
+        });
+      });
+      // 整体总计
+      const allTotal = records.reduce((s,r)=>s+(r.quantity||1),0);
+      const allBarcode = new Set(records.map(r=>r.barcodeId)).size;
+      summaryData.push({
+        月份:"【整体总计】",
+        入库总件数:allTotal,
+        条码个数:allBarcode,
+        入库单据条数:records.length
+      });
+
+      // 生成工作簿
+      const wb = XLSX.utils.book_new();
+      const ws1 = XLSX.utils.json_to_sheet(detailData);
+      const ws2 = XLSX.utils.json_to_sheet(summaryData);
+
+      // 列宽
+      ws1['!cols']=[
+        {wch:16},{wch:8},{wch:8},{wch:10},{wch:10},{wch:10},
+        {wch:12},{wch:10},{wch:30},{wch:30},{wch:8},{wch:20}
+      ];
+      ws2['!cols']=[{wch:12},{wch:12},{wch:12},{wch:14}];
+
+      XLSX.utils.book_append_sheet(wb, ws1, "入库明细");
+      XLSX.utils.book_append_sheet(wb, ws2, "统计汇总");
+
+      XLSX.writeFile(wb,`服装入库完整报表_${new Date().toLocaleDateString('zh-CN').replace(/\//g,'-')}.xlsx`);
+      showToast("📥 导出成功，含明细+汇总");
     }
+
     function showToast(m){
       const t=document.createElement('div');t.className='toast';t.textContent=m;document.body.appendChild(t);
       setTimeout(()=>t.remove(),2500);
