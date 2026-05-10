@@ -2,843 +2,560 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>服装扫码入库系统 - 专业版</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>智衣库 · 服装扫码入库系统</title>
   <link rel="manifest" href="manifest.json">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="扫码入库">
+  <meta name="apple-mobile-web-app-title" content="智衣库">
   <meta name="theme-color" content="#1e293b">
   
+  <!-- SheetJS 导出 -->
   <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+  <!-- 二维码扫描库 -->
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-  <!-- 【新增】OCR 文字识别库 -->
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+  <!-- Tesseract OCR 引擎 (轻量级文字识别) -->
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   
   <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     :root {
-      --bg: #f0f2f5;
+      --bg: #f1f5f9;
       --card: #ffffff;
       --primary: #3b82f6;
+      --primary-dark: #2563eb;
       --success: #10b981;
       --danger: #ef4444;
-      --text: #1e293b;
-      --text-secondary: #64748b;
+      --warning: #f59e0b;
+      --text: #0f172a;
+      --text-light: #64748b;
       --border: #e2e8f0;
-      --input-bg: #f8fafc;
-      --shadow: 0 1px 3px rgba(0,0,0,0.08);
+      --shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.02);
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
-      background: var(--bg); color: var(--text); padding: 12px; max-width: 480px;
-      margin: 0 auto; min-height: 100vh; padding-bottom: 40px;
+      font-family: system-ui, -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      background: var(--bg);
+      padding: 16px;
+      max-width: 520px;
+      margin: 0 auto;
+      min-height: 100vh;
+      padding-bottom: 40px;
     }
-    .header { text-align: center; padding: 16px 0 12px; }
-    .header h1 { font-size: 21px; font-weight: 700; }
-    .top-btns { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
-    .top-btns .btn { flex: 1; font-size: 13px; padding: 11px 6px; white-space: nowrap; }
+    .header { text-align: center; margin-bottom: 16px; }
+    .header h1 { font-size: 24px; font-weight: 800; background: linear-gradient(135deg, #3b82f6, #8b5cf6); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .sub { font-size: 12px; color: var(--text-light); margin-top: 4px; }
+    .btn-group { display: flex; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
     .btn {
-      display: block; width: 100%; padding: 13px; font-size: 16px;
-      font-weight: 600; border: none; border-radius: 12px; cursor: pointer;
-      transition: all 0.2s; text-align: center;
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      padding: 12px 16px; font-size: 14px; font-weight: 600; border: none;
+      border-radius: 60px; cursor: pointer; transition: 0.2s; flex: 1;
+      background: var(--card); color: var(--text); box-shadow: var(--shadow);
     }
-    .btn:active { transform: scale(0.97); opacity: 0.85; }
-    .btn-primary { background: var(--primary); color: #fff; }
-    .btn-success { background: var(--success); color: #fff; }
-    .btn-outline { background: var(--card); color: var(--primary); border: 2px solid var(--primary); }
-    .btn-install { background: #fff; color: #8b5cf6; border: 2px solid #8b5cf6; }
-    .btn-download { background: #fff; color: #f59e0b; border: 2px solid #f59e0b; }
-    .btn-danger { background: var(--card); color: var(--danger); border: 2px solid #fca5a5; }
-    .btn-sm { padding: 8px 14px; font-size: 13px; width: auto; display: inline-block; }
-    #installGuide { display: none; background: #fef3c7; padding: 10px 12px; border-radius: 10px; margin-bottom: 10px; text-align: center; font-size: 12px; color: #92400e; }
-    #reader { width: 100%; border-radius: 12px; overflow: hidden; margin: 10px 0; border: 2px solid var(--primary); display: none; }
-    .close-scan { text-align: center; margin-top: 6px; display: none; }
-    .scan-status { text-align: center; padding: 8px; font-size: 12px; color: var(--text-secondary); }
-    .card { background: var(--card); padding: 14px; border-radius: 12px; margin: 10px 0; box-shadow: var(--shadow); }
-    .card-title { font-size: 15px; font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
-    .form-group { margin-bottom: 10px; }
-    .form-group label { display: block; font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.5px; }
-    .form-group input, .form-group select { width: 100%; padding: 11px 12px; font-size: 15px; border: 2px solid var(--border); border-radius: 10px; background: var(--input-bg); color: var(--text); }
-    .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--primary); background: #fff; }
-    .form-group input[readonly] { background: #e8ecf2; color: #6b7280; font-family: 'SF Mono', Consolas, monospace; }
-    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
-    .scanned-badge { display: inline-block; background: #d1fae5; color: #065f46; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; }
-    .stats { display: flex; gap: 8px; margin: 10px 0; flex-wrap: wrap; }
-    .stat-item { flex: 1; background: var(--card); padding: 10px; border-radius: 10px; text-align: center; box-shadow: var(--shadow); min-width: 100px; }
-    .stat-item .num { font-size: 24px; font-weight: 800; color: var(--primary); }
-    .stat-item .lbl { font-size: 11px; color: var(--text-secondary); }
-    .section-header { display: flex; justify-content: space-between; align-items: center; margin: 16px 0 8px; }
-    .section-header h3 { font-size: 15px; font-weight: 700; }
-    .section-header span { font-size: 12px; color: var(--text-secondary); }
-    .record-card { background: var(--card); padding: 12px; margin: 6px 0; border-radius: 10px; box-shadow: var(--shadow); }
-    .record-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
-    .record-header .barcode { font-family: 'SF Mono', Consolas, monospace; font-size: 14px; font-weight: 700; color: var(--primary); }
-    .record-header .time { font-size: 11px; color: #94a3b8; }
-    .record-detail { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; font-size: 11px; }
-    .record-detail .field { background: var(--input-bg); padding: 5px 7px; border-radius: 6px; }
-    .record-detail .f-label { color: var(--text-secondary); font-size: 10px; }
-    .record-detail .f-value { font-weight: 600; margin-top: 1px; }
-    .record-actions { display: flex; gap: 6px; margin-top: 8px; justify-content: flex-end; }
-    .empty-state { text-align: center; color: #94a3b8; padding: 36px; }
-    .empty-state .icon { font-size: 42px; margin-bottom: 8px; }
+    .btn:active { transform: scale(0.96); }
+    .btn-primary { background: var(--primary); color: white; box-shadow: 0 4px 12px rgba(59,130,246,0.3); }
+    .btn-success { background: var(--success); color: white; }
+    .btn-warning { background: var(--warning); color: white; }
+    .btn-outline { background: transparent; border: 1.5px solid var(--primary); color: var(--primary); }
+    .btn-danger { background: transparent; border: 1.5px solid var(--danger); color: var(--danger); }
+    .btn-sm { padding: 8px 14px; font-size: 12px; flex: none; }
+    .switch-bar {
+      background: var(--card); border-radius: 40px; padding: 8px 18px;
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 16px; box-shadow: var(--shadow);
+    }
+    .switch-label { font-size: 13px; font-weight: 500; display: flex; gap: 6px; align-items: center; }
+    .switch { position: relative; width: 48px; height: 26px; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #cbd5e1; border-radius: 34px; transition: 0.2s; }
+    .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 3px; bottom: 3px; background-color: white; border-radius: 50%; transition: 0.2s; }
+    input:checked + .slider { background-color: var(--primary); }
+    input:checked + .slider:before { transform: translateX(22px); }
+
+    #reader { width: 100%; border-radius: 24px; overflow: hidden; margin: 8px 0; border: 2px solid var(--primary); display: none; box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
+    .scan-status { text-align: center; font-size: 12px; color: var(--text-light); margin: 6px 0; }
+    .close-scan { text-align: center; margin: 6px 0; display: none; }
+
+    .card { background: var(--card); border-radius: 28px; padding: 20px; margin: 14px 0; box-shadow: var(--shadow); }
+    .card-title { font-size: 18px; font-weight: 700; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
+    .badge { background: #d1fae5; color: #065f46; padding: 4px 12px; border-radius: 30px; font-size: 11px; font-weight: 600; }
+    .form-grid { display: flex; flex-direction: column; gap: 12px; }
+    .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+    .input-field label { font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-light); letter-spacing: 0.5px; margin-bottom: 4px; display: block; }
+    .input-field input, .input-field select { width: 100%; padding: 12px; font-size: 14px; border: 1.5px solid var(--border); border-radius: 16px; background: white; transition: 0.2s; }
+    .input-field input:focus, .input-field select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+    .input-field input[readonly] { background: #f1f5f9; color: #334155; }
+
+    .stats-grid { display: flex; gap: 12px; margin: 16px 0; }
+    .stat-block { flex: 1; background: var(--card); padding: 14px; border-radius: 24px; text-align: center; box-shadow: var(--shadow); }
+    .stat-number { font-size: 28px; font-weight: 800; color: var(--primary); }
+    .section-header { display: flex; justify-content: space-between; align-items: baseline; margin: 20px 0 12px; }
+    .record-item { background: var(--card); border-radius: 20px; padding: 14px; margin-bottom: 12px; box-shadow: var(--shadow); }
+    .record-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 6px; }
+    .barcode-chip { font-family: monospace; background: #eef2ff; padding: 4px 12px; border-radius: 30px; font-size: 12px; font-weight: 700; color: var(--primary); }
+    .time-text { font-size: 10px; color: #94a3b8; }
+    .detail-grid { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+    .detail-tag { background: #f8fafc; padding: 5px 10px; border-radius: 14px; font-size: 11px; }
+    .detail-tag span:first-child { color: var(--text-light); margin-right: 6px; }
+    .record-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; border-top: 1px solid var(--border); padding-top: 10px; }
+    .empty-state { text-align: center; padding: 48px 20px; color: #94a3b8; }
+    .month-summary { background: #f1f5f9; border-radius: 18px; padding: 12px; margin-bottom: 8px; font-size: 13px; }
     .toast {
       position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
-      background: #1e293b; color: #fff; padding: 12px 22px; border-radius: 25px;
-      font-size: 14px; font-weight: 600; z-index: 9999;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-      animation: fadeInOut 2.5s forwards; white-space: nowrap;
+      background: #1e293b; color: white; padding: 10px 20px; border-radius: 40px;
+      font-size: 13px; font-weight: 500; z-index: 1100;
+      animation: fadeOutUp 2.2s forwards; white-space: nowrap;
     }
-    @keyframes fadeInOut {
+    @keyframes fadeOutUp {
       0% { opacity: 0; transform: translateX(-50%) translateY(20px); }
       15% { opacity: 1; transform: translateX(-50%) translateY(0); }
-      70% { opacity: 1; }
-      100% { opacity: 0; }
+      80% { opacity: 1; }
+      100% { opacity: 0; visibility: hidden; }
     }
-    .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9999; justify-content: center; align-items: center; }
-    .modal-overlay.show { display: flex; }
-    .modal { background: #fff; padding: 22px; border-radius: 16px; text-align: center; margin: 0 20px; max-width: 330px; width: 100%; }
-    .modal h4 { margin-bottom: 6px; }
-    .modal p { color: var(--text-secondary); font-size: 13px; margin-bottom: 14px; }
-    .modal .modal-actions { display: flex; gap: 8px; }
-    .modal .modal-actions .btn { flex: 1; }
-    .month-item {
-      padding: 10px;
-      background: var(--input-bg);
-      border-radius: 8px;
-      margin-bottom: 6px;
-      font-size: 14px;
-    }
-    .switch-row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin: 10px 0;
-    }
-    .switch-text { font-size: 14px; }
-    .switch {
-      position: relative;
-      display: inline-block;
-      width: 44px;
-      height: 24px;
-    }
-    .switch input { opacity: 0; width: 0; height: 0; }
-    .slider {
-      position: absolute;
-      cursor: pointer;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background-color: #ccc;
-      transition: .3s;
-      border-radius: 24px;
-    }
-    .slider:before {
-      position: absolute;
-      content: "";
-      height: 18px; width: 18px;
-      left: 3px; bottom: 3px;
-      background-color: white;
-      transition: .3s;
-      border-radius: 50%;
-    }
-    input:checked + .slider { background-color: var(--primary); }
-    input:checked + .slider:before { transform: translateX(20px); }
-    /* 隐藏的图片上传控件 */
+    .modal-mask { display: none; position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); z-index: 1000; align-items: center; justify-content: center; }
+    .modal-mask.show { display: flex; }
+    .modal-box { background: white; width: 300px; border-radius: 32px; padding: 24px; text-align: center; }
+    .ocr-loading { position: fixed; bottom: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.8); color: white; padding: 12px 24px; border-radius: 60px; z-index: 1200; font-size: 14px; }
     #ocrFileInput { display: none; }
   </style>
 </head>
 <body>
-  <div class="header"><h1>👕 服装扫码入库系统</h1></div>
 
-  <div id="installGuide">💡 点击 <b>分享</b> → 滑动找到 <b>「添加到主屏幕」</b> 即可安装</div>
+<div class="header">
+  <h1>👕 智衣库 · 扫码入库</h1>
+  <div class="sub">专业条码扫描 + AI标签识别</div>
+</div>
 
-  <div class="top-btns">
-    <button class="btn btn-primary" onclick="startScan()" id="scanBtn">📷 扫码入库</button>
-    <button class="btn btn-success" onclick="document.getElementById('ocrFileInput').click()">📸 识别标签</button>
-    <button class="btn btn-download" onclick="exportToExcel()">📥 导出</button>
-    <button class="btn btn-install" id="installBtn" onclick="installApp()" style="display:none;">⬇️ 安装</button>
+<div class="btn-group">
+  <button class="btn btn-primary" onclick="startScan()" id="scanBtn">📷 扫码入库</button>
+  <button class="btn btn-success" onclick="triggerOCRUpload()">📸 识别标签</button>
+  <button class="btn btn-warning" onclick="exportToExcel()">📎 导出报表</button>
+</div>
+<input type="file" id="ocrFileInput" accept="image/*" capture="environment" onchange="handleOCRImage(event)">
+
+<div class="switch-bar">
+  <div class="switch-label">⚙️ 连续扫码智能沿用配置 + 序号自动递增</div>
+  <label class="switch"><input type="checkbox" id="keepConfigSwitch" checked><span class="slider"></span></label>
+</div>
+
+<div class="scan-status" id="scanStatus"></div>
+<div class="close-scan" id="closeScanArea">
+  <button class="btn btn-outline btn-sm" onclick="stopScan()">✕ 关闭扫码器</button>
+</div>
+<div id="reader"></div>
+
+<!-- 入库表单 -->
+<div class="card" id="formCard" style="display:none;">
+  <div class="card-title">
+    📝 入库明细
+    <span class="badge" id="scannedBadge" style="display:none;">✓ 已识别</span>
   </div>
-  <!-- 隐藏的文件上传控件 -->
-  <input type="file" id="ocrFileInput" accept="image/*" capture="environment" onchange="handleOcrImage(event)">
-
-  <div class="switch-row">
-    <span class="switch-text">连续扫码沿用配置+序号自增：</span>
-    <label class="switch">
-      <input type="checkbox" id="keepConfigSwitch" checked>
-      <span class="slider"></span>
-    </label>
-  </div>
-
-  <div class="scan-status" id="scanStatus"></div>
-  <div class="close-scan" id="closeScanArea">
-    <button class="btn btn-outline btn-sm" onclick="stopScan()">✕ 关闭扫码</button>
-  </div>
-  <div id="reader"></div>
-
-  <div class="card" id="formCard" style="display:none;">
-    <div class="card-title">📝 入库信息录入<span class="scanned-badge" id="scannedBadge" style="display:none;">已识别/扫码</span></div>
-    <div class="form-group"><label>🔢 条码 ID</label><input type="text" id="barcodeId" readonly placeholder="扫码后自动填充"></div>
-    <div class="form-row">
-      <div class="form-group">
-        <label>📋 序号</label>
-        <select id="sequenceNo"></select>
-      </div>
-      <div class="form-group"><label>📏 尺码</label><select id="size"><option value="">请选择</option><option value="XS">XS</option><option value="S">S</option><option value="M">M</option><option value="L">L</option><option value="XL">XL</option><option value="2XL">2XL</option><option value="3XL">3XL</option><option value="4XL">4XL</option></select></div>
+  <div class="form-grid">
+    <div class="input-field"><label>🔖 条码ID</label><input type="text" id="barcodeId" readonly placeholder="扫码/识别后自动填充"></div>
+    <div class="row-2">
+      <div class="input-field"><label>📋 序号</label><select id="sequenceNo"></select></div>
+      <div class="input-field"><label>📏 尺码</label><select id="size"><option value="">请选择</option><option>XS</option><option>S</option><option>M</option><option>L</option><option>XL</option><option>2XL</option><option>3XL</option><option>4XL</option><option>5XL</option></select></div>
     </div>
-    <div class="form-row-3">
-      <div class="form-group"><label>🏷️ 扎号</label><input type="text" id="bundleNo" placeholder="扎号"></div>
-      <div class="form-group"><label>📦 批号</label><input type="text" id="batchNo" placeholder="批号"></div>
-      <div class="form-group"><label>👔 款号</label><input type="text" id="styleNo" placeholder="款号"></div>
+    <div class="row-3">
+      <div class="input-field"><label>🏷️ 扎号</label><input type="text" id="bundleNo" placeholder="捆号/扎号"></div>
+      <div class="input-field"><label>📦 批号</label><input type="text" id="batchNo" placeholder="批号"></div>
+      <div class="input-field"><label>👔 款号</label><input type="text" id="styleNo" placeholder="款号"></div>
     </div>
-    <div class="form-row">
-      <div class="form-group"><label>🎨 色号</label><input type="text" id="colorCode" placeholder="如：02-269"></div>
-      <div class="form-group"><label>🖌️ 颜色</label><input type="text" id="colorName" placeholder="如：花灰"></div>
+    <div class="row-2">
+      <div class="input-field"><label>🎨 色号</label><input type="text" id="colorCode" placeholder="例: 02-269"></div>
+      <div class="input-field"><label>🖌️ 颜色</label><input type="text" id="colorName" placeholder="例: 花灰"></div>
     </div>
-    <div class="form-group"><label>🧵 A料信息</label><input type="text" id="fabricA" placeholder="如：02-269 花灰:05PB001A19直"></div>
-    <div class="form-group"><label>🧵 B料信息</label><input type="text" id="fabricB" placeholder="B料信息（如无则不填）"></div>
-    <div class="form-row">
-      <div class="form-group"><label>📊 数量</label><input type="number" id="quantity" value="1" min="1"></div>
-      <div class="form-group"><label>🕐 入库时间</label><input type="text" id="inboundTime" readonly placeholder="自动生成"></div>
+    <div class="input-field"><label>🧵 A料信息</label><input type="text" id="fabricA" placeholder="面料/辅料信息"></div>
+    <div class="input-field"><label>🧵 B料信息</label><input type="text" id="fabricB" placeholder="辅料B (选填)"></div>
+    <div class="row-2">
+      <div class="input-field"><label>📊 数量</label><input type="number" id="quantity" value="1" min="1"></div>
+      <div class="input-field"><label>⏱️ 入库时间</label><input type="text" id="inboundTime" readonly></div>
     </div>
-    <button class="btn btn-success" onclick="submitInbound()">✅ 确认入库</button>
+    <button class="btn btn-primary" onclick="submitInbound()" style="margin-top: 4px;">✅ 确认入库</button>
   </div>
+</div>
 
-  <div class="stats">
-    <div class="stat-item"><div class="num" id="statTotal">0</div><div class="lbl">总件数</div></div>
-    <div class="stat-item"><div class="num" id="statBarcodes">0</div><div class="lbl">已录入条码</div></div>
-    <div class="stat-item"><div class="num" id="statToday">0</div><div class="lbl">今日入库</div></div>
-  </div>
+<div class="stats-grid">
+  <div class="stat-block"><div class="stat-number" id="statTotal">0</div><div>总件数</div></div>
+  <div class="stat-block"><div class="stat-number" id="statBarcodes">0</div><div>唯一条码</div></div>
+  <div class="stat-block"><div class="stat-number" id="statToday">0</div><div>今日入库</div></div>
+</div>
 
-  <div class="section-header">
-    <h3>📅 月度入库总结</h3>
-  </div>
-  <div class="card" id="monthSummary"></div>
+<div class="section-header"><h3>📅 月度汇总</h3><span style="font-size:12px">按月份统计</span></div>
+<div id="monthSummary" class="card" style="padding: 12px;"></div>
 
-  <div class="section-header">
-    <h3>📋 入库记录</h3>
-    <span id="recordCount">0 条</span>
-  </div>
-  <div id="history"></div>
+<div class="section-header"><h3>📋 入库记录</h3><span id="recordCount">0 条</span></div>
+<div id="history"></div>
 
-  <div style="display:flex;gap:10px;margin-top:14px;">
-    <button class="btn btn-download" onclick="exportToExcel()" style="flex:1;">📥 导出表格 (.xlsx)</button>
-    <button class="btn btn-danger" onclick="showClearModal()" style="flex:1;">🗑️ 清空记录</button>
-  </div>
+<div style="display:flex; gap:12px; margin-top: 12px;">
+  <button class="btn btn-warning" onclick="exportToExcel()" style="flex:1;">📥 导出 Excel</button>
+  <button class="btn btn-danger" onclick="showClearModal()" style="flex:1;">🗑️ 清空记录</button>
+</div>
 
-  <!-- 普通清空弹窗 -->
-  <div class="modal-overlay" id="clearModal">
-    <div class="modal">
-      <h4>⚠️ 确认清空</h4>
-      <p>此操作将删除全部入库记录，不可恢复。建议先导出备份。</p>
-      <div class="modal-actions">
-        <button class="btn btn-outline btn-sm" onclick="hideClearModal()">取消</button>
-        <button class="btn btn-danger btn-sm" onclick="clearAll()">确认清空</button>
-      </div>
-    </div>
-  </div>
+<!-- 弹窗 -->
+<div class="modal-mask" id="clearModal"><div class="modal-box"><h4>⚠️ 确认清空</h4><p>所有入库数据将永久删除，建议先导出备份。</p><div class="btn-group" style="margin-top:12px;"><button class="btn btn-outline btn-sm" onclick="hideClearModal()">取消</button><button class="btn btn-danger btn-sm" onclick="clearAll()">确认清空</button></div></div></div>
+<div class="modal-mask" id="dupModal"><div class="modal-box"><h4>⚠️ 条码重复</h4><p id="dupMsg"></p><div class="btn-group" style="margin-top:12px;"><button class="btn btn-success btn-sm" onclick="dupContinue()">继续新增</button><button class="btn btn-primary btn-sm" onclick="dupReplace()">覆盖数据</button></div></div></div>
 
-  <!-- 重复条码弹窗：继续入库 / 覆盖数据 -->
-  <div class="modal-overlay" id="dupModal">
-    <div class="modal">
-      <h4>⚠️ 条码已存在</h4>
-      <p id="dupMsg">该条码已录入，请选择操作</p>
-      <div class="modal-actions">
-        <button class="btn btn-success btn-sm" onclick="dupContinue()">继续入库</button>
-        <button class="btn btn-primary btn-sm" onclick="dupReplace()">覆盖数据</button>
-      </div>
-    </div>
-  </div>
+<script>
+  // ---------- 核心变量 ----------
+  let html5QrCode = null;
+  let records = [];
+  let editingIndex = -1;
+  let deferredPrompt = null;
+  let lastConfig = {};
+  let isContinuousMode = false;
+  let currentDupBarcode = '';
+  let dailySeqMap = {};
 
-  <script>
-    let html5QrCode = null;
-    let records = [];
-    let editingIndex = -1;
-    let deferredPrompt = null;
+  // ----- 辅助函数 -----
+  const getTodayStr = () => new Date().toISOString().slice(0,10);
+  function rebuildDailySeqMap() {
+    dailySeqMap = {};
+    records.forEach(r => {
+      if (r.sequenceNo && r.inboundTime) {
+        let d = r.inboundTime.split(' ')[0].replace(/\//g, '-');
+        let parts = d.split('-');
+        if(parts.length===3){
+          let norm = `${parts[0]}-${parts[1].padStart(2,'0')}-${parts[2].padStart(2,'0')}`;
+          let seq = parseInt(r.sequenceNo,10);
+          if(!isNaN(seq)) dailySeqMap[norm] = Math.max(dailySeqMap[norm]||0, seq);
+        }
+      }
+    });
+  }
+  function getNextSequence() {
+    let today = getTodayStr();
+    let max = dailySeqMap[today] || 0;
+    records.forEach(r => {
+      if(r.inboundTime && r.sequenceNo){
+        let d = r.inboundTime.split(' ')[0].replace(/\//g, '-');
+        if(d === today) max = Math.max(max, parseInt(r.sequenceNo,10)||0);
+      }
+    });
+    return Math.min(max+1, 999);
+  }
+  function refreshSeqSelect() {
+    let sel = document.getElementById('sequenceNo');
+    if(!sel) return;
+    if(editingIndex !== -1 && document.getElementById('barcodeId').value) return;
+    let nxt = getNextSequence();
+    sel.value = nxt;
+    if(lastConfig) lastConfig.sequenceNo = sel.value;
+  }
+  function initSequenceSelect() {
+    let sel = document.getElementById('sequenceNo');
+    sel.innerHTML = '';
+    for(let i=1;i<=999;i++){ let opt = document.createElement('option'); opt.value=i; opt.textContent=i; sel.appendChild(opt); }
+    refreshSeqSelect();
+  }
 
-    let lastConfig = {};
-    let isContinuousMode = false;
-    let currentDupBarcode = '';
+  // ================= 【核心增强】OCR 标签智能识别 =================
+  function triggerOCRUpload() { document.getElementById('ocrFileInput').click(); }
+
+  async function handleOCRImage(event) {
+    const file = event.target.files[0];
+    if(!file) return;
+    showToast("🔍 AI识别中，请稍候...");
+    let loadingDiv = document.createElement('div');
+    loadingDiv.className = 'ocr-loading';
+    loadingDiv.innerText = '📖 正在识别标签文字...';
+    document.body.appendChild(loadingDiv);
+    try {
+      // 使用 Tesseract 进行中英文混合识别
+      const result = await Tesseract.recognize(file, 'chi_sim+eng', {
+        logger: m => console.log(m)
+      });
+      const rawText = result.data.text;
+      console.log("OCR原始:", rawText);
+      const parsed = parseGarmentLabel(rawText);
+      fillFromOCRData(parsed);
+      showToast("✅ 标签识别成功，已填充表单");
+    } catch(err) {
+      console.error(err);
+      showToast("❌ 识别失败，请确保标签清晰并重试");
+    } finally {
+      document.body.removeChild(loadingDiv);
+      document.getElementById('ocrFileInput').value = '';
+    }
+  }
+
+  // 智能解析服装标签（支持多种格式：款号、色号、尺码、扎批号等）
+  function parseGarmentLabel(text) {
+    let result = { barcodeId: '', size: '', bundleNo: '', batchNo: '', styleNo: '', colorCode: '', colorName: '', fabricA: '', fabricB: '' };
+    // 1. 提取条码（8-20位数字或字母数字组合，优先纯数字长串）
+    let barcodeMatch = text.match(/\b(\d{8,})\b/);
+    if(!barcodeMatch) barcodeMatch = text.match(/\b([A-Z0-9]{10,})\b/);
+    if(barcodeMatch) result.barcodeId = barcodeMatch[1];
     
-    let dailySeqMap = {};
+    // 2. 尺码  XS|S|M|L|XL|2XL|3XL|4XL|XXL 等
+    let sizeMatch = text.match(/\b(XS|S|M|L|XL|2XL|3XL|4XL|XXL|XXXL)\b/i);
+    if(sizeMatch) result.size = sizeMatch[1].toUpperCase();
+    
+    // 3. 扎号/捆号: "扎号:xxx", "捆号:xxx"
+    let bundleMatch = text.match(/(?:扎号|捆号)[:：]\s*([^\n\r]+)/i);
+    if(bundleMatch) result.bundleNo = bundleMatch[1].trim();
+    
+    // 4. 批号: "批号:xxx" "批次:xxx"
+    let batchMatch = text.match(/(?:批号|批次)[:：]\s*([^\n\r]+)/i);
+    if(batchMatch) result.batchNo = batchMatch[1].trim();
+    
+    // 5. 款号: "款号:xxx", "款:xxx"
+    let styleMatch = text.match(/(?:款号|款)[:：]\s*([A-Z0-9\-]+)/i);
+    if(styleMatch) result.styleNo = styleMatch[1].trim();
+    
+    // 6. 色号+颜色: 常见格式 "色号 02-269 花灰" 或 "颜色:花灰色号:02-269"
+    let colorCodeMatch = text.match(/(?:色号|色码)[:：]?\s*([\w\-]+)/i);
+    if(colorCodeMatch) result.colorCode = colorCodeMatch[1].trim();
+    let colorNameMatch = text.match(/(?:颜色|色名)[:：]?\s*([\u4e00-\u9fa5]+)/i);
+    if(colorNameMatch) result.colorName = colorNameMatch[1].trim();
+    // 额外捕获组合: 如 "02-269 花灰"
+    let combined = text.match(/([\w\-]+)\s+([\u4e00-\u9fa5]{2,})/);
+    if(combined && !result.colorCode) result.colorCode = combined[1];
+    if(combined && !result.colorName) result.colorName = combined[2];
+    
+    // 7. 面料信息: A料,B料尝试匹配
+    let fabricAMatch = text.match(/(?:A料|面料A)[:：]\s*([^\n]+)/i);
+    if(fabricAMatch) result.fabricA = fabricAMatch[1].trim();
+    let fabricBMatch = text.match(/(?:B料|面料B)[:：]\s*([^\n]+)/i);
+    if(fabricBMatch) result.fabricB = fabricBMatch[1].trim();
+    
+    return result;
+  }
 
-    // ====================== 【核心：OCR 识别标签自动填充】 ======================
-    async function handleOcrImage(event) {
-      const file = event.target.files[0];
-      if (!file) return;
+  function fillFromOCRData(data) {
+    if(data.barcodeId) document.getElementById('barcodeId').value = data.barcodeId;
+    if(data.size) {
+      let sizeSel = document.getElementById('size');
+      for(let opt of sizeSel.options) if(opt.value === data.size) { opt.selected = true; break; }
+    }
+    document.getElementById('bundleNo').value = data.bundleNo || '';
+    document.getElementById('batchNo').value = data.batchNo || '';
+    document.getElementById('styleNo').value = data.styleNo || '';
+    document.getElementById('colorCode').value = data.colorCode || '';
+    document.getElementById('colorName').value = data.colorName || '';
+    document.getElementById('fabricA').value = data.fabricA || '';
+    document.getElementById('fabricB').value = data.fabricB || '';
+    document.getElementById('quantity').value = 1;
+    document.getElementById('inboundTime').value = new Date().toLocaleString('zh-CN');
+    document.getElementById('scannedBadge').style.display = 'inline-block';
+    refreshSeqSelect();
+    document.getElementById('formCard').style.display = 'block';
+    document.getElementById('formCard').scrollIntoView({ behavior: 'smooth' });
+    showToast("🏷️ 标签信息已自动填入，请核对");
+  }
 
-      showToast("🔍 正在识别标签文字...");
-      document.getElementById('scanStatus').textContent = "正在识别标签文字...";
-
-      try {
-        // 使用 Tesseract.js 识别图片
-        const result = await Tesseract.recognize(file, 'chi_sim+eng', {
-          logger: m => console.log(m)
-        });
-
-        const text = result.data.text;
-        console.log("识别结果：", text);
-        parseAndFillForm(text);
-      } catch (err) {
-        console.error("识别失败：", err);
-        showToast("❌ 识别失败，请换一张清晰的图片重试");
-      } finally {
-        document.getElementById('ocrFileInput').value = '';
-        document.getElementById('scanStatus').textContent = "";
+  // 扫码填充
+  function fillScanBarcode(barcode){
+    document.getElementById('barcodeId').value = barcode;
+    document.getElementById('scannedBadge').style.display = 'inline-block';
+    document.getElementById('inboundTime').value = new Date().toLocaleString('zh-CN');
+    editingIndex = -1;
+    if(isContinuousMode && document.getElementById('keepConfigSwitch').checked){
+      applyLastConfigContinuous();
+    } else {
+      refreshSeqSelect();
+      if(lastConfig && document.getElementById('keepConfigSwitch').checked){
+        const keep = ['size','bundleNo','batchNo','styleNo','colorCode','colorName','fabricA','fabricB','quantity'];
+        keep.forEach(k => { let el = document.getElementById(k); if(el && lastConfig[k]!==undefined) el.value = lastConfig[k]; });
       }
     }
+    document.getElementById('formCard').style.display = 'block';
+    document.getElementById('formCard').scrollIntoView({behavior:'smooth'});
+    if(navigator.vibrate) navigator.vibrate(50);
+    showToast("✅ 扫码成功");
+  }
 
-    function parseAndFillForm(text) {
-      const lines = text.split('\n').map(l => l.trim()).filter(l => l);
-      let parsed = {
-        size: '',
-        bundleNo: '',
-        batchNo: '',
-        styleNo: '',
-        colorCode: '',
-        colorName: '',
-        barcodeId: ''
-      };
+  // 保存与沿用配置
+  function saveCurrentConfig() {
+    lastConfig = {
+      sequenceNo: document.getElementById('sequenceNo').value,
+      size: document.getElementById('size').value,
+      bundleNo: document.getElementById('bundleNo').value,
+      batchNo: document.getElementById('batchNo').value,
+      styleNo: document.getElementById('styleNo').value,
+      colorCode: document.getElementById('colorCode').value,
+      colorName: document.getElementById('colorName').value,
+      fabricA: document.getElementById('fabricA').value,
+      fabricB: document.getElementById('fabricB').value,
+      quantity: document.getElementById('quantity').value
+    };
+  }
+  function applyLastConfigContinuous() {
+    if(!document.getElementById('keepConfigSwitch').checked) return;
+    const fields = ['size','bundleNo','batchNo','styleNo','colorCode','colorName','fabricA','fabricB','quantity'];
+    fields.forEach(k => { let el = document.getElementById(k); if(el && lastConfig[k] !== undefined) el.value = lastConfig[k]; });
+    let newSeq = getNextSequence();
+    document.getElementById('sequenceNo').value = newSeq;
+    lastConfig.sequenceNo = newSeq;
+  }
 
-      // 1. 匹配条码（纯数字）
-      const barcodeMatch = text.match(/\d{8,}/);
-      if (barcodeMatch) parsed.barcodeId = barcodeMatch[0];
-
-      // 2. 匹配尺码（S/M/L/XL 等）
-      const sizeMatch = text.match(/\b(XS|S|M|L|XL|2XL|3XL|4XL)\b/i);
-      if (sizeMatch) parsed.size = sizeMatch[1].toUpperCase();
-
-      // 3. 匹配扎号（扎号: 后面的内容）
-      const bundleNoMatch = text.match(/扎号[:：]\s*([^\n]+)/);
-      if (bundleNoMatch) parsed.bundleNo = bundleNoMatch[1].trim();
-
-      // 4. 匹配批号（批: 后面的内容）
-      const batchNoMatch = text.match(/批[:：]\s*([^\n]+)/);
-      if (batchNoMatch) parsed.batchNo = batchNoMatch[1].trim();
-
-      // 5. 匹配款号（款: 后面的内容）
-      const styleNoMatch = text.match(/款[:：]\s*([^\n]+)/);
-      if (styleNoMatch) parsed.styleNo = styleNoMatch[1].trim();
-
-      // 6. 匹配色号+颜色（色: 后面的内容，格式如 02-269 花灰）
-      const colorMatch = text.match(/色[:：]\s*([\w\-]+)\s*([^\n]+)/);
-      if (colorMatch) {
-        parsed.colorCode = colorMatch[1].trim();
-        parsed.colorName = colorMatch[2].trim();
-      }
-
-      // 填充到表单
-      fillParsedDataToForm(parsed);
-    }
-
-    function fillParsedDataToForm(data) {
-      // 条码
-      if (data.barcodeId) {
-        document.getElementById('barcodeId').value = data.barcodeId;
-      }
-      // 尺码
-      if (data.size) {
-        const sizeSel = document.getElementById('size');
-        for (let opt of sizeSel.options) {
-          if (opt.value === data.size) {
-            opt.selected = true;
-            break;
-          }
-        }
-      }
-      // 其他字段
-      document.getElementById('bundleNo').value = data.bundleNo || '';
-      document.getElementById('batchNo').value = data.batchNo || '';
-      document.getElementById('styleNo').value = data.styleNo || '';
-      document.getElementById('colorCode').value = data.colorCode || '';
-      document.getElementById('colorName').value = data.colorName || '';
-      document.getElementById('fabricA').value = '';
-      document.getElementById('fabricB').value = '';
-      document.getElementById('quantity').value = 1;
-      document.getElementById('inboundTime').value = new Date().toLocaleString('zh-CN');
-      document.getElementById('scannedBadge').style.display = 'inline-block';
-
-      // 刷新序号为最新
-      refreshSequenceNoInForm();
-
-      // 显示表单
-      document.getElementById('formCard').style.display = 'block';
-      document.getElementById('formCard').scrollIntoView({behavior:'smooth'});
-      showToast("✅ 标签识别完成，已自动填充");
-    }
-
-    // 按入库时间倒序自动排序
-    function sortRecordsByTimeDesc() {
-      records.sort((a, b) => new Date(b.inboundTime) - new Date(a.inboundTime));
-    }
-
-    // 获取今天的日期字符串 YYYY-MM-DD
-    function getTodayStr() {
-      const d = new Date();
-      return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-    }
-
-    // 从现有记录重建 dailySeqMap
-    function rebuildDailySeqMap() {
-      dailySeqMap = {};
-      records.forEach(record => {
-        if (record.sequenceNo && record.inboundTime) {
-          let datePart = record.inboundTime.split(' ')[0];
-          datePart = datePart.replace(/\//g, '-');
-          const parts = datePart.split('-');
-          if(parts.length === 3) {
-            let year = parts[0];
-            let month = parts[1].padStart(2,'0');
-            let day = parts[2].padStart(2,'0');
-            const normDate = `${year}-${month}-${day}`;
-            const seq = parseInt(record.sequenceNo, 10);
-            if (!isNaN(seq)) {
-              const curMax = dailySeqMap[normDate] || 0;
-              if (seq > curMax) dailySeqMap[normDate] = seq;
-            }
-          }
-        }
-      });
-    }
-
-    // 获取今日下一个可用的序号
-    function getNextSequenceForToday() {
-      const today = getTodayStr();
-      let maxSeq = dailySeqMap[today] || 0;
-      records.forEach(r => {
-        if (r.inboundTime) {
-          let rDate = r.inboundTime.split(' ')[0].replace(/\//g, '-');
-          const parts = rDate.split('-');
-          if(parts.length===3) {
-            const norm = `${parts[0]}-${parts[1].padStart(2,'0')}-${parts[2].padStart(2,'0')}`;
-            if(norm === today) {
-              const seqVal = parseInt(r.sequenceNo,10);
-              if(!isNaN(seqVal) && seqVal > maxSeq) maxSeq = seqVal;
-            }
-          }
-        }
-      });
-      const nextSeq = maxSeq + 1;
-      return nextSeq > 999 ? 999 : nextSeq;
-    }
-
-    // 更新每日最大序号
-    function updateDailySeqForToday(usedSeq) {
-      const today = getTodayStr();
-      const cur = dailySeqMap[today] || 0;
-      if (usedSeq > cur) dailySeqMap[today] = usedSeq;
-    }
-
-    // 初始化序号下拉
-    function initSequenceNo() {
-      const sel = document.getElementById('sequenceNo');
-      sel.innerHTML = '';
-      for(let i=1;i<=999;i++) sel.innerHTML += `<option value="${i}">${i}</option>`;
-      const nextSeq = getNextSequenceForToday();
-      sel.value = nextSeq.toString();
-      lastConfig.sequenceNo = sel.value;
-    }
-
-    // 刷新表单中的序号
-    function refreshSequenceNoInForm() {
-      const sel = document.getElementById('sequenceNo');
-      if (!sel) return;
-      if (editingIndex >= 0 && document.getElementById('barcodeId').value.trim() !== '') {
-        return;
-      }
-      const nextVal = getNextSequenceForToday();
-      sel.value = nextVal.toString();
-      if (lastConfig) lastConfig.sequenceNo = sel.value;
-    }
-
-    // 重置序号
-    function resetSequenceForNewEntry() {
-      if (editingIndex === -1) {
-        refreshSequenceNoInForm();
-      }
-    }
-
-    // PWA逻辑
-    window.addEventListener('beforeinstallprompt', e=>{deferredPrompt=e;document.getElementById('installBtn').style.display='block';});
-    function installApp() {
-      if(deferredPrompt){deferredPrompt.prompt();deferredPrompt=null;}
-      else{document.getElementById('installGuide').style.display='block';}
-    }
-
-    // 保存当前表单配置
-    function saveCurrentConfig() {
-      lastConfig = {
-        sequenceNo: document.getElementById('sequenceNo').value,
-        size: document.getElementById('size').value,
-        bundleNo: document.getElementById('bundleNo').value,
-        batchNo: document.getElementById('batchNo').value,
-        styleNo: document.getElementById('styleNo').value,
-        colorCode: document.getElementById('colorCode').value,
-        colorName: document.getElementById('colorName').value,
-        fabricA: document.getElementById('fabricA').value,
-        fabricB: document.getElementById('fabricB').value,
-        quantity: document.getElementById('quantity').value
-      };
-    }
-
-    // 连续扫码模式：沿用配置
-    function applyLastConfigForContinuous() {
-      if(!document.getElementById('keepConfigSwitch').checked) return;
-      const keepFields = ['size','bundleNo','batchNo','styleNo','colorCode','colorName','fabricA','fabricB','quantity'];
-      keepFields.forEach(key=>{
-        const el = document.getElementById(key);
-        if(el && lastConfig[key] !== undefined) el.value = lastConfig[key] || '';
-      });
-      const newSeq = getNextSequenceForToday();
-      document.getElementById('sequenceNo').value = newSeq;
-      lastConfig.sequenceNo = newSeq.toString();
-    }
-
-    // 开始连续扫码
-    function startContinuousScan() {
-      isContinuousMode = true;
-      editingIndex = -1;
-      showToast('🔄 连续扫码模式开启，每次入库后序号自动+1');
-      startScan();
-    }
-
-    // 核心扫码启动
-    async function startScan() {
-      if(html5QrCode){
-        try{await html5QrCode.stop();}catch(e){}
-        html5QrCode=null;
-      }
-      document.getElementById('reader').innerHTML='';
-      document.getElementById('reader').style.display='block';
-      document.getElementById('scanBtn').style.display='none';
-      document.getElementById('closeScanArea').style.display='block';
-      document.getElementById('formCard').style.display='none';
-      document.getElementById('scanStatus').textContent='正在请求摄像头权限...';
-
-      html5QrCode=new Html5Qrcode("reader");
-      try{
-        await html5QrCode.start(
-          { facingMode:"environment" },
-          { fps:10, qrbox:{width:280,height:200} },
-          onScanSuccess,
-          err=>{}
-        );
-        document.getElementById('scanStatus').textContent='扫描中...';
-      }catch(e){
-        console.error("摄像头失败：",e);
-        if(e.name==="NotAllowedError") showToast("❌ 请允许摄像头权限");
-        else if(e.name==="NotFoundError") showToast("❌ 未找到摄像头");
-        else if(e.name==="NotSupportedError") showToast("❌ 请用HTTPS打开");
-        else showToast("❌ 摄像头启动失败");
-        stopScan();
-      }
-    }
-
-    function onScanSuccess(text) {
+  function startContinuousScan() { isContinuousMode = true; editingIndex = -1; showToast('🔄 连续扫码模式 · 序号自动递增'); startScan(); }
+  async function startScan() {
+    if(html5QrCode) try{ await html5QrCode.stop(); }catch(e){}
+    document.getElementById('reader').innerHTML = '';
+    document.getElementById('reader').style.display = 'block';
+    document.getElementById('scanBtn').style.display = 'none';
+    document.getElementById('closeScanArea').style.display = 'block';
+    document.getElementById('formCard').style.display = 'none';
+    document.getElementById('scanStatus').textContent = '📷 请求摄像头...';
+    html5QrCode = new Html5Qrcode("reader");
+    try {
+      await html5QrCode.start({ facingMode:"environment" }, { fps:10, qrbox:{width:280,height:200} }, onScanSuccess, ()=>{});
+      document.getElementById('scanStatus').textContent = '🔍 扫描中，对准条码';
+    } catch(e){
+      console.error(e);
+      showToast("❌ 摄像头启动失败, 请检查权限");
       stopScan();
-      const barcode = text.trim();
-      currentDupBarcode = barcode;
-
-      const existIndex = records.findIndex(r => r.barcodeId === barcode);
-      if(existIndex > -1){
-        document.getElementById('dupMsg').innerText = `条码 ${barcode} 已存在，选择操作`;
-        document.getElementById('dupModal').classList.add('show');
-        return;
-      }
-
-      // 扫码成功，填充条码并自动刷新序号
-      document.getElementById('barcodeId').value = barcode;
-      document.getElementById('scannedBadge').style.display='inline-block';
-      document.getElementById('inboundTime').value = new Date().toLocaleString('zh-CN');
+    }
+  }
+  function onScanSuccess(text) {
+    stopScan();
+    let barcode = text.trim();
+    currentDupBarcode = barcode;
+    let exist = records.findIndex(r => r.barcodeId === barcode);
+    if(exist !== -1){
+      document.getElementById('dupMsg').innerHTML = `条码 <strong>${barcode}</strong> 已存在，请选择`;
+      document.getElementById('dupModal').classList.add('show');
+      return;
+    }
+    fillScanBarcode(barcode);
+  }
+  function dupContinue(){ document.getElementById('dupModal').classList.remove('show'); fillScanBarcode(currentDupBarcode); showToast("📥 继续新增入库"); }
+  function dupReplace(){
+    document.getElementById('dupModal').classList.remove('show');
+    let idx = records.findIndex(r => r.barcodeId === currentDupBarcode);
+    if(idx !== -1) records.splice(idx,1);
+    saveRecords(); rebuildDailySeqMap(); sortByTime(); renderAll();
+    fillScanBarcode(currentDupBarcode);
+    showToast("🔄 覆盖原记录");
+  }
+  function stopScan() {
+    isContinuousMode = false;
+    if(html5QrCode) try{ html5QrCode.stop(); }catch(e){}
+    html5QrCode = null;
+    document.getElementById('reader').style.display = 'none';
+    document.getElementById('scanBtn').style.display = 'block';
+    document.getElementById('closeScanArea').style.display = 'none';
+    document.getElementById('scanStatus').textContent = '';
+  }
+  
+  // 提交入库
+  function submitInbound() {
+    let barcode = document.getElementById('barcodeId').value.trim();
+    if(!barcode) return showToast("⚠️ 请先扫码或识别标签");
+    let seq = document.getElementById('sequenceNo').value;
+    if(!seq) seq = getNextSequence().toString();
+    let today = getTodayStr();
+    let conflict = records.some(r => {
+      if(editingIndex !== -1 && r.id === records[editingIndex]?.id) return false;
+      let d = r.inboundTime?.split(' ')[0]?.replace(/\//g, '-');
+      return d === today && r.sequenceNo === seq;
+    });
+    if(conflict && editingIndex === -1){
+      seq = getNextSequence().toString();
+      document.getElementById('sequenceNo').value = seq;
+      showToast("📌 序号冲突，已自动修正");
+    }
+    const record = {
+      id: editingIndex !== -1 ? records[editingIndex].id : Date.now(),
+      barcodeId: barcode,
+      sequenceNo: seq,
+      size: document.getElementById('size').value,
+      bundleNo: document.getElementById('bundleNo').value,
+      batchNo: document.getElementById('batchNo').value,
+      styleNo: document.getElementById('styleNo').value,
+      colorCode: document.getElementById('colorCode').value,
+      colorName: document.getElementById('colorName').value,
+      fabricA: document.getElementById('fabricA').value,
+      fabricB: document.getElementById('fabricB').value,
+      quantity: parseInt(document.getElementById('quantity').value)||1,
+      inboundTime: new Date().toLocaleString('zh-CN')
+    };
+    if(editingIndex !== -1){
+      records[editingIndex] = record;
       editingIndex = -1;
-      
-      if(isContinuousMode && document.getElementById('keepConfigSwitch').checked){
-        applyLastConfigForContinuous();
-      } else {
-        refreshSequenceNoInForm();
-        if(lastConfig && !isContinuousMode && document.getElementById('keepConfigSwitch').checked){
-          const keepFields = ['size','bundleNo','batchNo','styleNo','colorCode','colorName','fabricA','fabricB','quantity'];
-          keepFields.forEach(key=>{
-            const el = document.getElementById(key);
-            if(el && lastConfig[key] !== undefined) el.value = lastConfig[key] || '';
-          });
-        }
-      }
-
-      document.getElementById('formCard').style.display='block';
-      document.getElementById('formCard').scrollIntoView({behavior:'smooth'});
-      if(navigator.vibrate) navigator.vibrate(50);
-      showToast("✅ 扫码成功，请确认入库");
+      showToast("✏️ 修改完成");
+    } else {
+      records.unshift(record);
+      showToast("✅ 入库成功");
     }
-
-    // 重复条码 —— 继续入库
-    function dupContinue(){
-      document.getElementById('dupModal').classList.remove('show');
-      fillBarcodeForm(currentDupBarcode);
-      showToast("📥 允许重复，继续入库");
-    }
-
-    // 重复条码 —— 覆盖数据
-    function dupReplace(){
-      document.getElementById('dupModal').classList.remove('show');
-      const idx = records.findIndex(r=>r.barcodeId === currentDupBarcode);
-      if(idx > -1) {
-        records.splice(idx,1);
-      }
-      saveRecords();
-      rebuildDailySeqMap();
-      sortRecordsByTimeDesc();
-      renderHistory();
-      renderStats();
-      renderMonthSummary();
-      fillBarcodeForm(currentDupBarcode);
-      showToast("🔄 已覆盖原有数据");
-    }
-
-    function stopScan() {
-      isContinuousMode = false;
-      if(html5QrCode){
-        try{html5QrCode.stop();}catch(e){}
-        html5QrCode=null;
-      }
-      document.getElementById('reader').style.display='none';
-      document.getElementById('scanBtn').style.display='block';
-      document.getElementById('closeScanArea').style.display='none';
-      document.getElementById('scanStatus').textContent='';
-    }
-
-    // 提交入库
-    function submitInbound() {
-      const barcode=document.getElementById('barcodeId').value.trim();
-      if(!barcode) return showToast("⚠️ 请先扫码或识别标签");
-
-      let seqValue = document.getElementById('sequenceNo').value;
-      if(!seqValue || seqValue === "") {
-        seqValue = getNextSequenceForToday().toString();
-      }
-      
-      const today = getTodayStr();
-      const isSeqExist = records.some(r => {
-        if(r.barcodeId === barcode && editingIndex === -1) return false;
-        if(r.inboundTime) {
-          let rDate = r.inboundTime.split(' ')[0].replace(/\//g, '-');
-          const parts = rDate.split('-');
-          if(parts.length===3) {
-            const norm = `${parts[0]}-${parts[1].padStart(2,'0')}-${parts[2].padStart(2,'0')}`;
-            if(norm === today && r.sequenceNo === seqValue) return true;
-          }
-        }
-        return false;
-      });
-      if(isSeqExist && editingIndex === -1) {
-        showToast("⚠️ 今日序号已存在，已自动更新为最新序号");
-        seqValue = getNextSequenceForToday().toString();
-        document.getElementById('sequenceNo').value = seqValue;
-      }
-
-      const nowTime = new Date().toLocaleString('zh-CN');
-      
-      const record={
-        id: editingIndex !== -1 ? records[editingIndex]?.id : Date.now(),
-        barcodeId:barcode,
-        sequenceNo:seqValue,
-        size:document.getElementById('size').value,
-        bundleNo:document.getElementById('bundleNo').value.trim(),
-        batchNo:document.getElementById('batchNo').value.trim(),
-        styleNo:document.getElementById('styleNo').value.trim(),
-        colorCode:document.getElementById('colorCode').value.trim(),
-        colorName:document.getElementById('colorName').value.trim(),
-        fabricA:document.getElementById('fabricA').value.trim(),
-        fabricB:document.getElementById('fabricB').value.trim(),
-        quantity:parseInt(document.getElementById('quantity').value)||1,
-        inboundTime: nowTime
-      };
-
-      if (editingIndex >= 0) {
-        records[editingIndex] = record;
-        editingIndex = -1;
-        showToast("✅ 修改已保存，数据已覆盖");
-      } else {
-        records.unshift(record);
-        showToast("✅ 入库成功");
-      }
-
-      saveRecords();
-      rebuildDailySeqMap();
-      updateDailySeqForToday(parseInt(seqValue,10));
-      sortRecordsByTimeDesc();
-      resetForm();
-      renderHistory();
-      renderStats();
-      renderMonthSummary();
-      document.getElementById('formCard').style.display='none';
-
-      if(isContinuousMode && document.getElementById('keepConfigSwitch').checked){
-        saveCurrentConfig();
-        setTimeout(()=>{
-          editingIndex = -1;
-          startContinuousScan();
-        }, 500);
-      } else {
-        saveCurrentConfig();
-        isContinuousMode = false;
-      }
-    }
-
-    function resetForm() {
-      document.getElementById('barcodeId').value='';
-      document.getElementById('scannedBadge').style.display='none';
-      refreshSequenceNoInForm();
-    }
-
-    function modifyRecord(i) {
-      if(html5QrCode) stopScan();
-      isContinuousMode = false;
-      const r = records[i];
-      editingIndex = i;
-
-      document.getElementById('barcodeId').value = r.barcodeId;
-      document.getElementById('sequenceNo').value = r.sequenceNo;
-      document.getElementById('size').value = r.size;
-      document.getElementById('bundleNo').value = r.bundleNo;
-      document.getElementById('batchNo').value = r.batchNo;
-      document.getElementById('styleNo').value = r.styleNo;
-      document.getElementById('colorCode').value = r.colorCode;
-      document.getElementById('colorName').value = r.colorName;
-      document.getElementById('fabricA').value = r.fabricA;
-      document.getElementById('fabricB').value = r.fabricB;
-      document.getElementById('quantity').value = r.quantity;
-      document.getElementById('inboundTime').value = r.inboundTime;
-      document.getElementById('scannedBadge').style.display='inline-block';
-
-      document.getElementById('formCard').style.display='block';
-      document.getElementById('scanBtn').style.display='block';
-      document.getElementById('formCard').scrollIntoView({behavior:'smooth'});
-      showToast("✏️ 正在修改数据，提交后将覆盖原记录并排序");
-    }
-
-    function deleteRecord(i) {
-      if(confirm('确定删除？')){
-        records.splice(i,1);
-        saveRecords();
-        rebuildDailySeqMap();
-        sortRecordsByTimeDesc();
-        renderHistory();
-        renderStats();
-        renderMonthSummary();
-        showToast("已删除记录");
-      }
-    }
-    
-    function showClearModal(){document.getElementById('clearModal').classList.add('show');}
-    function hideClearModal(){document.getElementById('clearModal').classList.remove('show');}
-    function clearAll(){
-      records=[];
-      saveRecords();
-      rebuildDailySeqMap();
-      sortRecordsByTimeDesc();
-      renderHistory();renderStats();renderMonthSummary();
-      hideClearModal();
-      showToast("🗑️ 全部记录已清空");
-    }
-    
-    function saveRecords(){localStorage.setItem('garment_inbound_records',JSON.stringify(records));}
-    function loadRecords(){
-      const d=localStorage.getItem('garment_inbound_records');
-      records=d?JSON.parse(d):[];
-      rebuildDailySeqMap();
-    }
-
-    // 月度汇总
-    function renderMonthSummary() {
-      const monthMap = {};
-      records.forEach(r=>{
-        const date = new Date(r.inboundTime);
-        const monthKey = `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}`;
-        if(!monthMap[monthKey]){
-          monthMap[monthKey] = { total:0, count:0, barcodes:new Set() };
-        }
-        monthMap[monthKey].total += r.quantity||1;
-        monthMap[monthKey].count += 1;
-        monthMap[monthKey].barcodes.add(r.barcodeId);
-      });
-      const container = document.getElementById('monthSummary');
-      const keys = Object.keys(monthMap).sort().reverse();
-      if(keys.length===0){
-        container.innerHTML = '<div class="empty-state" style="padding:20px;">暂无月度数据</div>';
-        return;
-      }
-      let html = '';
-      keys.forEach(m=>{
-        const item = monthMap[m];
-        html += `<div class="month-item"><strong>${m} 月度汇总</strong><br>入库总件数：${item.total} 件 &nbsp;&nbsp;录入条码：${item.barcodes.size} 个 &nbsp;&nbsp;单据条数：${item.count} 条</div>`;
-      });
-      container.innerHTML = html;
-    }
-
-    function renderHistory(){
-      const c=document.getElementById('history');
-      document.getElementById('recordCount').textContent=`${records.length} 条`;
-      if(records.length===0) return c.innerHTML=`<div class="empty-state"><div class="icon">📭</div><p>暂无记录</p></div>`;
-      c.innerHTML=records.map((r,i)=>`
-        <div class="record-card">
-          <div class="record-header"><span class="barcode">🔢 ${r.barcodeId}</span><span class="time">${r.inboundTime}</span></div>
-          <div class="record-detail">
-            <div class="field"><div class="f-label">序号</div><div class="f-value">${r.sequenceNo||'-'}</div></div>
-            <div class="field"><div class="f-label">尺码</div><div class="f-value">${r.size||'-'}</div></div>
-            <div class="field"><div class="f-label">款号</div><div class="f-value">${r.styleNo||'-'}</div></div>
-            <div class="field"><div class="f-label">色号/颜色</div><div class="f-value">${r.colorCode||''} ${r.colorName||''}</div></div>
-            <div class="field"><div class="f-label">扎号</div><div class="f-value">${r.bundleNo||'-'}</div></div>
-            <div class="field"><div class="f-label">批号</div><div class="f-value">${r.batchNo||'-'}</div></div>
-            <div class="field"><div class="f-label">数量</div><div class="f-value">×${r.quantity}</div></div>
-            <div class="field"><div class="f-label">A料</div><div class="f-value" style="font-size:10px;">${r.fabricA||'-'}</div></div>
-          </div>
-          <div class="record-actions"><button class="btn btn-outline btn-sm" onclick="modifyRecord(${i})">✏️ 修改</button><button class="btn btn-danger btn-sm" onclick="deleteRecord(${i})">🗑️ 删除</button></div>
+    saveRecords(); rebuildDailySeqMap(); sortByTime(); renderAll();
+    document.getElementById('formCard').style.display = 'none';
+    document.getElementById('scannedBadge').style.display = 'none';
+    document.getElementById('barcodeId').value = '';
+    saveCurrentConfig();
+    if(isContinuousMode && document.getElementById('keepConfigSwitch').checked){
+      setTimeout(() => startContinuousScan(), 500);
+    } else isContinuousMode = false;
+  }
+  function modifyRecord(i){ if(html5QrCode) stopScan(); isContinuousMode=false; let r=records[i]; editingIndex=i; document.getElementById('barcodeId').value=r.barcodeId; document.getElementById('sequenceNo').value=r.sequenceNo; document.getElementById('size').value=r.size; document.getElementById('bundleNo').value=r.bundleNo; document.getElementById('batchNo').value=r.batchNo; document.getElementById('styleNo').value=r.styleNo; document.getElementById('colorCode').value=r.colorCode; document.getElementById('colorName').value=r.colorName; document.getElementById('fabricA').value=r.fabricA; document.getElementById('fabricB').value=r.fabricB; document.getElementById('quantity').value=r.quantity; document.getElementById('inboundTime').value=r.inboundTime; document.getElementById('scannedBadge').style.display='inline-block'; document.getElementById('formCard').style.display='block'; showToast("✏️ 编辑模式"); }
+  function deleteRecord(i){ if(confirm("删除该条记录？")){ records.splice(i,1); saveRecords(); rebuildDailySeqMap(); sortByTime(); renderAll(); showToast("已删除"); } }
+  function sortByTime(){ records.sort((a,b)=> new Date(b.inboundTime) - new Date(a.inboundTime)); }
+  function saveRecords(){ localStorage.setItem('garment_inbound_records', JSON.stringify(records)); }
+  function loadRecords(){ let d=localStorage.getItem('garment_inbound_records'); records=d?JSON.parse(d):[]; rebuildDailySeqMap(); sortByTime(); }
+  function renderAll(){ renderHistory(); renderStats(); renderMonthSummary(); }
+  function renderHistory(){
+    let container=document.getElementById('history');
+    document.getElementById('recordCount').innerText=`${records.length}条`;
+    if(!records.length){ container.innerHTML='<div class="empty-state">📭 暂无入库记录，请扫码或识别标签</div>'; return; }
+    container.innerHTML=records.map((r,i)=>`
+      <div class="record-item">
+        <div class="record-header"><span class="barcode-chip">🔢 ${escapeHtml(r.barcodeId)}</span><span class="time-text">${r.inboundTime}</span></div>
+        <div class="detail-grid">
+          <div class="detail-tag"><span>序号</span> ${r.sequenceNo}</div>
+          <div class="detail-tag"><span>尺码</span> ${r.size||'-'}</div>
+          <div class="detail-tag"><span>款号</span> ${r.styleNo||'-'}</div>
+          <div class="detail-tag"><span>色号/色</span> ${r.colorCode||''} ${r.colorName||''}</div>
+          <div class="detail-tag"><span>扎/批</span> ${r.bundleNo||'-'} / ${r.batchNo||'-'}</div>
+          <div class="detail-tag"><span>数量</span> ×${r.quantity}</div>
         </div>
-      `).join('');
+        <div class="record-actions"><button class="btn btn-outline btn-sm" onclick="modifyRecord(${i})">✏️ 修改</button><button class="btn btn-danger btn-sm" onclick="deleteRecord(${i})">🗑️ 删除</button></div>
+      </div>
+    `).join('');
+  }
+  function renderStats(){
+    let total=records.reduce((s,r)=>s+(r.quantity||1),0);
+    let unique=new Set(records.map(r=>r.barcodeId)).size;
+    let todayDate=new Date().toLocaleDateString('zh-CN');
+    let todayQty=records.filter(r=>r.inboundTime?.includes(todayDate)).reduce((s,r)=>s+(r.quantity||1),0);
+    document.getElementById('statTotal').textContent=total;
+    document.getElementById('statBarcodes').textContent=unique;
+    document.getElementById('statToday').textContent=todayQty;
+  }
+  function renderMonthSummary(){
+    let map=new Map();
+    records.forEach(r=>{
+      let d=new Date(r.inboundTime);
+      let key=`${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2,'0')}`;
+      if(!map.has(key)) map.set(key,{total:0, codes:new Set(), count:0});
+      let item=map.get(key);
+      item.total+=r.quantity||1;
+      item.codes.add(r.barcodeId);
+      item.count+=1;
+    });
+    let html='';
+    for(let [k,v] of [...map.entries()].sort().reverse()){
+      html+=`<div class="month-summary"><strong>📅 ${k}</strong> &nbsp; 总件数: ${v.total} &nbsp; 条码数: ${v.codes.size} &nbsp; 单数: ${v.count}</div>`;
     }
-    
-    function renderStats(){
-      const total=records.reduce((s,r)=>s+(r.quantity||1),0);
-      const unique=new Set(records.map(r=>r.barcodeId)).size;
-      const today=new Date().toLocaleDateString('zh-CN');
-      const todayQty=records.filter(r=>r.inboundTime?.includes(today)).reduce((s,r)=>s+(r.quantity||1),0);
-      document.getElementById('statTotal').textContent=total;
-      document.getElementById('statBarcodes').textContent=unique;
-      document.getElementById('statToday').textContent=todayQty;
-    }
-
-    function exportToExcel(){
-      if(records.length===0) return showToast("⚠️ 无数据可导出");
-      const detailData=records.map(r=>({'条码ID':r.barcodeId,'序号':r.sequenceNo,'尺码':r.size,'扎号':r.bundleNo,'批号':r.batchNo,'款号':r.styleNo,'色号':r.colorCode,'颜色':r.colorName,'A料信息':r.fabricA,'B料信息':r.fabricB,'数量':r.quantity,'入库时间':r.inboundTime}));
-      const monthMap = {};
-      records.forEach(r=>{ const date = new Date(r.inboundTime); const monthKey = `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}`; if(!monthMap[monthKey]) monthMap[monthKey] = { 月份:monthKey, 总件数:0, 条码数:0, 单据条数:0, 条码集合:new Set() }; monthMap[monthKey].总件数 += r.quantity||1; monthMap[monthKey].单据条数 += 1; monthMap[monthKey].条码集合.add(r.barcodeId); });
-      const summaryData = Object.values(monthMap).map(item=>({月份:item.月份,入库总件数:item.总件数,条码个数:item.条码集合.size,入库单据条数:item.单据条数}));
-      const allTotal = records.reduce((s,r)=>s+(r.quantity||1),0);
-      const allBarcode = new Set(records.map(r=>r.barcodeId)).size;
-      summaryData.push({月份:"【整体总计】",入库总件数:allTotal,条码个数:allBarcode,入库单据条数:records.length});
-      const wb = XLSX.utils.book_new();
-      const ws1 = XLSX.utils.json_to_sheet(detailData);
-      const ws2 = XLSX.utils.json_to_sheet(summaryData);
-      ws1['!cols']=[{wch:16},{wch:8},{wch:8},{wch:10},{wch:10},{wch:10},{wch:12},{wch:10},{wch:30},{wch:30},{wch:8},{wch:20}];
-      ws2['!cols']=[{wch:12},{wch:12},{wch:12},{wch:14}];
-      XLSX.utils.book_append_sheet(wb, ws1, "入库明细");
-      XLSX.utils.book_append_sheet(wb, ws2, "统计汇总");
-      XLSX.writeFile(wb,`服装入库完整报表_${new Date().toLocaleDateString('zh-CN').replace(/\//g,'-')}.xlsx`);
-      showToast("📥 导出成功，含明细+汇总");
-    }
-
-    function showToast(m){
-      const t=document.createElement('div');t.className='toast';t.textContent=m;document.body.appendChild(t);
-      setTimeout(()=>t.remove(),2500);
-    }
-
-    // 初始化加载
-    loadRecords();
-    initSequenceNo();
-    sortRecordsByTimeDesc();
-    renderHistory();
-    renderStats();
-    renderMonthSummary();
-  </script>
+    document.getElementById('monthSummary').innerHTML=html||'<div class="empty-state">暂无月度数据</div>';
+  }
+  function exportToExcel(){
+    if(!records.length) return showToast("无数据导出");
+    let detail=records.map(r=>({'条码ID':r.barcodeId,'序号':r.sequenceNo,'尺码':r.size,'扎号':r.bundleNo,'批号':r.batchNo,'款号':r.styleNo,'色号':r.colorCode,'颜色':r.colorName,'A料':r.fabricA,'B料':r.fabricB,'数量':r.quantity,'入库时间':r.inboundTime}));
+    let wb=XLSX.utils.book_new();
+    let ws=XLSX.utils.json_to_sheet(detail);
+    XLSX.utils.book_append_sheet(wb,ws,"入库明细");
+    XLSX.writeFile(wb,`服装入库_${new Date().toLocaleDateString()}.xlsx`);
+    showToast("导出成功");
+  }
+  function showClearModal(){ document.getElementById('clearModal').classList.add('show'); }
+  function hideClearModal(){ document.getElementById('clearModal').classList.remove('show'); }
+  function clearAll(){ records=[]; saveRecords(); rebuildDailySeqMap(); renderAll(); hideClearModal(); showToast("已清空所有数据"); }
+  function showToast(msg){ let t=document.createElement('div');t.className='toast';t.innerText=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2200); }
+  function escapeHtml(str){ if(!str) return ''; return str.replace(/[&<>]/g, function(m){ if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); }
+  
+  window.addEventListener('beforeinstallprompt', e=>{ deferredPrompt=e; });
+  loadRecords(); initSequenceSelect(); renderAll();
+</script>
 </body>
 </html>
