@@ -42,7 +42,7 @@
     .sub { font-size: 12px; color: var(--text-light); margin-top: 4px; }
     .btn-group { display: flex; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
     .btn {
-      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      display: inline-flex; align-items: center justify-content: center; gap: 6px;
       padding: 12px 16px; font-size: 14px; font-weight: 600; border: none;
       border-radius: 60px; cursor: pointer; transition: 0.2s; flex: 1;
       background: var(--card); color: var(--text); box-shadow: var(--shadow);
@@ -166,9 +166,14 @@
     <div class="input-field"><label>🧵 A料信息</label><input type="text" id="fabricA" placeholder="面料/辅料信息"></div>
     <div class="input-field"><label>🧵 B料信息</label><input type="text" id="fabricB" placeholder="辅料B (选填)"></div>
     <div class="row-2">
-      <div class="input-field"><label>📊 数量</label><input type="number" id="quantity" value="1" min="1"></div>
-      <div class="input-field"><label>⏱️ 入库时间</label><input type="text" id="inboundTime" readonly></div>
+      <div class="input-field"><label>📊 数量</label><input type="number" id="quantity" value="1" min="1" oninput="calcAmount()"></div>
+      <div class="input-field"><label>💰 单价</label><input type="number" id="price" value="0" min="0" step="0.01" oninput="calcAmount()"></div>
     </div>
+    <div class="input-field">
+      <label>💵 合计金额</label>
+      <input type="text" id="amount" readonly value="0.00">
+    </div>
+    <div class="input-field"><label>⏱️ 入库时间</label><input type="text" id="inboundTime" readonly></div>
     <button class="btn btn-primary" onclick="submitInbound()" style="margin-top: 4px;">✅ 确认入库</button>
   </div>
 </div>
@@ -185,13 +190,18 @@
 <div class="section-header"><h3>📋 入库记录</h3><span id="recordCount">0 条</span></div>
 <div id="history"></div>
 
+<!-- 新增：清空本日 + 清空全部 -->
 <div style="display:flex; gap:12px; margin-top: 12px;">
   <button class="btn btn-warning" onclick="exportToExcel()" style="flex:1;">📥 导出 Excel</button>
-  <button class="btn btn-danger" onclick="showClearModal()" style="flex:1;">🗑️ 清空记录</button>
+  <button class="btn btn-outline btn-sm" onclick="clearTodayRecord()">🗑️ 清空本日</button>
+  <button class="btn btn-danger btn-sm" onclick="showClearModal()">清空全部</button>
 </div>
 
 <!-- 弹窗 -->
-<div class="modal-mask" id="clearModal"><div class="modal-box"><h4>⚠️ 确认清空</h4><p>所有入库数据将永久删除，建议先导出备份。</p><div class="btn-group" style="margin-top:12px;"><button class="btn btn-outline btn-sm" onclick="hideClearModal()">取消</button><button class="btn btn-danger btn-sm" onclick="clearAll()">确认清空</button></div></div></div>
+<div class="modal-mask" id="clearModal"><div class="modal-box"><h4>⚠️ 确认清空全部</h4><p>所有入库数据将永久删除，建议先导出备份。</p><div class="btn-group" style="margin-top:12px;"><button class="btn btn-outline btn-sm" onclick="hideClearModal()">取消</button><button class="btn btn-danger btn-sm" onclick="clearAll()">确认清空</button></div></div></div>
+
+<div class="modal-mask" id="todayClearModal"><div class="modal-box"><h4>⚠️ 确认清空本日</h4><p>仅删除今天入库记录，保留历史月度数据。</p><div class="btn-group" style="margin-top:12px;"><button class="btn btn-outline btn-sm" onclick="hideTodayClearModal()">取消</button><button class="btn btn-warning btn-sm" onclick="clearToday()">确认清空本日</button></div></div></div>
+
 <div class="modal-mask" id="dupModal"><div class="modal-box"><h4>⚠️ 条码重复</h4><p id="dupMsg"></p><div class="btn-group" style="margin-top:12px;"><button class="btn btn-success btn-sm" onclick="dupContinue()">继续新增</button><button class="btn btn-primary btn-sm" onclick="dupReplace()">覆盖数据</button></div></div></div>
 
 <script>
@@ -200,10 +210,18 @@
   let records = [];
   let editingIndex = -1;
   let lastConfig = {};
-  let isContinuousMode = false;      // 连续扫码标志
+  let isContinuousMode = false;
   let currentDupBarcode = '';
   let dailySeqMap = {};
-  let ocrWorker = null;             // 预加载OCR
+  let ocrWorker = null;
+
+  // 自动计算金额
+  function calcAmount(){
+    let qty = parseFloat(document.getElementById('quantity').value) || 0;
+    let price = parseFloat(document.getElementById('price').value) || 0;
+    let amt = (qty * price).toFixed(2);
+    document.getElementById('amount').value = amt;
+  }
 
   // ==================== 初始化 & 预加载OCR ====================
   (async function preloadOCR() {
@@ -217,6 +235,7 @@
 
   // ==================== 辅助函数 ====================
   const getTodayStr = () => new Date().toISOString().slice(0,10);
+  const getTodayCN = () => new Date().toLocaleDateString('zh-CN');
   
   function rebuildDailySeqMap() {
     dailySeqMap = {};
@@ -272,22 +291,23 @@
       colorName: document.getElementById('colorName').value,
       fabricA: document.getElementById('fabricA').value,
       fabricB: document.getElementById('fabricB').value,
-      quantity: document.getElementById('quantity').value
+      quantity: document.getElementById('quantity').value,
+      price: document.getElementById('price').value
     };
   }
   
   function applyLastConfigContinuous() {
     if(!document.getElementById('keepConfigSwitch').checked) return;
-    const fields = ['size','bundleNo','batchNo','styleNo','colorCode','colorName','fabricA','fabricB','quantity'];
+    const fields = ['size','bundleNo','batchNo','styleNo','colorCode','colorName','fabricA','fabricB','quantity','price'];
     fields.forEach(k => { let el = document.getElementById(k); if(el && lastConfig[k] !== undefined) el.value = lastConfig[k]; });
+    calcAmount();
     let newSeq = getNextSequence();
     document.getElementById('sequenceNo').value = newSeq;
     lastConfig.sequenceNo = newSeq;
   }
 
-  // ==================== 拍照识别标签 (集成到同一入口) ====================
+  // ==================== 拍照识别标签 ====================
   function triggerOCRUpload() { 
-    // 如果当前连续扫码模式激活，先停止扫码器
     if(html5QrCode) stopScan(true);
     document.getElementById('ocrFileInput').click(); 
   }
@@ -301,7 +321,6 @@
     loadingDiv.innerText = '📖 正在识别服装标签...';
     document.body.appendChild(loadingDiv);
     try {
-      // 图像预处理：灰度+二值化
       const processedBlob = await preprocessImage(file);
       let result;
       if (ocrWorker) {
@@ -311,7 +330,6 @@
         result = await Tesseract.recognize(processedBlob, 'chi_sim+eng');
       }
       const rawText = result.text;
-      console.log("OCR识别结果:", rawText);
       const parsed = parseGarmentLabel(rawText);
       
       if(!parsed.barcodeId && !parsed.styleNo && !parsed.size) {
@@ -327,7 +345,6 @@
         document.getElementById('formCard').scrollIntoView({ behavior: 'smooth' });
       }
     } catch(err) {
-      console.error(err);
       showToast("❌ 识别失败，请确保标签清晰并重试");
     } finally {
       document.body.removeChild(loadingDiv);
@@ -398,6 +415,8 @@
     document.getElementById('fabricA').value = data.fabricA || '';
     document.getElementById('fabricB').value = data.fabricB || '';
     document.getElementById('quantity').value = 1;
+    document.getElementById('price').value = 0;
+    calcAmount();
     document.getElementById('inboundTime').value = new Date().toLocaleString('zh-CN');
     document.getElementById('scannedBadge').style.display = 'inline-block';
     editingIndex = -1;
@@ -405,7 +424,7 @@
     document.getElementById('formCard').style.display = 'block';
   }
 
-  // ==================== 扫码核心逻辑 (单次 + 连续) ====================
+  // ==================== 扫码核心逻辑 ====================
   function fillScanBarcode(barcode){
     document.getElementById('barcodeId').value = barcode;
     document.getElementById('scannedBadge').style.display = 'inline-block';
@@ -416,8 +435,9 @@
     } else {
       refreshSeqSelect();
       if(lastConfig && document.getElementById('keepConfigSwitch').checked){
-        const keep = ['size','bundleNo','batchNo','styleNo','colorCode','colorName','fabricA','fabricB','quantity'];
+        const keep = ['size','bundleNo','batchNo','styleNo','colorCode','colorName','fabricA','fabricB','quantity','price'];
         keep.forEach(k => { let el = document.getElementById(k); if(el && lastConfig[k]!==undefined) el.value = lastConfig[k]; });
+        calcAmount();
       }
     }
     document.getElementById('formCard').style.display = 'block';
@@ -452,7 +472,6 @@
   }
   
   async function startSingleScan() {
-    // 关闭连续模式
     isContinuousMode = false;
     await startScanInternal();
   }
@@ -478,14 +497,13 @@
       await html5QrCode.start({ facingMode:"environment" }, { fps:10, qrbox:{width:280,height:200} }, onScanSuccess, ()=>{});
       document.getElementById('scanStatus').textContent = '🔍 扫描中，对准条码';
     } catch(e){
-      console.error(e);
       showToast("❌ 摄像头启动失败, 请检查权限");
       stopScan(true);
     }
   }
   
   async function onScanSuccess(text) {
-    await stopCameraOnly();  // 只关闭摄像头，不重置连续模式标志
+    await stopCameraOnly();
     let barcode = text.trim();
     currentDupBarcode = barcode;
     let exist = records.findIndex(r => r.barcodeId === barcode);
@@ -512,7 +530,7 @@
     showToast("🔄 覆盖原记录");
   }
   
-  // ==================== 提交入库 (连续模式下自动重启) ====================
+  // ==================== 提交入库 ====================
   function submitInbound() {
     let barcode = document.getElementById('barcodeId').value.trim();
     if(!barcode) return showToast("⚠️ 请先扫码或识别标签");
@@ -529,6 +547,11 @@
       document.getElementById('sequenceNo').value = seq;
       showToast("📌 序号冲突，已自动修正");
     }
+
+    let qty = parseFloat(document.getElementById('quantity').value) || 0;
+    let price = parseFloat(document.getElementById('price').value) || 0;
+    let amount = parseFloat(document.getElementById('amount').value) || 0;
+
     const record = {
       id: editingIndex !== -1 ? records[editingIndex].id : Date.now(),
       barcodeId: barcode,
@@ -541,7 +564,9 @@
       colorName: document.getElementById('colorName').value,
       fabricA: document.getElementById('fabricA').value,
       fabricB: document.getElementById('fabricB').value,
-      quantity: parseInt(document.getElementById('quantity').value)||1,
+      quantity: qty,
+      price: price,
+      amount: amount,
       inboundTime: new Date().toLocaleString('zh-CN')
     };
     if(editingIndex !== -1){
@@ -556,14 +581,34 @@
     document.getElementById('formCard').style.display = 'none';
     document.getElementById('scannedBadge').style.display = 'none';
     document.getElementById('barcodeId').value = '';
+    document.getElementById('price').value = 0;
+    document.getElementById('quantity').value = 1;
+    calcAmount();
     saveCurrentConfig();
     
-    // 连续模式且开关开启: 自动重启摄像头继续扫码
     if(isContinuousMode && document.getElementById('keepConfigSwitch').checked){
       setTimeout(() => { startScanInternal(); }, 400);
     }
   }
   
+  // ==================== 新增：清空本日记录 ====================
+  function clearTodayRecord(){
+    document.getElementById('todayClearModal').classList.add('show');
+  }
+  function hideTodayClearModal(){
+    document.getElementById('todayClearModal').classList.remove('show');
+  }
+  function clearToday(){
+    let todayCN = getTodayCN();
+    records = records.filter(r => !r.inboundTime?.includes(todayCN));
+    saveRecords();
+    rebuildDailySeqMap();
+    sortByTime();
+    renderAll();
+    hideTodayClearModal();
+    showToast("✅ 本日记录已清空，保留历史数据");
+  }
+
   // ==================== 增删改查 & 渲染 ====================
   function modifyRecord(i){ 
     if(html5QrCode) stopScan(true); 
@@ -581,13 +626,24 @@
     document.getElementById('fabricA').value=r.fabricA; 
     document.getElementById('fabricB').value=r.fabricB; 
     document.getElementById('quantity').value=r.quantity; 
+    document.getElementById('price').value=r.price; 
+    calcAmount();
     document.getElementById('inboundTime').value=r.inboundTime; 
     document.getElementById('scannedBadge').style.display='inline-block'; 
     document.getElementById('formCard').style.display='block'; 
     showToast("✏️ 编辑模式"); 
   }
   
-  function deleteRecord(i){ if(confirm("删除该条记录？")){ records.splice(i,1); saveRecords(); rebuildDailySeqMap(); sortByTime(); renderAll(); showToast("已删除"); } }
+  function deleteRecord(i){ 
+    if(confirm("删除该条记录？")){ 
+      records.splice(i,1); 
+      saveRecords(); 
+      rebuildDailySeqMap(); 
+      sortByTime(); 
+      renderAll(); 
+      showToast("已删除"); 
+    } 
+  }
   function sortByTime(){ records.sort((a,b)=> new Date(b.inboundTime) - new Date(a.inboundTime)); }
   function saveRecords(){ localStorage.setItem('garment_inbound_records', JSON.stringify(records)); }
   function loadRecords(){ let d=localStorage.getItem('garment_inbound_records'); records=d?JSON.parse(d):[]; rebuildDailySeqMap(); sortByTime(); }
@@ -607,6 +663,8 @@
           <div class="detail-tag"><span>色号/色</span> ${r.colorCode||''} ${r.colorName||''}</div>
           <div class="detail-tag"><span>扎/批</span> ${r.bundleNo||'-'} / ${r.batchNo||'-'}</div>
           <div class="detail-tag"><span>数量</span> ×${r.quantity}</div>
+          <div class="detail-tag"><span>单价</span> ¥${r.price.toFixed(2)}</div>
+          <div class="detail-tag"><span>金额</span> ¥${r.amount.toFixed(2)}</div>
         </div>
         <div class="record-actions"><button class="btn btn-outline btn-sm" onclick="modifyRecord(${i})">✏️ 修改</button><button class="btn btn-danger btn-sm" onclick="deleteRecord(${i})">🗑️ 删除</button></div>
       </div>
@@ -628,38 +686,80 @@
     records.forEach(r=>{
       let d=new Date(r.inboundTime);
       let key=`${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2,'0')}`;
-      if(!map.has(key)) map.set(key,{total:0, codes:new Set(), count:0});
+      if(!map.has(key)) map.set(key,{total:0, codes:new Set(), count:0, totalAmount:0});
       let item=map.get(key);
       item.total+=r.quantity||1;
       item.codes.add(r.barcodeId);
       item.count+=1;
+      item.totalAmount += parseFloat(r.amount) || 0;
     });
     let html='';
     for(let [k,v] of [...map.entries()].sort().reverse()){
-      html+=`<div class="month-summary"><strong>📅 ${k}</strong> &nbsp; 总件数: ${v.total} &nbsp; 条码数: ${v.codes.size} &nbsp; 单数: ${v.count}</div>`;
+      html+=`<div class="month-summary"><strong>📅 ${k}</strong> &nbsp; 总件数: ${v.total} &nbsp; 条码数: ${v.codes.size} &nbsp; 单数: ${v.count} &nbsp; 总金额: ¥${v.totalAmount.toFixed(2)}</div>`;
     }
     document.getElementById('monthSummary').innerHTML=html||'<div class="empty-state">暂无月度数据</div>';
   }
   
+  // 导出：两张表 1.入库明细 2.汇总统计(总数量、总金额)
   function exportToExcel(){
     if(!records.length) return showToast("无数据导出");
-    let detail=records.map(r=>({'条码ID':r.barcodeId,'序号':r.sequenceNo,'尺码':r.size,'扎号':r.bundleNo,'批号':r.batchNo,'款号':r.styleNo,'色号':r.colorCode,'颜色':r.colorName,'A料':r.fabricA,'B料':r.fabricB,'数量':r.quantity,'入库时间':r.inboundTime}));
-    let wb=XLSX.utils.book_new();
-    let ws=XLSX.utils.json_to_sheet(detail);
-    XLSX.utils.book_append_sheet(wb,ws,"入库明细");
-    XLSX.writeFile(wb,`服装入库_${new Date().toLocaleDateString()}.xlsx`);
-    showToast("导出成功");
+    // 明细表
+    let detail = records.map(r => ({
+      '入库时间': r.inboundTime,
+      '条码ID': r.barcodeId,
+      '序号': r.sequenceNo,
+      '款号': r.styleNo || '',
+      '色号': r.colorCode || '',
+      '颜色': r.colorName || '',
+      '尺码': r.size || '',
+      '扎号': r.bundleNo || '',
+      '批号': r.batchNo || '',
+      '数量': r.quantity || 1,
+      '单价(¥)': parseFloat(r.price).toFixed(2),
+      '金额(¥)': parseFloat(r.amount).toFixed(2)
+    }));
+
+    // 汇总表
+    let totalQty = records.reduce((sum, r) => sum + (r.quantity || 1), 0);
+    let totalMoney = records.reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0);
+    let totalOrder = records.length;
+    let totalCode = new Set(records.map(r=>r.barcodeId)).size;
+
+    let summary = [
+      {统计项目:'总入库单数', 数值:totalOrder},
+      {统计项目:'总条码种类', 数值:totalCode},
+      {统计项目:'总入库数量', 数值:totalQty},
+      {统计项目:'总金额(元)', 数值:totalMoney.toFixed(2)}
+    ];
+
+    let wb = XLSX.utils.book_new();
+    let ws1 = XLSX.utils.json_to_sheet(detail);
+    let ws2 = XLSX.utils.json_to_sheet(summary);
+
+    // 列宽
+    ws1['!cols'] = [
+      {wch:22},{wch:18},{wch:6},{wch:12},
+      {wch:10},{wch:8},{wch:6},{wch:10},
+      {wch:10},{wch:8},{wch:10},{wch:10}
+    ];
+    ws2['!cols'] = [{wch:14},{wch:12}];
+
+    XLSX.utils.book_append_sheet(wb, ws1, "入库明细");
+    XLSX.utils.book_append_sheet(wb, ws2, "数据汇总");
+
+    XLSX.writeFile(wb, `服装入库_${new Date().toLocaleDateString()}.xlsx`);
+    showToast("✅ 导出成功！含明细+汇总表");
   }
   
   function showClearModal(){ document.getElementById('clearModal').classList.add('show'); }
   function hideClearModal(){ document.getElementById('clearModal').classList.remove('show'); }
   function clearAll(){ records=[]; saveRecords(); rebuildDailySeqMap(); renderAll(); hideClearModal(); showToast("已清空所有数据"); }
   function showToast(msg){ let t=document.createElement('div');t.className='toast';t.innerText=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2200); }
-  function escapeHtml(str){ if(!str) return ''; return str.replace(/[&<>]/g, function(m){ if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); }
+  function escapeHtml(str){ if(!str) return ''; return str.replace(/[&<>]/g, m=>m==='&'?'&amp;':m==='<'?'&lt;':m==='>'?'&gt;':m); }
   
   // ==================== 启动 ====================
   window.addEventListener('beforeinstallprompt', e=>{ e.preventDefault(); });
-  loadRecords(); initSequenceSelect(); renderAll();
+  loadRecords(); initSequenceSelect(); calcAmount(); renderAll();
 </script>
 </body>
 </html>
