@@ -42,7 +42,7 @@
     .sub { font-size: 12px; color: var(--text-light); margin-top: 4px; }
     .btn-group { display: flex; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
     .btn {
-      display: inline-flex; align-items: center justify-content: center; gap: 6px;
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
       padding: 12px 16px; font-size: 14px; font-weight: 600; border: none;
       border-radius: 60px; cursor: pointer; transition: 0.2s; flex: 1;
       background: var(--card); color: var(--text); box-shadow: var(--shadow);
@@ -157,7 +157,7 @@
     <div class="row-3">
       <div class="input-field"><label>🏷️ 扎号</label><input type="text" id="bundleNo" placeholder="捆号/扎号"></div>
       <div class="input-field"><label>📦 批号</label><input type="text" id="batchNo" placeholder="批号"></div>
-      <div class="input-field"><label>👔 款号</label><input type="text" id="styleNo" placeholder="款号"></div>
+      <div class="input-field"><label>👔 款号</label><input type="text" id="styleNo" placeholder="款号" onchange="fillByStyle()"></div>
     </div>
     <div class="row-2">
       <div class="input-field"><label>🎨 色号</label><input type="text" id="colorCode" placeholder="例: 02-269"></div>
@@ -190,7 +190,6 @@
 <div class="section-header"><h3>📋 入库记录</h3><span id="recordCount">0 条</span></div>
 <div id="history"></div>
 
-<!-- 新增：清空本日 + 清空全部 -->
 <div style="display:flex; gap:12px; margin-top: 12px;">
   <button class="btn btn-warning" onclick="exportToExcel()" style="flex:1;">📥 导出 Excel</button>
   <button class="btn btn-outline btn-sm" onclick="clearTodayRecord()">🗑️ 清空本日</button>
@@ -221,6 +220,24 @@
     let price = parseFloat(document.getElementById('price').value) || 0;
     let amt = (qty * price).toFixed(2);
     document.getElementById('amount').value = amt;
+  }
+
+  // 同款号自动填充上次信息
+  function fillByStyle(){
+    let style = document.getElementById('styleNo').value.trim();
+    if(!style) return;
+    // 找最近一条同款号记录
+    let last = records.filter(r=>r.styleNo===style).sort((a,b)=>new Date(b.inboundTime)-new Date(a.inboundTime))[0];
+    if(!last) return;
+    document.getElementById('price').value = last.price || 0;
+    document.getElementById('colorCode').value = last.colorCode || '';
+    document.getElementById('colorName').value = last.colorName || '';
+    document.getElementById('fabricA').value = last.fabricA || '';
+    document.getElementById('fabricB').value = last.fabricB || '';
+    document.getElementById('bundleNo').value = last.bundleNo || '';
+    document.getElementById('batchNo').value = last.batchNo || '';
+    calcAmount();
+    showToast('✅ 同款信息已自动填充');
   }
 
   // ==================== 初始化 & 预加载OCR ====================
@@ -422,6 +439,7 @@
     editingIndex = -1;
     refreshSeqSelect();
     document.getElementById('formCard').style.display = 'block';
+    if(data.styleNo) fillByStyle();
   }
 
   // ==================== 扫码核心逻辑 ====================
@@ -430,6 +448,7 @@
     document.getElementById('scannedBadge').style.display = 'inline-block';
     document.getElementById('inboundTime').value = new Date().toLocaleString('zh-CN');
     editingIndex = -1;
+    let oldStyle = document.getElementById('styleNo').value.trim();
     if(isContinuousMode && document.getElementById('keepConfigSwitch').checked){
       applyLastConfigContinuous();
     } else {
@@ -440,6 +459,8 @@
         calcAmount();
       }
     }
+    let newStyle = document.getElementById('styleNo').value.trim();
+    if(newStyle && newStyle!==oldStyle) fillByStyle();
     document.getElementById('formCard').style.display = 'block';
     document.getElementById('formCard').scrollIntoView({behavior:'smooth'});
     if(navigator.vibrate) navigator.vibrate(50);
