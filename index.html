@@ -34,11 +34,11 @@
     }
     .header { text-align: center; padding: 16px 0 12px; }
     .header h1 { font-size: 21px; font-weight: 700; }
-    .top-btns { display: flex; gap: 8px; margin-bottom: 10px; }
+    .top-btns { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
     .top-btns .btn { flex: 1; font-size: 13px; padding: 11px 6px; white-space: nowrap; }
     .btn {
       display: block; width: 100%; padding: 13px; font-size: 16px;
-      font-weight: 600; border: none; border-radius: 12px; cursor: pointer;
+      font-weight: 600; border: none; border-radius: 12px cursor: pointer;
       transition: all 0.2s; text-align: center;
     }
     .btn:active { transform: scale(0.97); opacity: 0.85; }
@@ -63,8 +63,8 @@
     .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
     .scanned-badge { display: inline-block; background: #d1fae5; color: #065f46; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; }
-    .stats { display: flex; gap: 8px; margin: 10px 0; }
-    .stat-item { flex: 1; background: var(--card); padding: 10px; border-radius: 10px; text-align: center; box-shadow: var(--shadow); }
+    .stats { display: flex; gap: 8px; margin: 10px 0; flex-wrap: wrap; }
+    .stat-item { flex: 1; background: var(--card); padding: 10px; border-radius: 10px; text-align: center; box-shadow: var(--shadow); min-width: 100px; }
     .stat-item .num { font-size: 24px; font-weight: 800; color: var(--primary); }
     .stat-item .lbl { font-size: 11px; color: var(--text-secondary); }
     .section-header { display: flex; justify-content: space-between; align-items: center; margin: 16px 0 8px; }
@@ -101,18 +101,73 @@
     .modal p { color: var(--text-secondary); font-size: 13px; margin-bottom: 14px; }
     .modal .modal-actions { display: flex; gap: 8px; }
     .modal .modal-actions .btn { flex: 1; }
+    .month-item {
+      padding: 10px;
+      background: var(--input-bg);
+      border-radius: 8px;
+      margin-bottom: 6px;
+      font-size: 14px;
+    }
+    .switch-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 10px 0;
+    }
+    .switch-text { font-size: 14px; }
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 24px;
+    }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: #ccc;
+      transition: .3s;
+      border-radius: 24px;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 18px; width: 18px;
+      left: 3px; bottom: 3px;
+      background-color: white;
+      transition: .3s;
+      border-radius: 50%;
+    }
+    input:checked + .slider { background-color: var(--primary); }
+    input:checked + .slider:before { transform: translateX(20px); }
   </style>
 </head>
 <body>
   <div class="header"><h1>👕 服装扫码入库系统</h1></div>
+
   <div id="installGuide">💡 点击 <b>分享</b> → 滑动找到 <b>「添加到主屏幕」</b> 即可安装</div>
+
   <div class="top-btns">
-    <button class="btn btn-primary" onclick="startScan()" id="scanBtn">📷 扫码</button>
+    <button class="btn btn-primary" onclick="startScan()" id="scanBtn">📷 单次扫码</button>
+    <button class="btn btn-success" onclick="startContinuousScan()">🔄 连续扫码</button>
     <button class="btn btn-download" onclick="exportToExcel()">📥 下载</button>
     <button class="btn btn-install" id="installBtn" onclick="installApp()" style="display:none;">⬇️ 安装</button>
   </div>
+
+  <!-- 连续扫码开关提示 -->
+  <div class="switch-row">
+    <span class="switch-text">连续扫码沿用配置：</span>
+    <label class="switch">
+      <input type="checkbox" id="keepConfigSwitch" checked>
+      <span class="slider"></span>
+    </label>
+  </div>
+
   <div class="scan-status" id="scanStatus"></div>
-  <div class="close-scan" id="closeScanArea"><button class="btn btn-outline btn-sm" onclick="stopScan()">✕ 关闭扫码</button></div>
+  <div class="close-scan" id="closeScanArea">
+    <button class="btn btn-outline btn-sm" onclick="stopScan()">✕ 关闭扫码</button>
+  </div>
   <div id="reader"></div>
 
   <div class="card" id="formCard" style="display:none;">
@@ -140,13 +195,24 @@
     <button class="btn btn-success" onclick="submitInbound()">✅ 确认入库</button>
   </div>
 
+  <!-- 总统计 -->
   <div class="stats">
     <div class="stat-item"><div class="num" id="statTotal">0</div><div class="lbl">总件数</div></div>
     <div class="stat-item"><div class="num" id="statBarcodes">0</div><div class="lbl">已录入条码</div></div>
     <div class="stat-item"><div class="num" id="statToday">0</div><div class="lbl">今日入库</div></div>
   </div>
 
-  <div class="section-header"><h3>📋 入库记录</h3><span id="recordCount">0 条</span></div>
+  <!-- 月度入库总结 -->
+  <div class="section-header">
+    <h3>📅 月度入库总结</h3>
+  </div>
+  <div class="card" id="monthSummary"></div>
+
+  <!-- 入库记录 -->
+  <div class="section-header">
+    <h3>📋 入库记录</h3>
+    <span id="recordCount">0 条</span>
+  </div>
   <div id="history"></div>
 
   <div style="display:flex;gap:10px;margin-top:14px;">
@@ -171,12 +237,17 @@
     let editingIndex = -1;
     let deferredPrompt = null;
 
+    // 连续扫码配置缓存
+    let lastConfig = {};
+    let isContinuousMode = false;
+
     // 初始化
     function init() {
       loadRecords();
       populateSequenceOptions();
       renderHistory();
       renderStats();
+      renderMonthSummary();
     }
     function populateSequenceOptions() {
       const select = document.getElementById('sequenceNo');
@@ -190,9 +261,40 @@
       else{document.getElementById('installGuide').style.display='block';}
     }
 
-    // 核心：扫码（极简、每次重新授权、不吞错）
+    // 保存当前表单配置 用于连续扫码复用
+    function saveCurrentConfig() {
+      lastConfig = {
+        sequenceNo: document.getElementById('sequenceNo').value,
+        size: document.getElementById('size').value,
+        bundleNo: document.getElementById('bundleNo').value,
+        batchNo: document.getElementById('batchNo').value,
+        styleNo: document.getElementById('styleNo').value,
+        colorCode: document.getElementById('colorCode').value,
+        colorName: document.getElementById('colorName').value,
+        fabricA: document.getElementById('fabricA').value,
+        fabricB: document.getElementById('fabricB').value,
+        quantity: document.getElementById('quantity').value
+      };
+    }
+
+    // 复用上次配置
+    function applyLastConfig() {
+      if(!document.getElementById('keepConfigSwitch').checked) return;
+      Object.keys(lastConfig).forEach(key=>{
+        const el = document.getElementById(key);
+        if(el) el.value = lastConfig[key] || '';
+      });
+    }
+
+    // 开始连续扫码
+    function startContinuousScan() {
+      isContinuousMode = true;
+      showToast('🔄 已进入连续扫码模式');
+      startScan();
+    }
+
+    // 核心扫码
     async function startScan() {
-      // 1. 先彻底清旧实例
       if(html5QrCode){
         try{await html5QrCode.stop();}catch(e){}
         html5QrCode=null;
@@ -204,7 +306,6 @@
       document.getElementById('formCard').style.display='none';
       document.getElementById('scanStatus').textContent='正在请求摄像头权限...';
 
-      // 2. 每次新建实例、强制授权
       html5QrCode=new Html5Qrcode("reader");
       try{
         await html5QrCode.start(
@@ -215,26 +316,35 @@
         );
         document.getElementById('scanStatus').textContent='扫描中...';
       }catch(e){
-        // 3. 明确报错，让用户知道为什么不行
         console.error("摄像头失败：",e);
-        if(e.name==="NotAllowedError") showToast("❌ 请允许摄像头权限（地址栏🔒设置）");
+        if(e.name==="NotAllowedError") showToast("❌ 请允许摄像头权限");
         else if(e.name==="NotFoundError") showToast("❌ 未找到摄像头");
-        else if(e.name==="NotSupportedError") showToast("❌ 请用HTTPS或localhost打开");
-        else showToast("❌ 摄像头启动失败："+e.message);
+        else if(e.name==="NotSupportedError") showToast("❌ 请用HTTPS打开");
+        else showToast("❌ 摄像头启动失败");
         stopScan();
       }
     }
+
     function onScanSuccess(text) {
       stopScan();
-      document.getElementById('barcodeId').value=text.trim();
+      const barcode = text.trim();
+      document.getElementById('barcodeId').value = barcode;
       document.getElementById('scannedBadge').style.display='inline-block';
       document.getElementById('inboundTime').value=new Date().toLocaleString('zh-CN');
+
+      // 连续扫码自动复用配置
+      if(isContinuousMode){
+        applyLastConfig();
+      }
+
       document.getElementById('formCard').style.display='block';
       document.getElementById('formCard').scrollIntoView({behavior:'smooth'});
       if(navigator.vibrate) navigator.vibrate(50);
-      showToast("✅ 扫码成功");
+      showToast("✅ 扫码成功，请确认入库");
     }
+
     function stopScan() {
+      isContinuousMode = false;
       if(html5QrCode){
         try{html5QrCode.stop();}catch(e){}
         html5QrCode=null;
@@ -245,10 +355,14 @@
       document.getElementById('scanStatus').textContent='';
     }
 
-    // 表单、存储、渲染（不变，只改扫码）
+    // 提交入库
     function submitInbound() {
       const barcode=document.getElementById('barcodeId').value.trim();
       if(!barcode) return showToast("⚠️ 请先扫码");
+
+      // 保存当前配置 供下一次连续扫码使用
+      saveCurrentConfig();
+
       const record={
         id:editingIndex>=0?records[editingIndex].id:Date.now(),
         barcodeId:barcode,
@@ -265,25 +379,24 @@
         inboundTime:new Date().toLocaleString('zh-CN')
       };
       editingIndex>=0?(records[editingIndex]=record,editingIndex=-1):records.unshift(record);
-      saveRecords();resetForm();renderHistory();renderStats();
+      saveRecords();resetForm();renderHistory();renderStats();renderMonthSummary();
       document.getElementById('formCard').style.display='none';
       showToast("✅ 入库成功");
+
+      // 连续扫码自动继续下一次扫码
+      if(document.getElementById('keepConfigSwitch').checked){
+        setTimeout(()=>{
+          startContinuousScan();
+        },600);
+      }
     }
+
     function resetForm() {
       document.getElementById('barcodeId').value='';
-      document.getElementById('sequenceNo').value='';
-      document.getElementById('size').value='';
-      document.getElementById('bundleNo').value='';
-      document.getElementById('batchNo').value='';
-      document.getElementById('styleNo').value='';
-      document.getElementById('colorCode').value='';
-      document.getElementById('colorName').value='';
-      document.getElementById('fabricA').value='';
-      document.getElementById('fabricB').value='';
-      document.getElementById('quantity').value=1;
-      document.getElementById('inboundTime').value='';
       document.getElementById('scannedBadge').style.display='none';
+      // 不清空配置字段，保留给连续扫码
     }
+
     function editRecord(i) {
       const r=records[i];editingIndex=i;
       document.getElementById('barcodeId').value=r.barcodeId;
@@ -302,12 +415,60 @@
       document.getElementById('formCard').style.display='block';
       document.getElementById('scanBtn').style.display='none';
     }
-    function deleteRecord(i) {if(confirm('确定删除？')){records.splice(i,1);saveRecords();renderHistory();renderStats();}}
+    function deleteRecord(i) {
+      if(confirm('确定删除？')){
+        records.splice(i,1);
+        saveRecords();
+        renderHistory();renderStats();renderMonthSummary();
+      }
+    }
     function showClearModal(){document.getElementById('clearModal').classList.add('show');}
     function hideClearModal(){document.getElementById('clearModal').classList.remove('show');}
-    function clearAll(){records=[];saveRecords();renderHistory();renderStats();hideClearModal();}
+    function clearAll(){
+      records=[];
+      saveRecords();
+      renderHistory();renderStats();renderMonthSummary();
+      hideClearModal();
+      showToast("🗑️ 全部记录已清空");
+    }
     function saveRecords(){localStorage.setItem('garment_inbound_records',JSON.stringify(records));}
     function loadRecords(){const d=localStorage.getItem('garment_inbound_records');records=d?JSON.parse(d):[];}
+
+    // 渲染月度入库总结
+    function renderMonthSummary() {
+      const monthMap = {};
+      records.forEach(r=>{
+        const date = new Date(r.inboundTime);
+        const monthKey = `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}`;
+        if(!monthMap[monthKey]){
+          monthMap[monthKey] = { total:0, count:0, barcodes:new Set() };
+        }
+        monthMap[monthKey].total += r.quantity||1;
+        monthMap[monthKey].count += 1;
+        monthMap[monthKey].barcodes.add(r.barcodeId);
+      });
+
+      const container = document.getElementById('monthSummary');
+      const keys = Object.keys(monthMap).sort().reverse();
+      if(keys.length===0){
+        container.innerHTML = '<div class="empty-state" style="padding:20px;">暂无月度数据</div>';
+        return;
+      }
+      let html = '';
+      keys.forEach(m=>{
+        const item = monthMap[m];
+        html += `
+          <div class="month-item">
+            <strong>${m} 月度汇总</strong><br>
+            入库总件数：${item.total} 件 &nbsp;&nbsp;
+            录入条码：${item.barcodes.size} 个 &nbsp;&nbsp;
+            单据条数：${item.count} 条
+          </div>
+        `;
+      });
+      container.innerHTML = html;
+    }
+
     function renderHistory(){
       const c=document.getElementById('history');
       document.getElementById('recordCount').textContent=`${records.length} 条`;
@@ -355,7 +516,10 @@
       XLSX.writeFile(wb,`服装入库记录_${new Date().toLocaleDateString('zh-CN').replace(/\//g,'-')}.xlsx`);
       showToast("📥 导出成功");
     }
-    function showToast(m){const t=document.createElement('div');t.className='toast';t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),2500);}
+    function showToast(m){
+      const t=document.createElement('div');t.className='toast';t.textContent=m;document.body.appendChild(t);
+      setTimeout(()=>t.remove(),2500);
+    }
 
     init();
   </script>
