@@ -228,14 +228,14 @@
     </div>
   </div>
 
-  <!-- 重复条码弹窗：跳过 / 替换 -->
+  <!-- 重复条码弹窗：继续入库 / 覆盖数据 -->
   <div class="modal-overlay" id="dupModal">
     <div class="modal">
       <h4>⚠️ 条码已存在</h4>
-      <p id="dupMsg">该条码已录入，选择操作</p>
+      <p id="dupMsg">该条码已录入，请选择操作</p>
       <div class="modal-actions">
-        <button class="btn btn-outline btn-sm" onclick="dupSkip()">跳过</button>
-        <button class="btn btn-primary btn-sm" onclick="dupReplace()">替换</button>
+        <button class="btn btn-success btn-sm" onclick="dupContinue()">继续入库</button>
+        <button class="btn btn-primary btn-sm" onclick="dupReplace()">覆盖数据</button>
       </div>
     </div>
   </div>
@@ -374,21 +374,24 @@
       showToast("✅ 扫码成功，请确认入库");
     }
 
-    // 重复条码 - 跳过
-    function dupSkip(){
+    // 重复条码 —— 继续入库（直接新增，保留旧数据）
+    function dupContinue(){
       document.getElementById('dupModal').classList.remove('show');
-      showToast("⏭️ 已跳过重复条码");
-      if(isContinuousMode){
-        setTimeout(()=>startContinuousScan(),500);
-      }
+      fillBarcodeForm(currentDupBarcode);
+      showToast("📥 允许重复，继续入库");
     }
 
-    // 重复条码 - 替换
+    // 重复条码 —— 覆盖数据（删除旧记录，重新录入）
     function dupReplace(){
       document.getElementById('dupModal').classList.remove('show');
       const idx = records.findIndex(r=>r.barcodeId === currentDupBarcode);
       if(idx > -1) records.splice(idx,1);
+      saveRecords();
+      renderHistory();
+      renderStats();
+      renderMonthSummary();
       fillBarcodeForm(currentDupBarcode);
+      showToast("🔄 已覆盖原有数据");
     }
 
     function stopScan() {
