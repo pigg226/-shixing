@@ -142,7 +142,7 @@
 </div>
 <div id="reader"></div>
 
-<!-- 入库表单 -->
+<!-- 入库表单：去掉 oninput，改用JS全局监听 -->
 <div class="card" id="formCard" style="display:none;">
   <div class="card-title">
     📝 入库明细
@@ -157,7 +157,7 @@
     <div class="row-3">
       <div class="input-field"><label>🏷️ 扎号</label><input type="text" id="bundleNo" placeholder="捆号/扎号"></div>
       <div class="input-field"><label>📦 批号</label><input type="text" id="batchNo" placeholder="批号"></div>
-      <div class="input-field"><label>👔 款号</label><input type="text" id="styleNo" placeholder="款号" onchange="fillByStyle()"></div>
+      <div class="input-field"><label>👔 款号</label><input type="text" id="styleNo" placeholder="款号"></div>
     </div>
     <div class="row-2">
       <div class="input-field"><label>🎨 色号</label><input type="text" id="colorCode" placeholder="例: 02-269"></div>
@@ -166,8 +166,8 @@
     <div class="input-field"><label>🧵 A料信息</label><input type="text" id="fabricA" placeholder="面料/辅料信息"></div>
     <div class="input-field"><label>🧵 B料信息</label><input type="text" id="fabricB" placeholder="辅料B (选填)"></div>
     <div class="row-2">
-      <div class="input-field"><label>📊 数量</label><input type="number" id="quantity" value="1" min="1" oninput="calcAmount()"></div>
-      <div class="input-field"><label>💰 单价</label><input type="number" id="price" value="0" min="0" step="0.01" oninput="calcAmount()"></div>
+      <div class="input-field"><label>📊 数量</label><input type="number" id="quantity" value="1" min="1"></div>
+      <div class="input-field"><label>💰 单价</label><input type="number" id="price" value="0" min="0" step="0.01"></div>
     </div>
     <div class="input-field">
       <label>💵 合计金额</label>
@@ -214,15 +214,27 @@
   let dailySeqMap = {};
   let ocrWorker = null;
 
-  // 自动计算金额
+  // ========== 手机兼容：全局监听数量/单价变化，每次都算金额 ==========
   function calcAmount(){
     let qty = parseFloat(document.getElementById('quantity').value) || 0;
     let price = parseFloat(document.getElementById('price').value) || 0;
     let amt = (qty * price).toFixed(2);
     document.getElementById('amount').value = amt;
   }
+  // 全局绑定：兼容iOS/安卓/微信浏览器
+  function bindCalcEvents(){
+    const qty = document.getElementById('quantity');
+    const price = document.getElementById('price');
+    // 覆盖所有可能触发的事件（手机兼容）
+    qty.addEventListener('input', calcAmount);
+    qty.addEventListener('change', calcAmount);
+    qty.addEventListener('blur', calcAmount);
+    price.addEventListener('input', calcAmount);
+    price.addEventListener('change', calcAmount);
+    price.addEventListener('blur', calcAmount);
+  }
 
-  // 同款号自动填充上次信息
+  // ========== 同款号自动填充（手机稳定版） ==========
   function fillByStyle(){
     let style = document.getElementById('styleNo').value.trim();
     if(!style) return;
@@ -236,8 +248,15 @@
     document.getElementById('fabricB').value = last.fabricB || '';
     document.getElementById('bundleNo').value = last.bundleNo || '';
     document.getElementById('batchNo').value = last.batchNo || '';
-    calcAmount();
+    calcAmount(); // 强制算一次金额
     showToast('✅ 同款信息已自动填充');
+  }
+  // 绑定款号事件（手机兼容）
+  function bindStyleEvent(){
+    const style = document.getElementById('styleNo');
+    style.addEventListener('input', fillByStyle);
+    style.addEventListener('change', fillByStyle);
+    style.addEventListener('blur', fillByStyle);
   }
 
   // ==================== 初始化 & 预加载OCR ====================
@@ -317,7 +336,7 @@
     if(!document.getElementById('keepConfigSwitch').checked) return;
     const fields = ['size','bundleNo','batchNo','styleNo','colorCode','colorName','fabricA','fabricB','quantity','price'];
     fields.forEach(k => { let el = document.getElementById(k); if(el && lastConfig[k] !== undefined) el.value = lastConfig[k]; });
-    calcAmount();
+    calcAmount(); // 强制算金额
     let newSeq = getNextSequence();
     document.getElementById('sequenceNo').value = newSeq;
     lastConfig.sequenceNo = newSeq;
@@ -392,32 +411,6 @@
     });
   }
 
-  function parseGarmentLabel(text) {
-    let result = { barcodeId: '', size: '', bundleNo: '', batchNo: '', styleNo: '', colorCode: '', colorName: '', fabricA: '', fabricB: '' };
-    let barcodeMatch = text.match(/\b(\d{8,20})\b/);
-    if(barcodeMatch) result.barcodeId = barcodeMatch[1];
-    let sizeMatch = text.match(/\b(XS|S|M|L|XL|2XL|3XL|4XL|XXL|XXXL)\b/i);
-    if(sizeMatch) result.size = sizeMatch[1].toUpperCase();
-    let bundleMatch = text.match(/(?:扎号|捆号|扎)[:：]?\s*([^\n\r,，]+)/i);
-    if(bundleMatch) result.bundleNo = bundleMatch[1].trim();
-    let batchMatch = text.match(/(?:批号|批次|批)[:：]?\s*([^\n\r,，]+)/i);
-    if(batchMatch) result.batchNo = batchMatch[1].trim();
-    let styleMatch = text.match(/(?:款号|款|货号)[:：]?\s*([A-Z0-9\-]+)/i);
-    if(styleMatch) result.styleNo = styleMatch[1].trim();
-    let colorCodeMatch = text.match(/(?:色号|色码|色)[:：]?\s*([\w\-]+)/i);
-    if(colorCodeMatch) result.colorCode = colorCodeMatch[1].trim();
-    let colorNameMatch = text.match(/(?:颜色|色名)[:：]?\s*([\u4e00-\u9fa5]{2,6})/i);
-    if(colorNameMatch) result.colorName = colorNameMatch[1].trim();
-    let combined = text.match(/([\w\-]+)\s+([\u4e00-\u9fa5]{2,4})/);
-    if(combined && !result.colorCode) result.colorCode = combined[1];
-    if(combined && !result.colorName) result.colorName = combined[2];
-    let fabricAMatch = text.match(/(?:A料|面料A|A面)[:：]?\s*([^\n]{2,30})/i);
-    if(fabricAMatch) result.fabricA = fabricAMatch[1].trim();
-    let fabricBMatch = text.match(/(?:B料|面料B|B面)[:：]?\s*([^\n]{2,30})/i);
-    if(fabricBMatch) result.fabricB = fabricBMatch[1].trim();
-    return result;
-  }
-
   function fillFromOCRData(data) {
     if(data.barcodeId) document.getElementById('barcodeId').value = data.barcodeId;
     if(data.size) {
@@ -442,13 +435,18 @@
     if(data.styleNo) fillByStyle();
   }
 
-  // ==================== 扫码核心逻辑 ====================
+  // ==================== 扫码核心逻辑（手机稳定：每次重置事件） ====================
   function fillScanBarcode(barcode){
     document.getElementById('barcodeId').value = barcode;
     document.getElementById('scannedBadge').style.display = 'inline-block';
     document.getElementById('inboundTime').value = new Date().toLocaleString('zh-CN');
     editingIndex = -1;
     let oldStyle = document.getElementById('styleNo').value.trim();
+
+    // 手机关键：每次扫码后重新绑定事件，防止失效
+    bindCalcEvents();
+    bindStyleEvent();
+
     if(isContinuousMode && document.getElementById('keepConfigSwitch').checked){
       applyLastConfigContinuous();
     } else {
@@ -778,9 +776,13 @@
   function showToast(msg){ let t=document.createElement('div');t.className='toast';t.innerText=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2200); }
   function escapeHtml(str){ if(!str) return ''; return str.replace(/[&<>]/g, m=>m==='&'?'&amp;':m==='<'?'&lt;':m==='>'?'&gt;':m); }
   
-  // ==================== 启动 ====================
+  // ==================== 启动（手机关键：初始化绑定事件） ====================
   window.addEventListener('beforeinstallprompt', e=>{ e.preventDefault(); });
-  loadRecords(); initSequenceSelect(); calcAmount(); renderAll();
+  loadRecords(); initSequenceSelect(); 
+  bindCalcEvents();   // 初始化绑定金额计算
+  bindStyleEvent();   // 初始化绑定同款填充
+  calcAmount(); 
+  renderAll();
 </script>
 </body>
 </html>
