@@ -112,27 +112,27 @@
     .modal-mask.show { display: flex; }
     .modal-box { background: white; width: 300px; border-radius: 32px; padding: 24px; text-align: center; }
     .ocr-loading { position: fixed; bottom: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.8); color: white; padding: 12px 24px; border-radius: 60px; z-index: 1200; font-size: 14px; }
-    .retry-btn { margin-left: 8px; padding: 2px 8px; font-size: 10px; background: var(--warning); color: white; border-radius: 20px; cursor: pointer; }
-    #ocrFileInput, #ocrRetakeInput { display: none; }
+    #ocrFileInput { display: none; }
+    .inline-icon { margin-right: 4px; }
   </style>
 </head>
 <body>
 
 <div class="header">
   <h1>📦 服装扫码入库系统</h1>
-  <div class="sub">扫码入库 | 标签识别 | 数据管理</div>
+  <div class="sub">扫码入库 | 拍照识别标签 | 连续扫码模式</div>
 </div>
 
 <div class="btn-group">
-  <button class="btn btn-primary" onclick="startScan()" id="scanBtn">📷 扫码入库</button>
-  <button class="btn btn-success" onclick="triggerOCRUpload()">📸 拍照识别标签</button>
-  <button class="btn btn-warning" onclick="exportToExcel()">📎 导出报表</button>
+  <button class="btn btn-primary" onclick="startSingleScan()" id="scanBtn">📷 扫码入库</button>
+  <button class="btn btn-success" onclick="startContinuousScan()" id="continuousBtn">🔄 连续扫码入库</button>
+  <button class="btn btn-warning" onclick="triggerOCRUpload()">📸 拍照识别标签</button>
+  <button class="btn btn-outline" onclick="exportToExcel()">📎 导出</button>
 </div>
 <input type="file" id="ocrFileInput" accept="image/*" capture="environment" onchange="handleOCRImage(event)">
-<input type="file" id="ocrRetakeInput" accept="image/*" capture="environment" onchange="handleOCRImage(event)">
 
 <div class="switch-bar">
-  <div class="switch-label">⚙️ 连续扫码智能沿用配置 + 序号自动递增</div>
+  <div class="switch-label">⚙️ 连续扫码时沿用配置 + 序号自动递增</div>
   <label class="switch"><input type="checkbox" id="keepConfigSwitch" checked><span class="slider"></span></label>
 </div>
 
@@ -193,7 +193,6 @@
 <!-- 弹窗 -->
 <div class="modal-mask" id="clearModal"><div class="modal-box"><h4>⚠️ 确认清空</h4><p>所有入库数据将永久删除，建议先导出备份。</p><div class="btn-group" style="margin-top:12px;"><button class="btn btn-outline btn-sm" onclick="hideClearModal()">取消</button><button class="btn btn-danger btn-sm" onclick="clearAll()">确认清空</button></div></div></div>
 <div class="modal-mask" id="dupModal"><div class="modal-box"><h4>⚠️ 条码重复</h4><p id="dupMsg"></p><div class="btn-group" style="margin-top:12px;"><button class="btn btn-success btn-sm" onclick="dupContinue()">继续新增</button><button class="btn btn-primary btn-sm" onclick="dupReplace()">覆盖数据</button></div></div></div>
-<div class="modal-mask" id="ocrRetryModal"><div class="modal-box"><h4>📸 识别结果不理想</h4><p id="ocrRetryMsg">识别内容较少，是否重新拍照？</p><div class="btn-group" style="margin-top:12px;"><button class="btn btn-outline btn-sm" onclick="closeRetryModal()">使用当前结果</button><button class="btn btn-primary btn-sm" onclick="retakePhoto()">重新拍照</button></div></div></div>
 
 <script>
   // ==================== 全局变量 ====================
@@ -201,11 +200,10 @@
   let records = [];
   let editingIndex = -1;
   let lastConfig = {};
-  let isContinuousMode = false;
+  let isContinuousMode = false;      // 连续扫码标志
   let currentDupBarcode = '';
   let dailySeqMap = {};
-  let ocrWorker = null;           // 预加载的OCR工作线程
-  let lastOCRData = null;         // 上一次OCR识别结果缓存
+  let ocrWorker = null;             // 预加载OCR
 
   // ==================== 初始化 & 预加载OCR ====================
   (async function preloadOCR() {
@@ -213,7 +211,7 @@
       ocrWorker = await Tesseract.createWorker();
       await ocrWorker.loadLanguage('eng+chi_sim');
       await ocrWorker.initialize('eng+chi_sim');
-      console.log('OCR引擎预加载完成');
+      console.log('OCR引擎已就绪');
     } catch(e) { console.warn('OCR预加载失败', e); }
   })();
 
@@ -263,7 +261,6 @@
     refreshSeqSelect();
   }
 
-  // 保存配置
   function saveCurrentConfig() {
     lastConfig = {
       sequenceNo: document.getElementById('sequenceNo').value,
@@ -288,16 +285,57 @@
     lastConfig.sequenceNo = newSeq;
   }
 
-  // ==================== OCR 标签识别 (增强版) ====================
-  function triggerOCRUpload() { document.getElementById('ocrFileInput').click(); }
-  function retakePhoto() { 
-    closeRetryModal(); 
-    document.getElementById('ocrRetakeInput').click(); 
+  // ==================== 拍照识别标签 (集成到同一入口) ====================
+  function triggerOCRUpload() { 
+    // 如果当前连续扫码模式激活，先停止扫码器
+    if(html5QrCode) stopScan(true);
+    document.getElementById('ocrFileInput').click(); 
   }
-  function closeRetryModal() { document.getElementById('ocrRetryModal').classList.remove('show'); }
   
-  // 图像预处理：转为灰度+二值化，提升识别率
-  async function preprocessImage(file) {
+  async function handleOCRImage(event) {
+    const file = event.target.files[0];
+    if(!file) return;
+    showToast("🔍 AI识别中，请稍候...");
+    let loadingDiv = document.createElement('div');
+    loadingDiv.className = 'ocr-loading';
+    loadingDiv.innerText = '📖 正在识别服装标签...';
+    document.body.appendChild(loadingDiv);
+    try {
+      // 图像预处理：灰度+二值化
+      const processedBlob = await preprocessImage(file);
+      let result;
+      if (ocrWorker) {
+        const { data } = await ocrWorker.recognize(processedBlob);
+        result = data;
+      } else {
+        result = await Tesseract.recognize(processedBlob, 'chi_sim+eng');
+      }
+      const rawText = result.text;
+      console.log("OCR识别结果:", rawText);
+      const parsed = parseGarmentLabel(rawText);
+      
+      if(!parsed.barcodeId && !parsed.styleNo && !parsed.size) {
+        if(confirm("识别内容较少，可能不准确。是否仍然使用？\n点击「确定」继续，点击「取消」重新拍照")) {
+          fillFromOCRData(parsed);
+          showToast("已填充识别信息，请核对后确认入库");
+        } else {
+          triggerOCRUpload();
+        }
+      } else {
+        fillFromOCRData(parsed);
+        showToast("✅ 标签识别成功，已自动填充表单");
+        document.getElementById('formCard').scrollIntoView({ behavior: 'smooth' });
+      }
+    } catch(err) {
+      console.error(err);
+      showToast("❌ 识别失败，请确保标签清晰并重试");
+    } finally {
+      document.body.removeChild(loadingDiv);
+      document.getElementById('ocrFileInput').value = '';
+    }
+  }
+  
+  function preprocessImage(file) {
     return new Promise((resolve) => {
       const img = new Image();
       const canvas = document.createElement('canvas');
@@ -310,8 +348,8 @@
         const data = imageData.data;
         for (let i = 0; i < data.length; i += 4) {
           const gray = data[i] * 0.3 + data[i+1] * 0.59 + data[i+2] * 0.11;
-          const value = gray > 140 ? 255 : 0;  // 二值化阈值可调节
-          data[i] = data[i+1] = data[i+2] = value;
+          const bw = gray > 140 ? 255 : 0;
+          data[i] = data[i+1] = data[i+2] = bw;
         }
         ctx.putImageData(imageData, 0, 0);
         canvas.toBlob(resolve, 'image/png');
@@ -320,72 +358,25 @@
     });
   }
 
-  async function handleOCRImage(event) {
-    const file = event.target.files[0];
-    if(!file) return;
-    showToast("🔍 AI识别中，请稍候...");
-    let loadingDiv = document.createElement('div');
-    loadingDiv.className = 'ocr-loading';
-    loadingDiv.innerText = '📖 正在识别服装标签...';
-    document.body.appendChild(loadingDiv);
-    try {
-      // 预处理图片提升识别率
-      const processedBlob = await preprocessImage(file);
-      const result = await Tesseract.recognize(processedBlob, 'chi_sim+eng', {
-        logger: m => console.log(m)
-      });
-      const rawText = result.data.text;
-      console.log("OCR识别结果:\n", rawText);
-      const parsed = parseGarmentLabel(rawText);
-      lastOCRData = parsed;
-      
-      // 检查识别质量：如果条码和关键字段都为空，提示重拍
-      if(!parsed.barcodeId && !parsed.styleNo && !parsed.size) {
-        document.getElementById('ocrRetryMsg').innerHTML = '识别内容较少，请确保标签清晰、光线充足、正对拍摄。是否重新拍照？';
-        document.getElementById('ocrRetryModal').classList.add('show');
-        return;
-      }
-      fillFromOCRData(parsed);
-      showToast("✅ 标签识别成功，已自动填充表单");
-    } catch(err) {
-      console.error(err);
-      showToast("❌ 识别失败，请确保标签清晰并重试");
-    } finally {
-      document.body.removeChild(loadingDiv);
-      document.getElementById('ocrFileInput').value = '';
-      document.getElementById('ocrRetakeInput').value = '';
-    }
-  }
-
-  // 智能解析服装标签（支持多种格式）
   function parseGarmentLabel(text) {
     let result = { barcodeId: '', size: '', bundleNo: '', batchNo: '', styleNo: '', colorCode: '', colorName: '', fabricA: '', fabricB: '' };
-    // 条码：8-20位数字
     let barcodeMatch = text.match(/\b(\d{8,20})\b/);
     if(barcodeMatch) result.barcodeId = barcodeMatch[1];
-    // 尺码
     let sizeMatch = text.match(/\b(XS|S|M|L|XL|2XL|3XL|4XL|XXL|XXXL)\b/i);
     if(sizeMatch) result.size = sizeMatch[1].toUpperCase();
-    // 扎号/捆号
     let bundleMatch = text.match(/(?:扎号|捆号|扎)[:：]?\s*([^\n\r,，]+)/i);
     if(bundleMatch) result.bundleNo = bundleMatch[1].trim();
-    // 批号
     let batchMatch = text.match(/(?:批号|批次|批)[:：]?\s*([^\n\r,，]+)/i);
     if(batchMatch) result.batchNo = batchMatch[1].trim();
-    // 款号
     let styleMatch = text.match(/(?:款号|款|货号)[:：]?\s*([A-Z0-9\-]+)/i);
     if(styleMatch) result.styleNo = styleMatch[1].trim();
-    // 色号
     let colorCodeMatch = text.match(/(?:色号|色码|色)[:：]?\s*([\w\-]+)/i);
     if(colorCodeMatch) result.colorCode = colorCodeMatch[1].trim();
-    // 颜色名称（中文）
     let colorNameMatch = text.match(/(?:颜色|色名)[:：]?\s*([\u4e00-\u9fa5]{2,6})/i);
     if(colorNameMatch) result.colorName = colorNameMatch[1].trim();
-    // 组合提取：如 "02-269 花灰"
     let combined = text.match(/([\w\-]+)\s+([\u4e00-\u9fa5]{2,4})/);
     if(combined && !result.colorCode) result.colorCode = combined[1];
     if(combined && !result.colorName) result.colorName = combined[2];
-    // 面料信息
     let fabricAMatch = text.match(/(?:A料|面料A|A面)[:：]?\s*([^\n]{2,30})/i);
     if(fabricAMatch) result.fabricA = fabricAMatch[1].trim();
     let fabricBMatch = text.match(/(?:B料|面料B|B面)[:：]?\s*([^\n]{2,30})/i);
@@ -409,12 +400,12 @@
     document.getElementById('quantity').value = 1;
     document.getElementById('inboundTime').value = new Date().toLocaleString('zh-CN');
     document.getElementById('scannedBadge').style.display = 'inline-block';
+    editingIndex = -1;
     refreshSeqSelect();
     document.getElementById('formCard').style.display = 'block';
-    document.getElementById('formCard').scrollIntoView({ behavior: 'smooth' });
   }
 
-  // ==================== 扫码逻辑 ====================
+  // ==================== 扫码核心逻辑 (单次 + 连续) ====================
   function fillScanBarcode(barcode){
     document.getElementById('barcodeId').value = barcode;
     document.getElementById('scannedBadge').style.display = 'inline-block';
@@ -442,6 +433,7 @@
     }
     document.getElementById('reader').style.display = 'none';
     document.getElementById('scanBtn').style.display = 'block';
+    document.getElementById('continuousBtn').style.display = 'block';
     document.getElementById('closeScanArea').style.display = 'none';
     document.getElementById('scanStatus').textContent = '';
   }
@@ -454,15 +446,30 @@
     }
     document.getElementById('reader').style.display = 'none';
     document.getElementById('scanBtn').style.display = 'block';
+    document.getElementById('continuousBtn').style.display = 'block';
     document.getElementById('closeScanArea').style.display = 'none';
     document.getElementById('scanStatus').textContent = '';
   }
   
-  async function startScan() {
+  async function startSingleScan() {
+    // 关闭连续模式
+    isContinuousMode = false;
+    await startScanInternal();
+  }
+  
+  async function startContinuousScan() {
+    isContinuousMode = true;
+    editingIndex = -1;
+    showToast('🔄 连续扫码模式开启 · 序号自动递增');
+    await startScanInternal();
+  }
+  
+  async function startScanInternal() {
     if(html5QrCode) try{ await html5QrCode.stop(); }catch(e){}
     document.getElementById('reader').innerHTML = '';
     document.getElementById('reader').style.display = 'block';
     document.getElementById('scanBtn').style.display = 'none';
+    document.getElementById('continuousBtn').style.display = 'none';
     document.getElementById('closeScanArea').style.display = 'block';
     document.getElementById('formCard').style.display = 'none';
     document.getElementById('scanStatus').textContent = '📷 请求摄像头...';
@@ -478,7 +485,7 @@
   }
   
   async function onScanSuccess(text) {
-    await stopCameraOnly();
+    await stopCameraOnly();  // 只关闭摄像头，不重置连续模式标志
     let barcode = text.trim();
     currentDupBarcode = barcode;
     let exist = records.findIndex(r => r.barcodeId === barcode);
@@ -488,13 +495,6 @@
       return;
     }
     fillScanBarcode(barcode);
-  }
-  
-  function startContinuousScan() {
-    isContinuousMode = true;
-    editingIndex = -1;
-    showToast('🔄 连续扫码模式开启 · 序号自动递增');
-    startScan();
   }
   
   function dupContinue(){
@@ -512,7 +512,7 @@
     showToast("🔄 覆盖原记录");
   }
   
-  // ==================== 提交入库 ====================
+  // ==================== 提交入库 (连续模式下自动重启) ====================
   function submitInbound() {
     let barcode = document.getElementById('barcodeId').value.trim();
     if(!barcode) return showToast("⚠️ 请先扫码或识别标签");
@@ -558,10 +558,9 @@
     document.getElementById('barcodeId').value = '';
     saveCurrentConfig();
     
+    // 连续模式且开关开启: 自动重启摄像头继续扫码
     if(isContinuousMode && document.getElementById('keepConfigSwitch').checked){
-      setTimeout(() => { startScan(); }, 300);
-    } else {
-      isContinuousMode = false;
+      setTimeout(() => { startScanInternal(); }, 400);
     }
   }
   
@@ -597,7 +596,7 @@
   function renderHistory(){
     let container=document.getElementById('history');
     document.getElementById('recordCount').innerText=`${records.length}条`;
-    if(!records.length){ container.innerHTML='<div class="empty-state">📭 暂无入库记录，请扫码或识别标签</div>'; return; }
+    if(!records.length){ container.innerHTML='<div class="empty-state">📭 暂无入库记录，请扫码或拍照识别标签</div>'; return; }
     container.innerHTML=records.map((r,i)=>`
       <div class="record-item">
         <div class="record-header"><span class="barcode-chip">🔢 ${escapeHtml(r.barcodeId)}</span><span class="time-text">${r.inboundTime}</span></div>
