@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>服装扫码入库系统</title>
+  <title>服装扫码入库系统 - 专业版</title>
   <link rel="manifest" href="manifest.json">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -173,7 +173,7 @@
     <div class="card-title">📝 入库信息录入<span class="scanned-badge" id="scannedBadge" style="display:none;">已扫码</span></div>
     <div class="form-group"><label>🔢 条码 ID</label><input type="text" id="barcodeId" readonly placeholder="扫码后自动填充"></div>
     <div class="form-row">
-      <div class="form-group" style="display:none;">
+      <div class="form-group">
         <label>📋 序号</label>
         <select id="sequenceNo"></select>
       </div>
@@ -253,39 +253,119 @@
     let lastConfig = {};
     let isContinuousMode = false;
     let currentDupBarcode = '';
+    
+    // 【核心修复】全局序号计数器，基于当前日期 + 自增，实现每日序号从1开始自动递增
+    // 每次成功入库后，更新当前日期的最大序号。格式: "YYYY-MM-DD:序号值"
+    let dailySeqMap = {}; // { "2026-05-10": 5 }
 
-    // 【新增】按入库时间倒序自动排序 最新记录在最上面
+    // 按入库时间倒序自动排序
     function sortRecordsByTimeDesc() {
       records.sort((a, b) => new Date(b.inboundTime) - new Date(a.inboundTime));
     }
 
-    // 初始化
-    function init() {
-      loadRecords();
-      initSequenceNo();
-      // 初始化也排序
-      sortRecordsByTimeDesc();
-      renderHistory();
-      renderStats();
-      renderMonthSummary();
+    // 获取今天的日期字符串 YYYY-MM-DD
+    function getTodayStr() {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
     }
 
-    // 初始化序号下拉
+    // 从现有记录重建 dailySeqMap (加载时或清空/删除时重新构建)
+    function rebuildDailySeqMap() {
+      dailySeqMap = {};
+      records.forEach(record => {
+        if (record.sequenceNo && record.inboundTime) {
+          // 从inboundTime中提取日期 (格式 "2026/5/10 14:30:00" 或 "2026-5-10 14:30:00")
+          let datePart = record.inboundTime.split(' ')[0];
+          // 统一转换分隔符为 '-'
+          datePart = datePart.replace(/\//g, '-');
+          // 确保是标准四位年份
+          const parts = datePart.split('-');
+          if(parts.length === 3) {
+            let year = parts[0];
+            let month = parts[1].padStart(2,'0');
+            let day = parts[2].padStart(2,'0');
+            const normDate = `${year}-${month}-${day}`;
+            const seq = parseInt(record.sequenceNo, 10);
+            if (!isNaN(seq)) {
+              const curMax = dailySeqMap[normDate] || 0;
+              if (seq > curMax) dailySeqMap[normDate] = seq;
+            }
+          }
+        }
+      });
+    }
+
+    // 获取今日下一个可用的序号 (根据已有记录 + 内存映射)
+    function getNextSequenceForToday() {
+      const today = getTodayStr();
+      let maxSeq = dailySeqMap[today] || 0;
+      // 额外扫描一遍最新记录确保实时 (防止刚修改后重建不及时)
+      records.forEach(r => {
+        if (r.inboundTime) {
+          let rDate = r.inboundTime.split(' ')[0].replace(/\//g, '-');
+          const parts = rDate.split('-');
+          if(parts.length===3) {
+            const norm = `${parts[0]}-${parts[1].padStart(2,'0')}-${parts[2].padStart(2,'0')}`;
+            if(norm === today) {
+              const seqVal = parseInt(r.sequenceNo,10);
+              if(!isNaN(seqVal) && seqVal > maxSeq) maxSeq = seqVal;
+            }
+          }
+        }
+      });
+      const nextSeq = maxSeq + 1;
+      // 限制序号最大999，UI下拉已支持
+      return nextSeq > 999 ? 999 : nextSeq;
+    }
+
+    // 更新每日最大序号 (入库成功后调用)
+    function updateDailySeqForToday(usedSeq) {
+      const today = getTodayStr();
+      const cur = dailySeqMap[today] || 0;
+      if (usedSeq > cur) dailySeqMap[today] = usedSeq;
+    }
+
+    // 初始化序号下拉 (1-999)
     function initSequenceNo() {
       const sel = document.getElementById('sequenceNo');
+      sel.innerHTML = '';
       for(let i=1;i<=999;i++) sel.innerHTML += `<option value="${i}">${i}</option>`;
-      sel.value = "1";
-      lastConfig.sequenceNo = "1";
+      // 设置默认值为下一个可用序号
+      const nextSeq = getNextSequenceForToday();
+      sel.value = nextSeq.toString();
+      // 同步 lastConfig 中的序号
+      lastConfig.sequenceNo = sel.value;
     }
 
-    // PWA
+    // 刷新表单中的序号下拉为新值（确保每次打开表单时使用最新序号，特别是连续扫码场景）
+    function refreshSequenceNoInForm() {
+      const sel = document.getElementById('sequenceNo');
+      if (!sel) return;
+      // 检查是否处于编辑状态：如果 editingIndex >= 0 且表单已有条码值，不自动覆盖序号，保留原有编辑的数据序号
+      if (editingIndex >= 0 && document.getElementById('barcodeId').value.trim() !== '') {
+        // 编辑模式，不要自动刷新序号，保持原有的序号值
+        return;
+      }
+      const nextVal = getNextSequenceForToday();
+      sel.value = nextVal.toString();
+      if (lastConfig) lastConfig.sequenceNo = sel.value;
+    }
+
+    // 重置序号下拉到最新值 (非编辑模式下)
+    function resetSequenceForNewEntry() {
+      if (editingIndex === -1) {
+        refreshSequenceNoInForm();
+      }
+    }
+
+    // PWA逻辑
     window.addEventListener('beforeinstallprompt', e=>{deferredPrompt=e;document.getElementById('installBtn').style.display='block';});
     function installApp() {
       if(deferredPrompt){deferredPrompt.prompt();deferredPrompt=null;}
       else{document.getElementById('installGuide').style.display='block';}
     }
 
-    // 保存当前表单配置
+    // 保存当前表单配置 (供连续扫码沿用)
     function saveCurrentConfig() {
       lastConfig = {
         sequenceNo: document.getElementById('sequenceNo').value,
@@ -301,29 +381,31 @@
       };
     }
 
-    // 复用配置 + 序号自动+1
-    function applyLastConfig() {
+    // 连续扫码模式：沿用配置，并且序号自增1（基于当前日期最新序号+1）
+    function applyLastConfigForContinuous() {
       if(!document.getElementById('keepConfigSwitch').checked) return;
-      Object.keys(lastConfig).forEach(key=>{
+      // 保存除序号外的所有字段
+      const keepFields = ['size','bundleNo','batchNo','styleNo','colorCode','colorName','fabricA','fabricB','quantity'];
+      keepFields.forEach(key=>{
         const el = document.getElementById(key);
-        if(el && key !== 'sequenceNo') el.value = lastConfig[key] || '';
+        if(el && lastConfig[key] !== undefined) el.value = lastConfig[key] || '';
       });
-      let seq = parseInt(lastConfig.sequenceNo || "0");
-      if(!isNaN(seq)){
-        seq += 1;
-        document.getElementById('sequenceNo').value = seq;
-        lastConfig.sequenceNo = seq.toString();
-      }
+      // 【核心修复】序号务必基于最新今日最大序号自增
+      const newSeq = getNextSequenceForToday();
+      document.getElementById('sequenceNo').value = newSeq;
+      // 更新 lastConfig 中的序号缓存
+      lastConfig.sequenceNo = newSeq.toString();
     }
 
     // 开始连续扫码
     function startContinuousScan() {
       isContinuousMode = true;
-      showToast('🔄 连续扫码自动序号递增');
+      editingIndex = -1;  // 确保连续扫码不属于编辑状态
+      showToast('🔄 连续扫码模式开启，每次入库后序号自动+1');
       startScan();
     }
 
-    // 核心扫码
+    // 核心扫码启动
     async function startScan() {
       if(html5QrCode){
         try{await html5QrCode.stop();}catch(e){}
@@ -356,6 +438,7 @@
     }
 
     function onScanSuccess(text) {
+      // 成功扫码后停止扫描界面，以便填写表单
       stopScan();
       const barcode = text.trim();
       currentDupBarcode = barcode;
@@ -370,14 +453,32 @@
       fillBarcodeForm(barcode);
     }
 
-    // 填充条码到表单
+    // 填充条码到表单（新条目）
     function fillBarcodeForm(barcode){
       document.getElementById('barcodeId').value = barcode;
       document.getElementById('scannedBadge').style.display='inline-block';
-      document.getElementById('inboundTime').value=new Date().toLocaleString('zh-CN');
+      document.getElementById('inboundTime').value = new Date().toLocaleString('zh-CN');
 
-      if(isContinuousMode){
-        applyLastConfig();
+      // 确保之前未处于编辑状态
+      editingIndex = -1;
+      
+      // 根据模式决定是否沿用配置并刷新序号
+      if(isContinuousMode && document.getElementById('keepConfigSwitch').checked){
+        applyLastConfigForContinuous();
+      } else {
+        // 非连续模式或者未勾选沿用配置，仍然需要保证序号是最新可用序号（避免出现序号重复过低）
+        refreshSequenceNoInForm();
+        // 同时将当前表单其他字段保留旧的配置（如果lastConfig有数据）或空白? 保持原样但序号正确更重要
+        if(lastConfig && !isContinuousMode){
+          // 非连续模式下如果希望保留上次配置的其他项（除了序号）则也恢复一下提升体验
+          if(document.getElementById('keepConfigSwitch').checked){
+            const keepFields = ['size','bundleNo','batchNo','styleNo','colorCode','colorName','fabricA','fabricB','quantity'];
+            keepFields.forEach(key=>{
+              const el = document.getElementById(key);
+              if(el && lastConfig[key] !== undefined) el.value = lastConfig[key] || '';
+            });
+          }
+        }
       }
 
       document.getElementById('formCard').style.display='block';
@@ -397,8 +498,12 @@
     function dupReplace(){
       document.getElementById('dupModal').classList.remove('show');
       const idx = records.findIndex(r=>r.barcodeId === currentDupBarcode);
-      if(idx > -1) records.splice(idx,1);
+      if(idx > -1) {
+        // 删除旧记录前，需要更新序号映射？ 重建一次即可，由后续操作重建
+        records.splice(idx,1);
+      }
       saveRecords();
+      rebuildDailySeqMap();        // 重建序号映射
       sortRecordsByTimeDesc();
       renderHistory();
       renderStats();
@@ -424,14 +529,38 @@
       const barcode=document.getElementById('barcodeId').value.trim();
       if(!barcode) return showToast("⚠️ 请先扫码");
 
-      saveCurrentConfig();
-      // 每次提交都刷新为当前最新时间
-      const nowTime = new Date().toLocaleString('zh-CN');
+      // 获取表单中的序号
+      let seqValue = document.getElementById('sequenceNo').value;
+      if(!seqValue || seqValue === "") {
+        seqValue = getNextSequenceForToday().toString();
+      }
+      
+      // 验证序号是否被今日其他记录使用 (防止手动修改冲突，但允许重复序号？通常不允许同一天相同序号，但系统不作强制，仅做提示)
+      const today = getTodayStr();
+      const isSeqExist = records.some(r => {
+        if(r.barcodeId === barcode && editingIndex === -1) return false; // 新增时排除自身
+        if(r.inboundTime) {
+          let rDate = r.inboundTime.split(' ')[0].replace(/\//g, '-');
+          const parts = rDate.split('-');
+          if(parts.length===3) {
+            const norm = `${parts[0]}-${parts[1].padStart(2,'0')}-${parts[2].padStart(2,'0')}`;
+            if(norm === today && r.sequenceNo === seqValue) return true;
+          }
+        }
+        return false;
+      });
+      if(isSeqExist && editingIndex === -1) {
+        showToast("⚠️ 今日序号已存在，已自动更新为最新序号");
+        seqValue = getNextSequenceForToday().toString();
+        document.getElementById('sequenceNo').value = seqValue;
+      }
 
+      const nowTime = new Date().toLocaleString('zh-CN');
+      
       const record={
-        id:Date.now(),
+        id: editingIndex !== -1 ? records[editingIndex]?.id : Date.now(),
         barcodeId:barcode,
-        sequenceNo:document.getElementById('sequenceNo').value,
+        sequenceNo:seqValue,
         size:document.getElementById('size').value,
         bundleNo:document.getElementById('bundleNo').value.trim(),
         batchNo:document.getElementById('batchNo').value.trim(),
@@ -444,7 +573,6 @@
         inboundTime: nowTime
       };
 
-      // 如果是修改状态，覆盖旧记录
       if (editingIndex >= 0) {
         records[editingIndex] = record;
         editingIndex = -1;
@@ -455,6 +583,9 @@
       }
 
       saveRecords();
+      rebuildDailySeqMap();          // 重新计算每日最大序号
+      // 更新今日最大序号
+      updateDailySeqForToday(parseInt(seqValue,10));
       sortRecordsByTimeDesc();
       resetForm();
       renderHistory();
@@ -462,20 +593,34 @@
       renderMonthSummary();
       document.getElementById('formCard').style.display='none';
 
-      if(document.getElementById('keepConfigSwitch').checked){
+      // 连续扫码模式且开关开启，自动再次开启扫码
+      if(isContinuousMode && document.getElementById('keepConfigSwitch').checked){
+        // 保存当前表单配置以便下次沿用
+        saveCurrentConfig();
+        // 延时启动下一次扫码，让用户有时间看到入库成功
         setTimeout(()=>{
+          // 重置编辑标志
+          editingIndex = -1;
           startContinuousScan();
-        },600);
+        }, 500);
+      } else {
+        // 非连续模式下也保存配置
+        saveCurrentConfig();
+        isContinuousMode = false;
       }
     }
 
     function resetForm() {
       document.getElementById('barcodeId').value='';
       document.getElementById('scannedBadge').style.display='none';
+      // 不清空其他字段，以便下次录入可能复用，但序号刷新为最新
+      refreshSequenceNoInForm();
     }
 
-    // 点击「修改」按钮，填充旧数据，进入编辑状态
     function modifyRecord(i) {
+      // 修改时停止任何扫码模式
+      if(html5QrCode) stopScan();
+      isContinuousMode = false;
       const r = records[i];
       editingIndex = i;
 
@@ -494,35 +639,44 @@
       document.getElementById('scannedBadge').style.display='inline-block';
 
       document.getElementById('formCard').style.display='block';
-      document.getElementById('scanBtn').style.display='none';
+      document.getElementById('scanBtn').style.display='block';
       document.getElementById('formCard').scrollIntoView({behavior:'smooth'});
-      showToast("✏️ 正在修改数据，提交后将覆盖原记录并自动置顶");
+      showToast("✏️ 正在修改数据，提交后将覆盖原记录并排序");
     }
 
     function deleteRecord(i) {
       if(confirm('确定删除？')){
         records.splice(i,1);
         saveRecords();
+        rebuildDailySeqMap();
         sortRecordsByTimeDesc();
         renderHistory();
         renderStats();
         renderMonthSummary();
+        showToast("已删除记录");
       }
     }
+    
     function showClearModal(){document.getElementById('clearModal').classList.add('show');}
     function hideClearModal(){document.getElementById('clearModal').classList.remove('show');}
     function clearAll(){
       records=[];
       saveRecords();
+      rebuildDailySeqMap();
       sortRecordsByTimeDesc();
       renderHistory();renderStats();renderMonthSummary();
       hideClearModal();
       showToast("🗑️ 全部记录已清空");
     }
+    
     function saveRecords(){localStorage.setItem('garment_inbound_records',JSON.stringify(records));}
-    function loadRecords(){const d=localStorage.getItem('garment_inbound_records');records=d?JSON.parse(d):[];}
+    function loadRecords(){
+      const d=localStorage.getItem('garment_inbound_records');
+      records=d?JSON.parse(d):[];
+      rebuildDailySeqMap();
+    }
 
-    // 渲染月度入库总结
+    // 月度汇总
     function renderMonthSummary() {
       const monthMap = {};
       records.forEach(r=>{
@@ -535,7 +689,6 @@
         monthMap[monthKey].count += 1;
         monthMap[monthKey].barcodes.add(r.barcodeId);
       });
-
       const container = document.getElementById('monthSummary');
       const keys = Object.keys(monthMap).sort().reverse();
       if(keys.length===0){
@@ -545,14 +698,7 @@
       let html = '';
       keys.forEach(m=>{
         const item = monthMap[m];
-        html += `
-          <div class="month-item">
-            <strong>${m} 月度汇总</strong><br>
-            入库总件数：${item.total} 件 &nbsp;&nbsp;
-            录入条码：${item.barcodes.size} 个 &nbsp;&nbsp;
-            单据条数：${item.count} 条
-          </div>
-        `;
+        html += `<div class="month-item"><strong>${m} 月度汇总</strong><br>入库总件数：${item.total} 件 &nbsp;&nbsp;录入条码：${item.barcodes.size} 个 &nbsp;&nbsp;单据条数：${item.count} 条</div>`;
       });
       container.innerHTML = html;
     }
@@ -574,13 +720,11 @@
             <div class="field"><div class="f-label">数量</div><div class="f-value">×${r.quantity}</div></div>
             <div class="field"><div class="f-label">A料</div><div class="f-value" style="font-size:10px;">${r.fabricA||'-'}</div></div>
           </div>
-          <div class="record-actions">
-            <button class="btn btn-outline btn-sm" onclick="modifyRecord(${i})">✏️ 修改</button>
-            <button class="btn btn-danger btn-sm" onclick="deleteRecord(${i})">🗑️ 删除</button>
-          </div>
+          <div class="record-actions"><button class="btn btn-outline btn-sm" onclick="modifyRecord(${i})">✏️ 修改</button><button class="btn btn-danger btn-sm" onclick="deleteRecord(${i})">🗑️ 删除</button></div>
         </div>
       `).join('');
     }
+    
     function renderStats(){
       const total=records.reduce((s,r)=>s+(r.quantity||1),0);
       const unique=new Set(records.map(r=>r.barcodeId)).size;
@@ -591,58 +735,22 @@
       document.getElementById('statToday').textContent=todayQty;
     }
 
-    // 导出Excel：明细 + 汇总两张表
     function exportToExcel(){
       if(records.length===0) return showToast("⚠️ 无数据可导出");
-
-      const detailData=records.map(r=>({
-        '条码ID':r.barcodeId,'序号':r.sequenceNo,'尺码':r.size,'扎号':r.bundleNo,
-        '批号':r.batchNo,'款号':r.styleNo,'色号':r.colorCode,'颜色':r.colorName,
-        'A料信息':r.fabricA,'B料信息':r.fabricB,'数量':r.quantity,'入库时间':r.inboundTime
-      }));
-
+      const detailData=records.map(r=>({'条码ID':r.barcodeId,'序号':r.sequenceNo,'尺码':r.size,'扎号':r.bundleNo,'批号':r.batchNo,'款号':r.styleNo,'色号':r.colorCode,'颜色':r.colorName,'A料信息':r.fabricA,'B料信息':r.fabricB,'数量':r.quantity,'入库时间':r.inboundTime}));
       const monthMap = {};
-      records.forEach(r=>{
-        const date = new Date(r.inboundTime);
-        const monthKey = `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}`;
-        if(!monthMap[monthKey]){
-          monthMap[monthKey] = { 月份:monthKey, 总件数:0, 条码数:0, 单据条数:0, 条码集合:new Set() };
-        }
-        monthMap[monthKey].总件数 += r.quantity||1;
-        monthMap[monthKey].单据条数 += 1;
-        monthMap[monthKey].条码集合.add(r.barcodeId);
-      });
-      const summaryData = [];
-      Object.values(monthMap).forEach(item=>{
-        summaryData.push({
-          月份:item.月份,
-          入库总件数:item.总件数,
-          条码个数:item.条码集合.size,
-          入库单据条数:item.单据条数
-        });
-      });
+      records.forEach(r=>{ const date = new Date(r.inboundTime); const monthKey = `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}`; if(!monthMap[monthKey]) monthMap[monthKey] = { 月份:monthKey, 总件数:0, 条码数:0, 单据条数:0, 条码集合:new Set() }; monthMap[monthKey].总件数 += r.quantity||1; monthMap[monthKey].单据条数 += 1; monthMap[monthKey].条码集合.add(r.barcodeId); });
+      const summaryData = Object.values(monthMap).map(item=>({月份:item.月份,入库总件数:item.总件数,条码个数:item.条码集合.size,入库单据条数:item.单据条数}));
       const allTotal = records.reduce((s,r)=>s+(r.quantity||1),0);
       const allBarcode = new Set(records.map(r=>r.barcodeId)).size;
-      summaryData.push({
-        月份:"【整体总计】",
-        入库总件数:allTotal,
-        条码个数:allBarcode,
-        入库单据条数:records.length
-      });
-
+      summaryData.push({月份:"【整体总计】",入库总件数:allTotal,条码个数:allBarcode,入库单据条数:records.length});
       const wb = XLSX.utils.book_new();
       const ws1 = XLSX.utils.json_to_sheet(detailData);
       const ws2 = XLSX.utils.json_to_sheet(summaryData);
-
-      ws1['!cols']=[
-        {wch:16},{wch:8},{wch:8},{wch:10},{wch:10},{wch:10},
-        {wch:12},{wch:10},{wch:30},{wch:30},{wch:8},{wch:20}
-      ];
+      ws1['!cols']=[{wch:16},{wch:8},{wch:8},{wch:10},{wch:10},{wch:10},{wch:12},{wch:10},{wch:30},{wch:30},{wch:8},{wch:20}];
       ws2['!cols']=[{wch:12},{wch:12},{wch:12},{wch:14}];
-
       XLSX.utils.book_append_sheet(wb, ws1, "入库明细");
       XLSX.utils.book_append_sheet(wb, ws2, "统计汇总");
-
       XLSX.writeFile(wb,`服装入库完整报表_${new Date().toLocaleDateString('zh-CN').replace(/\//g,'-')}.xlsx`);
       showToast("📥 导出成功，含明细+汇总");
     }
@@ -652,7 +760,13 @@
       setTimeout(()=>t.remove(),2500);
     }
 
-    init();
+    // 初始化加载
+    loadRecords();
+    initSequenceNo();
+    sortRecordsByTimeDesc();
+    renderHistory();
+    renderStats();
+    renderMonthSummary();
   </script>
 </body>
 </html>
