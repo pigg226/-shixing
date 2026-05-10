@@ -12,6 +12,8 @@
   
   <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <!-- 【新增】OCR 文字识别库 -->
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
   
   <style>
     :root {
@@ -141,6 +143,8 @@
     }
     input:checked + .slider { background-color: var(--primary); }
     input:checked + .slider:before { transform: translateX(20px); }
+    /* 隐藏的图片上传控件 */
+    #ocrFileInput { display: none; }
   </style>
 </head>
 <body>
@@ -149,11 +153,13 @@
   <div id="installGuide">💡 点击 <b>分享</b> → 滑动找到 <b>「添加到主屏幕」</b> 即可安装</div>
 
   <div class="top-btns">
-    <button class="btn btn-primary" onclick="startScan()" id="scanBtn">📷 单次扫码</button>
-    <button class="btn btn-success" onclick="startContinuousScan()">🔄 连续扫码</button>
+    <button class="btn btn-primary" onclick="startScan()" id="scanBtn">📷 扫码入库</button>
+    <button class="btn btn-success" onclick="document.getElementById('ocrFileInput').click()">📸 识别标签</button>
     <button class="btn btn-download" onclick="exportToExcel()">📥 导出</button>
     <button class="btn btn-install" id="installBtn" onclick="installApp()" style="display:none;">⬇️ 安装</button>
   </div>
+  <!-- 隐藏的文件上传控件 -->
+  <input type="file" id="ocrFileInput" accept="image/*" capture="environment" onchange="handleOcrImage(event)">
 
   <div class="switch-row">
     <span class="switch-text">连续扫码沿用配置+序号自增：</span>
@@ -170,7 +176,7 @@
   <div id="reader"></div>
 
   <div class="card" id="formCard" style="display:none;">
-    <div class="card-title">📝 入库信息录入<span class="scanned-badge" id="scannedBadge" style="display:none;">已扫码</span></div>
+    <div class="card-title">📝 入库信息录入<span class="scanned-badge" id="scannedBadge" style="display:none;">已识别/扫码</span></div>
     <div class="form-group"><label>🔢 条码 ID</label><input type="text" id="barcodeId" readonly placeholder="扫码后自动填充"></div>
     <div class="form-row">
       <div class="form-group">
@@ -255,26 +261,109 @@
     
     let dailySeqMap = {};
 
-    // ====================== 【新增：精准识别自动填充】 ======================
-    function autoFillByBarcode(text) {
-      try {
-        // 按 | 分割条码内容（你的格式：款号|色号|颜色|尺码|扎号|批号|A料|B料）
-        const arr = text.split('|').map(i => i.trim());
-        
-        // 自动匹配表单
-        document.getElementById('styleNo').value    = arr[0] || '';   // 款号
-        document.getElementById('colorCode').value  = arr[1] || '';   // 色号
-        document.getElementById('colorName').value   = arr[2] || '';   // 颜色
-        document.getElementById('size').value        = arr[3] || '';   // 尺码
-        document.getElementById('bundleNo').value   = arr[4] || '';   // 扎号
-        document.getElementById('batchNo').value     = arr[5] || '';   // 批号
-        document.getElementById('fabricA').value    = arr[6] || '';   // A料
-        document.getElementById('fabricB').value    = arr[7] || '';   // B料
+    // ====================== 【核心：OCR 识别标签自动填充】 ======================
+    async function handleOcrImage(event) {
+      const file = event.target.files[0];
+      if (!file) return;
 
-        showToast("✅ 精准识别完成，已自动填充");
-      } catch (e) {
-        console.log('条码解析失败', e);
+      showToast("🔍 正在识别标签文字...");
+      document.getElementById('scanStatus').textContent = "正在识别标签文字...";
+
+      try {
+        // 使用 Tesseract.js 识别图片
+        const result = await Tesseract.recognize(file, 'chi_sim+eng', {
+          logger: m => console.log(m)
+        });
+
+        const text = result.data.text;
+        console.log("识别结果：", text);
+        parseAndFillForm(text);
+      } catch (err) {
+        console.error("识别失败：", err);
+        showToast("❌ 识别失败，请换一张清晰的图片重试");
+      } finally {
+        document.getElementById('ocrFileInput').value = '';
+        document.getElementById('scanStatus').textContent = "";
       }
+    }
+
+    function parseAndFillForm(text) {
+      const lines = text.split('\n').map(l => l.trim()).filter(l => l);
+      let parsed = {
+        size: '',
+        bundleNo: '',
+        batchNo: '',
+        styleNo: '',
+        colorCode: '',
+        colorName: '',
+        barcodeId: ''
+      };
+
+      // 1. 匹配条码（纯数字）
+      const barcodeMatch = text.match(/\d{8,}/);
+      if (barcodeMatch) parsed.barcodeId = barcodeMatch[0];
+
+      // 2. 匹配尺码（S/M/L/XL 等）
+      const sizeMatch = text.match(/\b(XS|S|M|L|XL|2XL|3XL|4XL)\b/i);
+      if (sizeMatch) parsed.size = sizeMatch[1].toUpperCase();
+
+      // 3. 匹配扎号（扎号: 后面的内容）
+      const bundleNoMatch = text.match(/扎号[:：]\s*([^\n]+)/);
+      if (bundleNoMatch) parsed.bundleNo = bundleNoMatch[1].trim();
+
+      // 4. 匹配批号（批: 后面的内容）
+      const batchNoMatch = text.match(/批[:：]\s*([^\n]+)/);
+      if (batchNoMatch) parsed.batchNo = batchNoMatch[1].trim();
+
+      // 5. 匹配款号（款: 后面的内容）
+      const styleNoMatch = text.match(/款[:：]\s*([^\n]+)/);
+      if (styleNoMatch) parsed.styleNo = styleNoMatch[1].trim();
+
+      // 6. 匹配色号+颜色（色: 后面的内容，格式如 02-269 花灰）
+      const colorMatch = text.match(/色[:：]\s*([\w\-]+)\s*([^\n]+)/);
+      if (colorMatch) {
+        parsed.colorCode = colorMatch[1].trim();
+        parsed.colorName = colorMatch[2].trim();
+      }
+
+      // 填充到表单
+      fillParsedDataToForm(parsed);
+    }
+
+    function fillParsedDataToForm(data) {
+      // 条码
+      if (data.barcodeId) {
+        document.getElementById('barcodeId').value = data.barcodeId;
+      }
+      // 尺码
+      if (data.size) {
+        const sizeSel = document.getElementById('size');
+        for (let opt of sizeSel.options) {
+          if (opt.value === data.size) {
+            opt.selected = true;
+            break;
+          }
+        }
+      }
+      // 其他字段
+      document.getElementById('bundleNo').value = data.bundleNo || '';
+      document.getElementById('batchNo').value = data.batchNo || '';
+      document.getElementById('styleNo').value = data.styleNo || '';
+      document.getElementById('colorCode').value = data.colorCode || '';
+      document.getElementById('colorName').value = data.colorName || '';
+      document.getElementById('fabricA').value = '';
+      document.getElementById('fabricB').value = '';
+      document.getElementById('quantity').value = 1;
+      document.getElementById('inboundTime').value = new Date().toLocaleString('zh-CN');
+      document.getElementById('scannedBadge').style.display = 'inline-block';
+
+      // 刷新序号为最新
+      refreshSequenceNoInForm();
+
+      // 显示表单
+      document.getElementById('formCard').style.display = 'block';
+      document.getElementById('formCard').scrollIntoView({behavior:'smooth'});
+      showToast("✅ 标签识别完成，已自动填充");
     }
 
     // 按入库时间倒序自动排序
@@ -456,32 +545,22 @@
         return;
       }
 
-      // ========== 调用：精准识别 + 自动填充 ==========
-      autoFillByBarcode(barcode);
-      
-      fillBarcodeForm(barcode);
-    }
-
-    // 填充条码到表单
-    function fillBarcodeForm(barcode){
+      // 扫码成功，填充条码并自动刷新序号
       document.getElementById('barcodeId').value = barcode;
       document.getElementById('scannedBadge').style.display='inline-block';
       document.getElementById('inboundTime').value = new Date().toLocaleString('zh-CN');
-
       editingIndex = -1;
       
       if(isContinuousMode && document.getElementById('keepConfigSwitch').checked){
         applyLastConfigForContinuous();
       } else {
         refreshSequenceNoInForm();
-        if(lastConfig && !isContinuousMode){
-          if(document.getElementById('keepConfigSwitch').checked){
-            const keepFields = ['size','bundleNo','batchNo','styleNo','colorCode','colorName','fabricA','fabricB','quantity'];
-            keepFields.forEach(key=>{
-              const el = document.getElementById(key);
-              if(el && lastConfig[key] !== undefined) el.value = lastConfig[key] || '';
-            });
-          }
+        if(lastConfig && !isContinuousMode && document.getElementById('keepConfigSwitch').checked){
+          const keepFields = ['size','bundleNo','batchNo','styleNo','colorCode','colorName','fabricA','fabricB','quantity'];
+          keepFields.forEach(key=>{
+            const el = document.getElementById(key);
+            if(el && lastConfig[key] !== undefined) el.value = lastConfig[key] || '';
+          });
         }
       }
 
@@ -530,7 +609,7 @@
     // 提交入库
     function submitInbound() {
       const barcode=document.getElementById('barcodeId').value.trim();
-      if(!barcode) return showToast("⚠️ 请先扫码");
+      if(!barcode) return showToast("⚠️ 请先扫码或识别标签");
 
       let seqValue = document.getElementById('sequenceNo').value;
       if(!seqValue || seqValue === "") {
