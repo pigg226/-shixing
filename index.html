@@ -254,14 +254,22 @@
     let isContinuousMode = false;
     let currentDupBarcode = '';
 
+    // 【新增】按入库时间倒序自动排序 最新记录在最上面
+    function sortRecordsByTimeDesc() {
+      records.sort((a, b) => new Date(b.inboundTime) - new Date(a.inboundTime));
+    }
+
     // 初始化
     function init() {
       loadRecords();
       initSequenceNo();
+      // 初始化也排序
+      sortRecordsByTimeDesc();
       renderHistory();
       renderStats();
       renderMonthSummary();
     }
+
     // 初始化序号下拉
     function initSequenceNo() {
       const sel = document.getElementById('sequenceNo');
@@ -391,6 +399,7 @@
       const idx = records.findIndex(r=>r.barcodeId === currentDupBarcode);
       if(idx > -1) records.splice(idx,1);
       saveRecords();
+      sortRecordsByTimeDesc();
       renderHistory();
       renderStats();
       renderMonthSummary();
@@ -416,6 +425,8 @@
       if(!barcode) return showToast("⚠️ 请先扫码");
 
       saveCurrentConfig();
+      // 每次提交都刷新为当前最新时间
+      const nowTime = new Date().toLocaleString('zh-CN');
 
       const record={
         id:Date.now(),
@@ -430,7 +441,7 @@
         fabricA:document.getElementById('fabricA').value.trim(),
         fabricB:document.getElementById('fabricB').value.trim(),
         quantity:parseInt(document.getElementById('quantity').value)||1,
-        inboundTime:new Date().toLocaleString('zh-CN')
+        inboundTime: nowTime
       };
 
       // 如果是修改状态，覆盖旧记录
@@ -444,6 +455,7 @@
       }
 
       saveRecords();
+      sortRecordsByTimeDesc();
       resetForm();
       renderHistory();
       renderStats();
@@ -465,7 +477,7 @@
     // 点击「修改」按钮，填充旧数据，进入编辑状态
     function modifyRecord(i) {
       const r = records[i];
-      editingIndex = i; // 标记为修改状态，提交时会覆盖
+      editingIndex = i;
 
       document.getElementById('barcodeId').value = r.barcodeId;
       document.getElementById('sequenceNo').value = r.sequenceNo;
@@ -484,14 +496,17 @@
       document.getElementById('formCard').style.display='block';
       document.getElementById('scanBtn').style.display='none';
       document.getElementById('formCard').scrollIntoView({behavior:'smooth'});
-      showToast("✏️ 正在修改数据，提交后将覆盖原记录");
+      showToast("✏️ 正在修改数据，提交后将覆盖原记录并自动置顶");
     }
 
     function deleteRecord(i) {
       if(confirm('确定删除？')){
         records.splice(i,1);
         saveRecords();
-        renderHistory();renderStats();renderMonthSummary();
+        sortRecordsByTimeDesc();
+        renderHistory();
+        renderStats();
+        renderMonthSummary();
       }
     }
     function showClearModal(){document.getElementById('clearModal').classList.add('show');}
@@ -499,6 +514,7 @@
     function clearAll(){
       records=[];
       saveRecords();
+      sortRecordsByTimeDesc();
       renderHistory();renderStats();renderMonthSummary();
       hideClearModal();
       showToast("🗑️ 全部记录已清空");
