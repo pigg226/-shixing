@@ -3,18 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>服装扫码入库系统</title>
+  <title>服装扫码入库</title>
   <link rel="manifest" href="manifest.json">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="智衣库">
+  <meta name="apple-mobile-web-app-title" content="pigg">
   <meta name="theme-color" content="#1e293b">
   
-  <!-- SheetJS 导出 -->
   <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
-  <!-- 二维码扫描库 -->
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-  <!-- Tesseract OCR 引擎 (轻量级文字识别) -->
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   
   <style>
@@ -23,7 +20,6 @@
       --bg: #f1f5f9;
       --card: #ffffff;
       --primary: #3b82f6;
-      --primary-dark: #2563eb;
       --success: #10b981;
       --danger: #ef4444;
       --warning: #f59e0b;
@@ -122,7 +118,7 @@
 <body>
 
 <div class="header">
-  <h1>👕 智衣库 · 扫码入库</h1>
+  <h1>👕 扫码入库</h1>
   <div class="sub">专业条码扫描 + AI标签识别</div>
 </div>
 
@@ -140,7 +136,7 @@
 
 <div class="scan-status" id="scanStatus"></div>
 <div class="close-scan" id="closeScanArea">
-  <button class="btn btn-outline btn-sm" onclick="stopScan()">✕ 关闭扫码器</button>
+  <button class="btn btn-outline btn-sm" onclick="stopScan(true)">✕ 关闭扫码器</button>
 </div>
 <div id="reader"></div>
 
@@ -197,18 +193,19 @@
 <div class="modal-mask" id="dupModal"><div class="modal-box"><h4>⚠️ 条码重复</h4><p id="dupMsg"></p><div class="btn-group" style="margin-top:12px;"><button class="btn btn-success btn-sm" onclick="dupContinue()">继续新增</button><button class="btn btn-primary btn-sm" onclick="dupReplace()">覆盖数据</button></div></div></div>
 
 <script>
-  // ---------- 核心变量 ----------
+  // ---------- 全局变量 ----------
   let html5QrCode = null;
   let records = [];
   let editingIndex = -1;
   let deferredPrompt = null;
   let lastConfig = {};
-  let isContinuousMode = false;
+  let isContinuousMode = false;      // 连续扫码模式标志
   let currentDupBarcode = '';
   let dailySeqMap = {};
 
   // ----- 辅助函数 -----
   const getTodayStr = () => new Date().toISOString().slice(0,10);
+  
   function rebuildDailySeqMap() {
     dailySeqMap = {};
     records.forEach(r => {
@@ -223,6 +220,7 @@
       }
     });
   }
+  
   function getNextSequence() {
     let today = getTodayStr();
     let max = dailySeqMap[today] || 0;
@@ -234,6 +232,7 @@
     });
     return Math.min(max+1, 999);
   }
+  
   function refreshSeqSelect() {
     let sel = document.getElementById('sequenceNo');
     if(!sel) return;
@@ -242,6 +241,7 @@
     sel.value = nxt;
     if(lastConfig) lastConfig.sequenceNo = sel.value;
   }
+  
   function initSequenceSelect() {
     let sel = document.getElementById('sequenceNo');
     sel.innerHTML = '';
@@ -249,7 +249,7 @@
     refreshSeqSelect();
   }
 
-  // ================= 【核心增强】OCR 标签智能识别 =================
+  // ================= OCR 标签智能识别 =================
   function triggerOCRUpload() { document.getElementById('ocrFileInput').click(); }
 
   async function handleOCRImage(event) {
@@ -261,7 +261,6 @@
     loadingDiv.innerText = '📖 正在识别标签文字...';
     document.body.appendChild(loadingDiv);
     try {
-      // 使用 Tesseract 进行中英文混合识别
       const result = await Tesseract.recognize(file, 'chi_sim+eng', {
         logger: m => console.log(m)
       });
@@ -279,46 +278,30 @@
     }
   }
 
-  // 智能解析服装标签（支持多种格式：款号、色号、尺码、扎批号等）
   function parseGarmentLabel(text) {
     let result = { barcodeId: '', size: '', bundleNo: '', batchNo: '', styleNo: '', colorCode: '', colorName: '', fabricA: '', fabricB: '' };
-    // 1. 提取条码（8-20位数字或字母数字组合，优先纯数字长串）
     let barcodeMatch = text.match(/\b(\d{8,})\b/);
     if(!barcodeMatch) barcodeMatch = text.match(/\b([A-Z0-9]{10,})\b/);
     if(barcodeMatch) result.barcodeId = barcodeMatch[1];
-    
-    // 2. 尺码  XS|S|M|L|XL|2XL|3XL|4XL|XXL 等
     let sizeMatch = text.match(/\b(XS|S|M|L|XL|2XL|3XL|4XL|XXL|XXXL)\b/i);
     if(sizeMatch) result.size = sizeMatch[1].toUpperCase();
-    
-    // 3. 扎号/捆号: "扎号:xxx", "捆号:xxx"
     let bundleMatch = text.match(/(?:扎号|捆号)[:：]\s*([^\n\r]+)/i);
     if(bundleMatch) result.bundleNo = bundleMatch[1].trim();
-    
-    // 4. 批号: "批号:xxx" "批次:xxx"
     let batchMatch = text.match(/(?:批号|批次)[:：]\s*([^\n\r]+)/i);
     if(batchMatch) result.batchNo = batchMatch[1].trim();
-    
-    // 5. 款号: "款号:xxx", "款:xxx"
     let styleMatch = text.match(/(?:款号|款)[:：]\s*([A-Z0-9\-]+)/i);
     if(styleMatch) result.styleNo = styleMatch[1].trim();
-    
-    // 6. 色号+颜色: 常见格式 "色号 02-269 花灰" 或 "颜色:花灰色号:02-269"
     let colorCodeMatch = text.match(/(?:色号|色码)[:：]?\s*([\w\-]+)/i);
     if(colorCodeMatch) result.colorCode = colorCodeMatch[1].trim();
     let colorNameMatch = text.match(/(?:颜色|色名)[:：]?\s*([\u4e00-\u9fa5]+)/i);
     if(colorNameMatch) result.colorName = colorNameMatch[1].trim();
-    // 额外捕获组合: 如 "02-269 花灰"
     let combined = text.match(/([\w\-]+)\s+([\u4e00-\u9fa5]{2,})/);
     if(combined && !result.colorCode) result.colorCode = combined[1];
     if(combined && !result.colorName) result.colorName = combined[2];
-    
-    // 7. 面料信息: A料,B料尝试匹配
     let fabricAMatch = text.match(/(?:A料|面料A)[:：]\s*([^\n]+)/i);
     if(fabricAMatch) result.fabricA = fabricAMatch[1].trim();
     let fabricBMatch = text.match(/(?:B料|面料B)[:：]\s*([^\n]+)/i);
     if(fabricBMatch) result.fabricB = fabricBMatch[1].trim();
-    
     return result;
   }
 
@@ -344,7 +327,31 @@
     showToast("🏷️ 标签信息已自动填入，请核对");
   }
 
-  // 扫码填充
+  // ================= 扫码逻辑 (修复连续模式) =================
+  function saveCurrentConfig() {
+    lastConfig = {
+      sequenceNo: document.getElementById('sequenceNo').value,
+      size: document.getElementById('size').value,
+      bundleNo: document.getElementById('bundleNo').value,
+      batchNo: document.getElementById('batchNo').value,
+      styleNo: document.getElementById('styleNo').value,
+      colorCode: document.getElementById('colorCode').value,
+      colorName: document.getElementById('colorName').value,
+      fabricA: document.getElementById('fabricA').value,
+      fabricB: document.getElementById('fabricB').value,
+      quantity: document.getElementById('quantity').value
+    };
+  }
+  
+  function applyLastConfigContinuous() {
+    if(!document.getElementById('keepConfigSwitch').checked) return;
+    const fields = ['size','bundleNo','batchNo','styleNo','colorCode','colorName','fabricA','fabricB','quantity'];
+    fields.forEach(k => { let el = document.getElementById(k); if(el && lastConfig[k] !== undefined) el.value = lastConfig[k]; });
+    let newSeq = getNextSequence();
+    document.getElementById('sequenceNo').value = newSeq;
+    lastConfig.sequenceNo = newSeq;
+  }
+  
   function fillScanBarcode(barcode){
     document.getElementById('barcodeId').value = barcode;
     document.getElementById('scannedBadge').style.display = 'inline-block';
@@ -364,32 +371,32 @@
     if(navigator.vibrate) navigator.vibrate(50);
     showToast("✅ 扫码成功");
   }
-
-  // 保存与沿用配置
-  function saveCurrentConfig() {
-    lastConfig = {
-      sequenceNo: document.getElementById('sequenceNo').value,
-      size: document.getElementById('size').value,
-      bundleNo: document.getElementById('bundleNo').value,
-      batchNo: document.getElementById('batchNo').value,
-      styleNo: document.getElementById('styleNo').value,
-      colorCode: document.getElementById('colorCode').value,
-      colorName: document.getElementById('colorName').value,
-      fabricA: document.getElementById('fabricA').value,
-      fabricB: document.getElementById('fabricB').value,
-      quantity: document.getElementById('quantity').value
-    };
+  
+  // 仅停止摄像头，不改变连续模式标志
+  async function stopCameraOnly() {
+    if(html5QrCode){
+      try{ await html5QrCode.stop(); }catch(e){}
+      html5QrCode = null;
+    }
+    document.getElementById('reader').style.display = 'none';
+    document.getElementById('scanBtn').style.display = 'block';
+    document.getElementById('closeScanArea').style.display = 'none';
+    document.getElementById('scanStatus').textContent = '';
   }
-  function applyLastConfigContinuous() {
-    if(!document.getElementById('keepConfigSwitch').checked) return;
-    const fields = ['size','bundleNo','batchNo','styleNo','colorCode','colorName','fabricA','fabricB','quantity'];
-    fields.forEach(k => { let el = document.getElementById(k); if(el && lastConfig[k] !== undefined) el.value = lastConfig[k]; });
-    let newSeq = getNextSequence();
-    document.getElementById('sequenceNo').value = newSeq;
-    lastConfig.sequenceNo = newSeq;
+  
+  // 完全停止扫码并且退出连续模式 (用户主动关闭)
+  function stopScan(resetContinuous = true) {
+    if(resetContinuous) isContinuousMode = false;
+    if(html5QrCode){
+      try{ html5QrCode.stop(); }catch(e){}
+      html5QrCode = null;
+    }
+    document.getElementById('reader').style.display = 'none';
+    document.getElementById('scanBtn').style.display = 'block';
+    document.getElementById('closeScanArea').style.display = 'none';
+    document.getElementById('scanStatus').textContent = '';
   }
-
-  function startContinuousScan() { isContinuousMode = true; editingIndex = -1; showToast('🔄 连续扫码模式 · 序号自动递增'); startScan(); }
+  
   async function startScan() {
     if(html5QrCode) try{ await html5QrCode.stop(); }catch(e){}
     document.getElementById('reader').innerHTML = '';
@@ -405,11 +412,13 @@
     } catch(e){
       console.error(e);
       showToast("❌ 摄像头启动失败, 请检查权限");
-      stopScan();
+      stopScan(true);
     }
   }
-  function onScanSuccess(text) {
-    stopScan();
+  
+  async function onScanSuccess(text) {
+    // 先停止摄像头 (但保留连续模式)
+    await stopCameraOnly();
     let barcode = text.trim();
     currentDupBarcode = barcode;
     let exist = records.findIndex(r => r.barcodeId === barcode);
@@ -420,7 +429,20 @@
     }
     fillScanBarcode(barcode);
   }
-  function dupContinue(){ document.getElementById('dupModal').classList.remove('show'); fillScanBarcode(currentDupBarcode); showToast("📥 继续新增入库"); }
+  
+  function startContinuousScan() {
+    isContinuousMode = true;
+    editingIndex = -1;
+    showToast('🔄 连续扫码模式开启 · 序号自动递增');
+    startScan();
+  }
+  
+  function dupContinue(){
+    document.getElementById('dupModal').classList.remove('show');
+    fillScanBarcode(currentDupBarcode);
+    showToast("📥 继续新增入库");
+  }
+  
   function dupReplace(){
     document.getElementById('dupModal').classList.remove('show');
     let idx = records.findIndex(r => r.barcodeId === currentDupBarcode);
@@ -429,17 +451,8 @@
     fillScanBarcode(currentDupBarcode);
     showToast("🔄 覆盖原记录");
   }
-  function stopScan() {
-    isContinuousMode = false;
-    if(html5QrCode) try{ html5QrCode.stop(); }catch(e){}
-    html5QrCode = null;
-    document.getElementById('reader').style.display = 'none';
-    document.getElementById('scanBtn').style.display = 'block';
-    document.getElementById('closeScanArea').style.display = 'none';
-    document.getElementById('scanStatus').textContent = '';
-  }
   
-  // 提交入库
+  // 提交入库 (入库后自动重启连续扫码)
   function submitInbound() {
     let barcode = document.getElementById('barcodeId').value.trim();
     if(!barcode) return showToast("⚠️ 请先扫码或识别标签");
@@ -484,16 +497,46 @@
     document.getElementById('scannedBadge').style.display = 'none';
     document.getElementById('barcodeId').value = '';
     saveCurrentConfig();
+    
+    // 连续模式且开关开启: 自动重新启动摄像头继续扫码
     if(isContinuousMode && document.getElementById('keepConfigSwitch').checked){
-      setTimeout(() => startContinuousScan(), 500);
-    } else isContinuousMode = false;
+      setTimeout(() => {
+        startScan();
+      }, 300);
+    } else {
+      // 非连续模式则退出连续状态
+      isContinuousMode = false;
+    }
   }
-  function modifyRecord(i){ if(html5QrCode) stopScan(); isContinuousMode=false; let r=records[i]; editingIndex=i; document.getElementById('barcodeId').value=r.barcodeId; document.getElementById('sequenceNo').value=r.sequenceNo; document.getElementById('size').value=r.size; document.getElementById('bundleNo').value=r.bundleNo; document.getElementById('batchNo').value=r.batchNo; document.getElementById('styleNo').value=r.styleNo; document.getElementById('colorCode').value=r.colorCode; document.getElementById('colorName').value=r.colorName; document.getElementById('fabricA').value=r.fabricA; document.getElementById('fabricB').value=r.fabricB; document.getElementById('quantity').value=r.quantity; document.getElementById('inboundTime').value=r.inboundTime; document.getElementById('scannedBadge').style.display='inline-block'; document.getElementById('formCard').style.display='block'; showToast("✏️ 编辑模式"); }
+  
+  function modifyRecord(i){ 
+    if(html5QrCode) stopScan(true); 
+    isContinuousMode=false; 
+    let r=records[i]; 
+    editingIndex=i; 
+    document.getElementById('barcodeId').value=r.barcodeId; 
+    document.getElementById('sequenceNo').value=r.sequenceNo; 
+    document.getElementById('size').value=r.size; 
+    document.getElementById('bundleNo').value=r.bundleNo; 
+    document.getElementById('batchNo').value=r.batchNo; 
+    document.getElementById('styleNo').value=r.styleNo; 
+    document.getElementById('colorCode').value=r.colorCode; 
+    document.getElementById('colorName').value=r.colorName; 
+    document.getElementById('fabricA').value=r.fabricA; 
+    document.getElementById('fabricB').value=r.fabricB; 
+    document.getElementById('quantity').value=r.quantity; 
+    document.getElementById('inboundTime').value=r.inboundTime; 
+    document.getElementById('scannedBadge').style.display='inline-block'; 
+    document.getElementById('formCard').style.display='block'; 
+    showToast("✏️ 编辑模式"); 
+  }
+  
   function deleteRecord(i){ if(confirm("删除该条记录？")){ records.splice(i,1); saveRecords(); rebuildDailySeqMap(); sortByTime(); renderAll(); showToast("已删除"); } }
   function sortByTime(){ records.sort((a,b)=> new Date(b.inboundTime) - new Date(a.inboundTime)); }
   function saveRecords(){ localStorage.setItem('garment_inbound_records', JSON.stringify(records)); }
   function loadRecords(){ let d=localStorage.getItem('garment_inbound_records'); records=d?JSON.parse(d):[]; rebuildDailySeqMap(); sortByTime(); }
   function renderAll(){ renderHistory(); renderStats(); renderMonthSummary(); }
+  
   function renderHistory(){
     let container=document.getElementById('history');
     document.getElementById('recordCount').innerText=`${records.length}条`;
@@ -513,6 +556,7 @@
       </div>
     `).join('');
   }
+  
   function renderStats(){
     let total=records.reduce((s,r)=>s+(r.quantity||1),0);
     let unique=new Set(records.map(r=>r.barcodeId)).size;
@@ -522,6 +566,7 @@
     document.getElementById('statBarcodes').textContent=unique;
     document.getElementById('statToday').textContent=todayQty;
   }
+  
   function renderMonthSummary(){
     let map=new Map();
     records.forEach(r=>{
@@ -539,6 +584,7 @@
     }
     document.getElementById('monthSummary').innerHTML=html||'<div class="empty-state">暂无月度数据</div>';
   }
+  
   function exportToExcel(){
     if(!records.length) return showToast("无数据导出");
     let detail=records.map(r=>({'条码ID':r.barcodeId,'序号':r.sequenceNo,'尺码':r.size,'扎号':r.bundleNo,'批号':r.batchNo,'款号':r.styleNo,'色号':r.colorCode,'颜色':r.colorName,'A料':r.fabricA,'B料':r.fabricB,'数量':r.quantity,'入库时间':r.inboundTime}));
@@ -548,6 +594,7 @@
     XLSX.writeFile(wb,`服装入库_${new Date().toLocaleDateString()}.xlsx`);
     showToast("导出成功");
   }
+  
   function showClearModal(){ document.getElementById('clearModal').classList.add('show'); }
   function hideClearModal(){ document.getElementById('clearModal').classList.remove('show'); }
   function clearAll(){ records=[]; saveRecords(); rebuildDailySeqMap(); renderAll(); hideClearModal(); showToast("已清空所有数据"); }
