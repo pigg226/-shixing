@@ -156,7 +156,7 @@
   </div>
 
   <div class="switch-row">
-    <span class="switch-text">连续扫码自动序号递增：</span>
+    <span class="switch-text">连续扫码沿用配置+序号自增：</span>
     <label class="switch">
       <input type="checkbox" id="keepConfigSwitch" checked>
       <span class="slider"></span>
@@ -172,7 +172,6 @@
   <div class="card" id="formCard" style="display:none;">
     <div class="card-title">📝 入库信息录入<span class="scanned-badge" id="scannedBadge" style="display:none;">已扫码</span></div>
     <div class="form-group"><label>🔢 条码 ID</label><input type="text" id="barcodeId" readonly placeholder="扫码后自动填充"></div>
-    <!-- 序号自动隐藏，无需手动选择 -->
     <div class="form-row">
       <div class="form-group" style="display:none;">
         <label>📋 序号</label>
@@ -267,7 +266,6 @@
     function initSequenceNo() {
       const sel = document.getElementById('sequenceNo');
       for(let i=1;i<=999;i++) sel.innerHTML += `<option value="${i}">${i}</option>`;
-      // 默认从1开始
       sel.value = "1";
       lastConfig.sequenceNo = "1";
     }
@@ -302,7 +300,6 @@
         const el = document.getElementById(key);
         if(el && key !== 'sequenceNo') el.value = lastConfig[key] || '';
       });
-      // 序号自增
       let seq = parseInt(lastConfig.sequenceNo || "0");
       if(!isNaN(seq)){
         seq += 1;
@@ -355,7 +352,6 @@
       const barcode = text.trim();
       currentDupBarcode = barcode;
 
-      // 检测重复条码
       const existIndex = records.findIndex(r => r.barcodeId === barcode);
       if(existIndex > -1){
         document.getElementById('dupMsg').innerText = `条码 ${barcode} 已存在，选择操作`;
@@ -436,10 +432,23 @@
         quantity:parseInt(document.getElementById('quantity').value)||1,
         inboundTime:new Date().toLocaleString('zh-CN')
       };
-      records.unshift(record);
-      saveRecords();resetForm();renderHistory();renderStats();renderMonthSummary();
+
+      // 如果是修改状态，覆盖旧记录
+      if (editingIndex >= 0) {
+        records[editingIndex] = record;
+        editingIndex = -1;
+        showToast("✅ 修改已保存，数据已覆盖");
+      } else {
+        records.unshift(record);
+        showToast("✅ 入库成功");
+      }
+
+      saveRecords();
+      resetForm();
+      renderHistory();
+      renderStats();
+      renderMonthSummary();
       document.getElementById('formCard').style.display='none';
-      showToast("✅ 入库成功");
 
       if(document.getElementById('keepConfigSwitch').checked){
         setTimeout(()=>{
@@ -453,25 +462,31 @@
       document.getElementById('scannedBadge').style.display='none';
     }
 
-    // 编辑改成 修改
+    // 点击「修改」按钮，填充旧数据，进入编辑状态
     function modifyRecord(i) {
-      const r=records[i];editingIndex=i;
-      document.getElementById('barcodeId').value=r.barcodeId;
-      document.getElementById('sequenceNo').value=r.sequenceNo;
-      document.getElementById('size').value=r.size;
-      document.getElementById('bundleNo').value=r.bundleNo;
-      document.getElementById('batchNo').value=r.batchNo;
-      document.getElementById('styleNo').value=r.styleNo;
-      document.getElementById('colorCode').value=r.colorCode;
-      document.getElementById('colorName').value=r.colorName;
-      document.getElementById('fabricA').value=r.fabricA;
-      document.getElementById('fabricB').value=r.fabricB;
-      document.getElementById('quantity').value=r.quantity;
-      document.getElementById('inboundTime').value=r.inboundTime;
+      const r = records[i];
+      editingIndex = i; // 标记为修改状态，提交时会覆盖
+
+      document.getElementById('barcodeId').value = r.barcodeId;
+      document.getElementById('sequenceNo').value = r.sequenceNo;
+      document.getElementById('size').value = r.size;
+      document.getElementById('bundleNo').value = r.bundleNo;
+      document.getElementById('batchNo').value = r.batchNo;
+      document.getElementById('styleNo').value = r.styleNo;
+      document.getElementById('colorCode').value = r.colorCode;
+      document.getElementById('colorName').value = r.colorName;
+      document.getElementById('fabricA').value = r.fabricA;
+      document.getElementById('fabricB').value = r.fabricB;
+      document.getElementById('quantity').value = r.quantity;
+      document.getElementById('inboundTime').value = r.inboundTime;
       document.getElementById('scannedBadge').style.display='inline-block';
+
       document.getElementById('formCard').style.display='block';
       document.getElementById('scanBtn').style.display='none';
+      document.getElementById('formCard').scrollIntoView({behavior:'smooth'});
+      showToast("✏️ 正在修改数据，提交后将覆盖原记录");
     }
+
     function deleteRecord(i) {
       if(confirm('确定删除？')){
         records.splice(i,1);
@@ -564,14 +579,12 @@
     function exportToExcel(){
       if(records.length===0) return showToast("⚠️ 无数据可导出");
 
-      // 1. 入库明细
       const detailData=records.map(r=>({
         '条码ID':r.barcodeId,'序号':r.sequenceNo,'尺码':r.size,'扎号':r.bundleNo,
         '批号':r.batchNo,'款号':r.styleNo,'色号':r.colorCode,'颜色':r.colorName,
         'A料信息':r.fabricA,'B料信息':r.fabricB,'数量':r.quantity,'入库时间':r.inboundTime
       }));
 
-      // 2. 统计汇总
       const monthMap = {};
       records.forEach(r=>{
         const date = new Date(r.inboundTime);
