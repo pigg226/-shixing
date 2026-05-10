@@ -156,7 +156,7 @@
   </div>
 
   <div class="switch-row">
-    <span class="switch-text">连续扫码沿用配置+序号自增：</span>
+    <span class="switch-text">连续扫码自动序号递增：</span>
     <label class="switch">
       <input type="checkbox" id="keepConfigSwitch" checked>
       <span class="slider"></span>
@@ -172,8 +172,12 @@
   <div class="card" id="formCard" style="display:none;">
     <div class="card-title">📝 入库信息录入<span class="scanned-badge" id="scannedBadge" style="display:none;">已扫码</span></div>
     <div class="form-group"><label>🔢 条码 ID</label><input type="text" id="barcodeId" readonly placeholder="扫码后自动填充"></div>
+    <!-- 序号自动隐藏，无需手动选择 -->
     <div class="form-row">
-      <div class="form-group"><label>📋 序号</label><select id="sequenceNo"><option value="">请选择</option></select></div>
+      <div class="form-group" style="display:none;">
+        <label>📋 序号</label>
+        <select id="sequenceNo"></select>
+      </div>
       <div class="form-group"><label>📏 尺码</label><select id="size"><option value="">请选择</option><option value="XS">XS</option><option value="S">S</option><option value="M">M</option><option value="L">L</option><option value="XL">XL</option><option value="2XL">2XL</option><option value="3XL">3XL</option><option value="4XL">4XL</option></select></div>
     </div>
     <div class="form-row-3">
@@ -254,14 +258,18 @@
     // 初始化
     function init() {
       loadRecords();
-      populateSequenceOptions();
+      initSequenceNo();
       renderHistory();
       renderStats();
       renderMonthSummary();
     }
-    function populateSequenceOptions() {
-      const select = document.getElementById('sequenceNo');
-      for (let i=1; i<=200; i++) select.innerHTML += `<option value="${i}">${i}</option>`;
+    // 初始化序号下拉
+    function initSequenceNo() {
+      const sel = document.getElementById('sequenceNo');
+      for(let i=1;i<=999;i++) sel.innerHTML += `<option value="${i}">${i}</option>`;
+      // 默认从1开始
+      sel.value = "1";
+      lastConfig.sequenceNo = "1";
     }
 
     // PWA
@@ -271,7 +279,7 @@
       else{document.getElementById('installGuide').style.display='block';}
     }
 
-    // 保存当前表单配置 用于连续扫码复用
+    // 保存当前表单配置
     function saveCurrentConfig() {
       lastConfig = {
         sequenceNo: document.getElementById('sequenceNo').value,
@@ -287,14 +295,14 @@
       };
     }
 
-    // 复用上次配置 + 序号自动+1
+    // 复用配置 + 序号自动+1
     function applyLastConfig() {
       if(!document.getElementById('keepConfigSwitch').checked) return;
       Object.keys(lastConfig).forEach(key=>{
         const el = document.getElementById(key);
         if(el && key !== 'sequenceNo') el.value = lastConfig[key] || '';
       });
-      // 序号自动递增
+      // 序号自增
       let seq = parseInt(lastConfig.sequenceNo || "0");
       if(!isNaN(seq)){
         seq += 1;
@@ -306,7 +314,7 @@
     // 开始连续扫码
     function startContinuousScan() {
       isContinuousMode = true;
-      showToast('🔄 已进入连续扫码模式，序号自动递增');
+      showToast('🔄 连续扫码自动序号递增');
       startScan();
     }
 
@@ -374,14 +382,14 @@
       showToast("✅ 扫码成功，请确认入库");
     }
 
-    // 重复条码 —— 继续入库（直接新增，保留旧数据）
+    // 重复条码 —— 继续入库
     function dupContinue(){
       document.getElementById('dupModal').classList.remove('show');
       fillBarcodeForm(currentDupBarcode);
       showToast("📥 允许重复，继续入库");
     }
 
-    // 重复条码 —— 覆盖数据（删除旧记录，重新录入）
+    // 重复条码 —— 覆盖数据
     function dupReplace(){
       document.getElementById('dupModal').classList.remove('show');
       const idx = records.findIndex(r=>r.barcodeId === currentDupBarcode);
@@ -445,7 +453,8 @@
       document.getElementById('scannedBadge').style.display='none';
     }
 
-    function editRecord(i) {
+    // 编辑改成 修改
+    function modifyRecord(i) {
       const r=records[i];editingIndex=i;
       document.getElementById('barcodeId').value=r.barcodeId;
       document.getElementById('sequenceNo').value=r.sequenceNo;
@@ -535,7 +544,7 @@
             <div class="field"><div class="f-label">A料</div><div class="f-value" style="font-size:10px;">${r.fabricA||'-'}</div></div>
           </div>
           <div class="record-actions">
-            <button class="btn btn-outline btn-sm" onclick="editRecord(${i})">✏️ 编辑</button>
+            <button class="btn btn-outline btn-sm" onclick="modifyRecord(${i})">✏️ 修改</button>
             <button class="btn btn-danger btn-sm" onclick="deleteRecord(${i})">🗑️ 删除</button>
           </div>
         </div>
@@ -574,7 +583,6 @@
         monthMap[monthKey].单据条数 += 1;
         monthMap[monthKey].条码集合.add(r.barcodeId);
       });
-      // 整理月度汇总行
       const summaryData = [];
       Object.values(monthMap).forEach(item=>{
         summaryData.push({
@@ -584,7 +592,6 @@
           入库单据条数:item.单据条数
         });
       });
-      // 整体总计
       const allTotal = records.reduce((s,r)=>s+(r.quantity||1),0);
       const allBarcode = new Set(records.map(r=>r.barcodeId)).size;
       summaryData.push({
@@ -594,12 +601,10 @@
         入库单据条数:records.length
       });
 
-      // 生成工作簿
       const wb = XLSX.utils.book_new();
       const ws1 = XLSX.utils.json_to_sheet(detailData);
       const ws2 = XLSX.utils.json_to_sheet(summaryData);
 
-      // 列宽
       ws1['!cols']=[
         {wch:16},{wch:8},{wch:8},{wch:10},{wch:10},{wch:10},
         {wch:12},{wch:10},{wch:30},{wch:30},{wch:8},{wch:20}
