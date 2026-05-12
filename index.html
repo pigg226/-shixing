@@ -85,7 +85,6 @@
     .stat-block { flex: 1; background: var(--card); padding: 14px; border-radius: 16px; text-align: center; box-shadow: var(--shadow); }
     .stat-number { font-size: 26px; font-weight: 800; color: var(--primary); }
     .section-header { display: flex; justify-content: space-between; align-items: baseline; margin: 20px 0 12px; }
-    /* 优化后记录条目 */
     .record-item { 
       background: var(--card); border-radius: 16px; padding: 16px; 
       margin-bottom: 10px; box-shadow: var(--shadow);
@@ -144,7 +143,7 @@
 </div>
 <div id="reader"></div>
 
-<!-- 入库表单：已删除 批号、色号、A料、B料 -->
+<!-- 已删除：批号、色号、A料、B料 -->
 <div class="card" id="formCard" style="display:none;">
   <div class="card-title">
     📝 入库明细
@@ -207,14 +206,14 @@
   let dailySeqMap = {};
   let ocrWorker = null;
 
-  // 金额自动计算
+  // ========== 手机兼容：全局监听数量/单价变化，每次都算金额 ==========
   function calcAmount(){
     let qty = parseFloat(document.getElementById('quantity').value) || 0;
     let price = parseFloat(document.getElementById('price').value) || 0;
     let amt = (qty * price).toFixed(2);
     document.getElementById('amount').value = amt;
   }
-  // 手机兼容全局绑定
+  // 全局绑定：兼容iOS/安卓/微信浏览器
   function bindCalcEvents(){
     const qty = document.getElementById('quantity');
     const price = document.getElementById('price');
@@ -226,7 +225,7 @@
     price.addEventListener('blur', calcAmount);
   }
 
-  // 同款号自动填充：只保留 扎号、单价
+  // ========== 同款号自动填充 ==========
   function fillByStyle(){
     let style = document.getElementById('styleNo').value.trim();
     if(!style) return;
@@ -244,15 +243,17 @@
     style.addEventListener('blur', fillByStyle);
   }
 
-  // ==================== 初始化 & OCR ====================
+  // ==================== 初始化 & 预加载OCR（完全恢复原版识别） ====================
   (async function preloadOCR() {
     try {
       ocrWorker = await Tesseract.createWorker();
       await ocrWorker.loadLanguage('eng+chi_sim');
       await ocrWorker.initialize('eng+chi_sim');
-    } catch(e) {}
+      console.log('OCR引擎已就绪');
+    } catch(e) { console.warn('OCR预加载失败', e); }
   })();
 
+  // ==================== 辅助函数 ====================
   const getTodayStr = () => new Date().toISOString().slice(0,10);
   const getTodayCN = () => new Date().toLocaleDateString('zh-CN');
   
@@ -320,7 +321,7 @@
     lastConfig.sequenceNo = newSeq;
   }
 
-  // 拍照识别
+  // ==================== 拍照识别标签 完全恢复原版识别逻辑 ====================
   function triggerOCRUpload() { 
     if(html5QrCode) stopScan(true);
     document.getElementById('ocrFileInput').click(); 
@@ -336,23 +337,30 @@
     document.body.appendChild(loadingDiv);
     try {
       const processedBlob = await preprocessImage(file);
-      let result = await Tesseract.recognize(processedBlob, 'chi_sim+eng');
+      let result;
+      if (ocrWorker) {
+        const { data } = await ocrWorker.recognize(processedBlob);
+        result = data;
+      } else {
+        result = await Tesseract.recognize(processedBlob, 'chi_sim+eng');
+      }
       const rawText = result.text;
       const parsed = parseGarmentLabel(rawText);
       
       if(!parsed.barcodeId && !parsed.styleNo && !parsed.size) {
-        if(confirm("识别内容较少，是否仍然使用？")) {
+        if(confirm("识别内容较少，可能不准确。是否仍然使用？\n点击「确定」继续，点击「取消」重新拍照")) {
           fillFromOCRData(parsed);
+          showToast("已填充识别信息，请核对后确认入库");
         } else {
           triggerOCRUpload();
         }
       } else {
         fillFromOCRData(parsed);
-        showToast("✅ 标签识别成功");
+        showToast("✅ 标签识别成功，已自动填充表单");
         document.getElementById('formCard').scrollIntoView({ behavior: 'smooth' });
       }
     } catch(err) {
-      showToast("❌ 识别失败");
+      showToast("❌ 识别失败，请确保标签清晰并重试");
     } finally {
       document.body.removeChild(loadingDiv);
       document.getElementById('ocrFileInput').value = '';
@@ -368,22 +376,37 @@
         canvas.width = img.width;
         canvas.height = img.height;
         ctx.drawImage(img, 0, 0);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imageData.data;
+        for (let i = 0; i < data.length; i += 4) {
+          const gray = data[i] * 0.3 + data[i+1] * 0.59 + data[i+2] * 0.11;
+          const bw = gray > 140 ? 255 : 0;
+          data[i] = data[i+1] = data[i+2] = bw;
+        }
+        ctx.putImageData(imageData, 0, 0);
         canvas.toBlob(resolve, 'image/png');
       };
       img.src = URL.createObjectURL(file);
     });
   }
 
+  // 恢复原版完整标签解析规则
   function parseGarmentLabel(text) {
     let result = { barcodeId: '', size: '', bundleNo: '', styleNo: '' };
-    let barcodeMatch = text.match(/\b(\d{8,20})\b/);
-    if(barcodeMatch) result.barcodeId = barcodeMatch[1];
-    let sizeMatch = text.match(/\b(XS|S|M|L|XL|2XL|3XL|4XL|XXL|XXXL)\b/i);
-    if(sizeMatch) result.size = sizeMatch[1].toUpperCase();
-    let bundleMatch = text.match(/(?:扎号|捆号|扎)[:：]?\s*([^\n\r,，]+)/i);
-    if(bundleMatch) result.bundleNo = bundleMatch[1].trim();
-    let styleMatch = text.match(/(?:款号|款|货号)[:：]?\s*([A-Z0-9\-]+)/i);
-    if(styleMatch) result.styleNo = styleMatch[1].trim();
+    // 条码
+    let barcodeMatch = text.match(/\b\d{10,22}\b/);
+    if(barcodeMatch) result.barcodeId = barcodeMatch[0];
+    // 尺码
+    let sizeMatch = text.match(/(XS|S|M|L|XL|2XL|3XL|4XL|5XL|XXL|XXXL)/gi);
+    if(sizeMatch) result.size = sizeMatch[0].toUpperCase();
+    // 扎号
+    let bundleReg = /(扎号|捆号|扎|捆)[：:；;,，\s]*([A-Z0-9\-]+)/;
+    let bm = text.match(bundleReg);
+    if(bm) result.bundleNo = bm[2].trim();
+    // 款号
+    let styleReg = /(款号|货号|款)[：:；;,，\s]*([A-Z0-9\-]{3,})/;
+    let sm = text.match(styleReg);
+    if(sm) result.styleNo = sm[2].trim();
     return result;
   }
 
@@ -406,7 +429,7 @@
     if(data.styleNo) fillByStyle();
   }
 
-  // 扫码逻辑
+  // ==================== 扫码核心逻辑（手机稳定：每次重置事件） ====================
   function fillScanBarcode(barcode){
     document.getElementById('barcodeId').value = barcode;
     document.getElementById('scannedBadge').style.display = 'inline-block';
@@ -468,7 +491,7 @@
   async function startContinuousScan() {
     isContinuousMode = true;
     editingIndex = -1;
-    showToast('🔄 连续扫码模式开启');
+    showToast('🔄 连续扫码模式开启 · 序号自动递增');
     await startScanInternal();
   }
   
@@ -486,7 +509,7 @@
       await html5QrCode.start({ facingMode:"environment" }, { fps:10, qrbox:{width:280,height:200} }, onScanSuccess, ()=>{});
       document.getElementById('scanStatus').textContent = '🔍 扫描中，对准条码';
     } catch(e){
-      showToast("❌ 摄像头启动失败");
+      showToast("❌ 摄像头启动失败, 请检查权限");
       stopScan(true);
     }
   }
@@ -497,7 +520,7 @@
     currentDupBarcode = barcode;
     let exist = records.findIndex(r => r.barcodeId === barcode);
     if(exist !== -1){
-      document.getElementById('dupMsg').innerHTML = `条码 <strong>${barcode}</strong> 已存在`;
+      document.getElementById('dupMsg').innerHTML = `条码 <strong>${barcode}</strong> 已存在，请选择`;
       document.getElementById('dupModal').classList.add('show');
       return;
     }
@@ -507,6 +530,7 @@
   function dupContinue(){
     document.getElementById('dupModal').classList.remove('show');
     fillScanBarcode(currentDupBarcode);
+    showToast("📥 继续新增入库");
   }
   
   function dupReplace(){
@@ -515,9 +539,10 @@
     if(idx !== -1) records.splice(idx,1);
     saveRecords(); rebuildDailySeqMap(); sortByTime(); renderAll();
     fillScanBarcode(currentDupBarcode);
+    showToast("🔄 覆盖原记录");
   }
   
-  // 提交入库
+  // ==================== 提交入库 ====================
   function submitInbound() {
     let barcode = document.getElementById('barcodeId').value.trim();
     if(!barcode) return showToast("⚠️ 请先扫码或识别标签");
@@ -532,7 +557,7 @@
     if(conflict && editingIndex === -1){
       seq = getNextSequence().toString();
       document.getElementById('sequenceNo').value = seq;
-      showToast("📌 序号自动修正");
+      showToast("📌 序号冲突，已自动修正");
     }
 
     let qty = parseFloat(document.getElementById('quantity').value) || 0;
@@ -573,6 +598,7 @@
     }
   }
   
+  // ==================== 清空本日记录 ====================
   function clearTodayRecord(){
     document.getElementById('todayClearModal').classList.add('show');
   }
@@ -586,9 +612,10 @@
     rebuildDailySeqMap();
     sortByTime(); renderAll();
     hideTodayClearModal();
-    showToast("✅ 本日记录已清空");
+    showToast("✅ 本日记录已清空，保留历史数据");
   }
 
+  // ==================== 增删改查 & 渲染 ====================
   function modifyRecord(i){ 
     if(html5QrCode) stopScan(true); 
     isContinuousMode=false; 
@@ -605,6 +632,7 @@
     document.getElementById('inboundTime').value=r.inboundTime; 
     document.getElementById('scannedBadge').style.display='inline-block'; 
     document.getElementById('formCard').style.display='block'; 
+    showToast("✏️ 编辑模式"); 
   }
   
   function deleteRecord(i){ 
@@ -621,32 +649,23 @@
   function loadRecords(){ let d=localStorage.getItem('garment_inbound_records'); records=d?JSON.parse(d):[]; rebuildDailySeqMap(); sortByTime(); }
   function renderAll(){ renderHistory(); renderStats(); renderMonthSummary(); }
   
-  // 优化后记录渲染布局
+  // 优化后记录渲染
   function renderHistory(){
     let container=document.getElementById('history');
     document.getElementById('recordCount').innerText=`${records.length}条`;
-    if(!records.length){ 
-      container.innerHTML='<div class="empty-state">📭 暂无入库记录</div>'; 
-      return; 
-    }
+    if(!records.length){ container.innerHTML='<div class="empty-state">📭 暂无入库记录，请扫码或拍照识别标签</div>'; return; }
     container.innerHTML=records.map((r,i)=>`
       <div class="record-item">
-        <div class="record-header">
-          <span class="barcode-chip">🔢 ${escapeHtml(r.barcodeId)}</span>
-          <span class="time-text">${r.inboundTime}</span>
-        </div>
+        <div class="record-header"><span class="barcode-chip">🔢 ${escapeHtml(r.barcodeId)}</span><span class="time-text">${r.inboundTime}</span></div>
         <div class="detail-grid">
-          <div class="detail-tag"><span>序号</span>${r.sequenceNo}</div>
-          <div class="detail-tag"><span>款号</span>${r.styleNo||'-'}</div>
-          <div class="detail-tag"><span>尺码</span>${r.size||'-'}</div>
-          <div class="detail-tag"><span>扎号</span>${r.bundleNo||'-'}</div>
-          <div class="detail-tag"><span>数量</span>×${r.quantity}</div>
-          <div class="detail-tag"><span>金额</span>¥${r.amount.toFixed(2)}</div>
+          <div class="detail-tag"><span>序号</span> ${r.sequenceNo}</div>
+          <div class="detail-tag"><span>款号</span> ${r.styleNo||'-'}</div>
+          <div class="detail-tag"><span>尺码</span> ${r.size||'-'}</div>
+          <div class="detail-tag"><span>扎号</span> ${r.bundleNo||'-'}</div>
+          <div class="detail-tag"><span>数量</span> ×${r.quantity}</div>
+          <div class="detail-tag"><span>金额</span> ¥${r.amount.toFixed(2)}</div>
         </div>
-        <div class="record-actions">
-          <button class="btn btn-outline btn-sm" onclick="modifyRecord(${i})">✏️ 修改</button>
-          <button class="btn btn-danger btn-sm" onclick="deleteRecord(${i})">🗑️ 删除</button>
-        </div>
+        <div class="record-actions"><button class="btn btn-outline btn-sm" onclick="modifyRecord(${i})">✏️ 修改</button><button class="btn btn-danger btn-sm" onclick="deleteRecord(${i})">🗑️ 删除</button></div>
       </div>
     `).join('');
   }
@@ -675,12 +694,12 @@
     });
     let html='';
     for(let [k,v] of [...map.entries()].sort().reverse()){
-      html+=`<div class="month-summary"><strong>📅 ${k}</strong> 总件数: ${v.total} | 条码: ${v.codes.size} | 单数: ${v.count} | 总金额: ¥${v.totalAmount.toFixed(2)}</div>`;
+      html+=`<div class="month-summary"><strong>📅 ${k}</strong> &nbsp; 总件数: ${v.total} &nbsp; 条码数: ${v.codes.size} &nbsp; 单数: ${v.count} &nbsp; 总金额: ¥${v.totalAmount.toFixed(2)}</div>`;
     }
     document.getElementById('monthSummary').innerHTML=html||'<div class="empty-state">暂无月度数据</div>';
   }
   
-  // 导出Excel 同步精简字段
+  // 导出：同步精简多余字段
   function exportToExcel(){
     if(!records.length) return showToast("无数据导出");
     let detail = records.map(r => ({
@@ -721,7 +740,7 @@
     XLSX.utils.book_append_sheet(wb, ws2, "数据汇总");
 
     XLSX.writeFile(wb, `服装入库_${new Date().toLocaleDateString()}.xlsx`);
-    showToast("✅ 导出成功");
+    showToast("✅ 导出成功！含明细+汇总表");
   }
   
   function showClearModal(){ document.getElementById('clearModal').classList.add('show'); }
