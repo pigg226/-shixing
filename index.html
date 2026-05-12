@@ -71,31 +71,34 @@
     .scan-status { text-align: center; font-size: 12px; color: var(--text-light); margin: 6px 0; }
     .close-scan { text-align: center; margin: 6px 0; display: none; }
 
-    .card { background: var(--card); border-radius: 28px; padding: 20px; margin: 14px 0; box-shadow: var(--shadow); }
+    .card { background: var(--card); border-radius: 20px; padding: 20px; margin: 14px 0; box-shadow: var(--shadow); }
     .card-title { font-size: 18px; font-weight: 700; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
     .badge { background: #d1fae5; color: #065f46; padding: 4px 12px; border-radius: 30px; font-size: 11px; font-weight: 600; }
-    .form-grid { display: flex; flex-direction: column; gap: 12px; }
+    .form-grid { display: flex; flex-direction: column; gap: 14px; }
     .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
     .input-field label { font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-light); letter-spacing: 0.5px; margin-bottom: 4px; display: block; }
-    .input-field input, .input-field select { width: 100%; padding: 12px; font-size: 14px; border: 1.5px solid var(--border); border-radius: 16px; background: white; transition: 0.2s; }
+    .input-field input, .input-field select { width: 100%; padding: 12px; font-size: 14px; border: 1.5px solid var(--border); border-radius: 12px; background: white; transition: 0.2s; }
     .input-field input:focus, .input-field select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
     .input-field input[readonly] { background: #f1f5f9; color: #334155; }
 
     .stats-grid { display: flex; gap: 12px; margin: 16px 0; }
-    .stat-block { flex: 1; background: var(--card); padding: 14px; border-radius: 24px; text-align: center; box-shadow: var(--shadow); }
-    .stat-number { font-size: 28px; font-weight: 800; color: var(--primary); }
+    .stat-block { flex: 1; background: var(--card); padding: 14px; border-radius: 16px; text-align: center; box-shadow: var(--shadow); }
+    .stat-number { font-size: 26px; font-weight: 800; color: var(--primary); }
     .section-header { display: flex; justify-content: space-between; align-items: baseline; margin: 20px 0 12px; }
-    .record-item { background: var(--card); border-radius: 20px; padding: 14px; margin-bottom: 12px; box-shadow: var(--shadow); }
-    .record-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 6px; }
+    /* 优化后记录条目 */
+    .record-item { 
+      background: var(--card); border-radius: 16px; padding: 16px; 
+      margin-bottom: 10px; box-shadow: var(--shadow);
+    }
+    .record-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 6px; }
     .barcode-chip { font-family: monospace; background: #eef2ff; padding: 4px 12px; border-radius: 30px; font-size: 12px; font-weight: 700; color: var(--primary); }
     .time-text { font-size: 10px; color: #94a3b8; }
-    .detail-grid { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
-    .detail-tag { background: #f8fafc; padding: 5px 10px; border-radius: 14px; font-size: 11px; }
-    .detail-tag span:first-child { color: var(--text-light); margin-right: 6px; }
+    .detail-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin: 10px 0; }
+    .detail-tag { background: #f8fafc; padding: 6px 8px; border-radius: 10px; font-size: 12px; text-align:center; }
+    .detail-tag span:first-child { color: var(--text-light); margin-right: 4px; font-size:11px; }
     .record-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; border-top: 1px solid var(--border); padding-top: 10px; }
     .empty-state { text-align: center; padding: 48px 20px; color: #94a3b8; }
-    .month-summary { background: #f1f5f9; border-radius: 18px; padding: 12px; margin-bottom: 8px; font-size: 13px; }
+    .month-summary { background: #f1f5f9; border-radius: 12px; padding: 12px; margin-bottom: 8px; font-size: 13px; }
     .toast {
       position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
       background: #1e293b; color: white; padding: 10px 20px; border-radius: 40px;
@@ -110,10 +113,9 @@
     }
     .modal-mask { display: none; position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); z-index: 1000; align-items: center; justify-content: center; }
     .modal-mask.show { display: flex; }
-    .modal-box { background: white; width: 300px; border-radius: 32px; padding: 24px; text-align: center; }
+    .modal-box { background: white; width: 300px; border-radius: 20px; padding: 24px; text-align: center; }
     .ocr-loading { position: fixed; bottom: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.8); color: white; padding: 12px 24px; border-radius: 60px; z-index: 1200; font-size: 14px; }
     #ocrFileInput { display: none; }
-    .inline-icon { margin-right: 4px; }
   </style>
 </head>
 <body>
@@ -142,7 +144,7 @@
 </div>
 <div id="reader"></div>
 
-<!-- 入库表单：去掉 oninput，改用JS全局监听 -->
+<!-- 入库表单：已删除 批号、色号、A料、B料 -->
 <div class="card" id="formCard" style="display:none;">
   <div class="card-title">
     📝 入库明细
@@ -154,19 +156,10 @@
       <div class="input-field"><label>📋 序号</label><select id="sequenceNo"></select></div>
       <div class="input-field"><label>📏 尺码</label><select id="size"><option value="">请选择</option><option>XS</option><option>S</option><option>M</option><option>L</option><option>XL</option><option>2XL</option><option>3XL</option><option>4XL</option><option>5XL</option></select></div>
     </div>
-    <div class="row-3">
-      <div class="input-field"><label>🏷️ 扎号</label><input type="text" id="bundleNo" placeholder="捆号/扎号"></div>
-      <div class="input-field"><label>📦 批号</label><input type="text" id="batchNo" placeholder="批号"></div>
-      <div class="input-field"><label>👔 款号</label><input type="text" id="styleNo" placeholder="款号"></div>
-    </div>
+    <div class="input-field"><label>🏷️ 扎号</label><input type="text" id="bundleNo" placeholder="捆号/扎号"></div>
+    <div class="input-field"><label>👔 款号</label><input type="text" id="styleNo" placeholder="款号"></div>
     <div class="row-2">
-      <div class="input-field"><label>🎨 色号</label><input type="text" id="colorCode" placeholder="例: 02-269"></div>
-      <div class="input-field"><label>🖌️ 颜色</label><input type="text" id="colorName" placeholder="例: 花灰"></div>
-    </div>
-    <div class="input-field"><label>🧵 A料信息</label><input type="text" id="fabricA" placeholder="面料/辅料信息"></div>
-    <div class="input-field"><label>🧵 B料信息</label><input type="text" id="fabricB" placeholder="辅料B (选填)"></div>
-    <div class="row-2">
-      <div class="input-field"><label>📊 数量</label><input type="number" id="quantity" value="1" min="1"></div>
+      <div class="input-field"><label>📊 自定义数量</label><input type="number" id="quantity" value="1" min="1"></div>
       <div class="input-field"><label>💰 单价</label><input type="number" id="price" value="0" min="0" step="0.01"></div>
     </div>
     <div class="input-field">
@@ -214,18 +207,17 @@
   let dailySeqMap = {};
   let ocrWorker = null;
 
-  // ========== 手机兼容：全局监听数量/单价变化，每次都算金额 ==========
+  // 金额自动计算
   function calcAmount(){
     let qty = parseFloat(document.getElementById('quantity').value) || 0;
     let price = parseFloat(document.getElementById('price').value) || 0;
     let amt = (qty * price).toFixed(2);
     document.getElementById('amount').value = amt;
   }
-  // 全局绑定：兼容iOS/安卓/微信浏览器
+  // 手机兼容全局绑定
   function bindCalcEvents(){
     const qty = document.getElementById('quantity');
     const price = document.getElementById('price');
-    // 覆盖所有可能触发的事件（手机兼容）
     qty.addEventListener('input', calcAmount);
     qty.addEventListener('change', calcAmount);
     qty.addEventListener('blur', calcAmount);
@@ -234,24 +226,17 @@
     price.addEventListener('blur', calcAmount);
   }
 
-  // ========== 同款号自动填充（手机稳定版） ==========
+  // 同款号自动填充：只保留 扎号、单价
   function fillByStyle(){
     let style = document.getElementById('styleNo').value.trim();
     if(!style) return;
-    // 找最近一条同款号记录
     let last = records.filter(r=>r.styleNo===style).sort((a,b)=>new Date(b.inboundTime)-new Date(a.inboundTime))[0];
     if(!last) return;
     document.getElementById('price').value = last.price || 0;
-    document.getElementById('colorCode').value = last.colorCode || '';
-    document.getElementById('colorName').value = last.colorName || '';
-    document.getElementById('fabricA').value = last.fabricA || '';
-    document.getElementById('fabricB').value = last.fabricB || '';
     document.getElementById('bundleNo').value = last.bundleNo || '';
-    document.getElementById('batchNo').value = last.batchNo || '';
-    calcAmount(); // 强制算一次金额
+    calcAmount();
     showToast('✅ 同款信息已自动填充');
   }
-  // 绑定款号事件（手机兼容）
   function bindStyleEvent(){
     const style = document.getElementById('styleNo');
     style.addEventListener('input', fillByStyle);
@@ -259,17 +244,15 @@
     style.addEventListener('blur', fillByStyle);
   }
 
-  // ==================== 初始化 & 预加载OCR ====================
+  // ==================== 初始化 & OCR ====================
   (async function preloadOCR() {
     try {
       ocrWorker = await Tesseract.createWorker();
       await ocrWorker.loadLanguage('eng+chi_sim');
       await ocrWorker.initialize('eng+chi_sim');
-      console.log('OCR引擎已就绪');
-    } catch(e) { console.warn('OCR预加载失败', e); }
+    } catch(e) {}
   })();
 
-  // ==================== 辅助函数 ====================
   const getTodayStr = () => new Date().toISOString().slice(0,10);
   const getTodayCN = () => new Date().toLocaleDateString('zh-CN');
   
@@ -321,12 +304,7 @@
       sequenceNo: document.getElementById('sequenceNo').value,
       size: document.getElementById('size').value,
       bundleNo: document.getElementById('bundleNo').value,
-      batchNo: document.getElementById('batchNo').value,
       styleNo: document.getElementById('styleNo').value,
-      colorCode: document.getElementById('colorCode').value,
-      colorName: document.getElementById('colorName').value,
-      fabricA: document.getElementById('fabricA').value,
-      fabricB: document.getElementById('fabricB').value,
       quantity: document.getElementById('quantity').value,
       price: document.getElementById('price').value
     };
@@ -334,15 +312,15 @@
   
   function applyLastConfigContinuous() {
     if(!document.getElementById('keepConfigSwitch').checked) return;
-    const fields = ['size','bundleNo','batchNo','styleNo','colorCode','colorName','fabricA','fabricB','quantity','price'];
+    const fields = ['size','bundleNo','styleNo','quantity','price'];
     fields.forEach(k => { let el = document.getElementById(k); if(el && lastConfig[k] !== undefined) el.value = lastConfig[k]; });
-    calcAmount(); // 强制算金额
+    calcAmount();
     let newSeq = getNextSequence();
     document.getElementById('sequenceNo').value = newSeq;
     lastConfig.sequenceNo = newSeq;
   }
 
-  // ==================== 拍照识别标签 ====================
+  // 拍照识别
   function triggerOCRUpload() { 
     if(html5QrCode) stopScan(true);
     document.getElementById('ocrFileInput').click(); 
@@ -358,30 +336,23 @@
     document.body.appendChild(loadingDiv);
     try {
       const processedBlob = await preprocessImage(file);
-      let result;
-      if (ocrWorker) {
-        const { data } = await ocrWorker.recognize(processedBlob);
-        result = data;
-      } else {
-        result = await Tesseract.recognize(processedBlob, 'chi_sim+eng');
-      }
+      let result = await Tesseract.recognize(processedBlob, 'chi_sim+eng');
       const rawText = result.text;
       const parsed = parseGarmentLabel(rawText);
       
       if(!parsed.barcodeId && !parsed.styleNo && !parsed.size) {
-        if(confirm("识别内容较少，可能不准确。是否仍然使用？\n点击「确定」继续，点击「取消」重新拍照")) {
+        if(confirm("识别内容较少，是否仍然使用？")) {
           fillFromOCRData(parsed);
-          showToast("已填充识别信息，请核对后确认入库");
         } else {
           triggerOCRUpload();
         }
       } else {
         fillFromOCRData(parsed);
-        showToast("✅ 标签识别成功，已自动填充表单");
+        showToast("✅ 标签识别成功");
         document.getElementById('formCard').scrollIntoView({ behavior: 'smooth' });
       }
     } catch(err) {
-      showToast("❌ 识别失败，请确保标签清晰并重试");
+      showToast("❌ 识别失败");
     } finally {
       document.body.removeChild(loadingDiv);
       document.getElementById('ocrFileInput').value = '';
@@ -397,18 +368,23 @@
         canvas.width = img.width;
         canvas.height = img.height;
         ctx.drawImage(img, 0, 0);
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const data = imageData.data;
-        for (let i = 0; i < data.length; i += 4) {
-          const gray = data[i] * 0.3 + data[i+1] * 0.59 + data[i+2] * 0.11;
-          const bw = gray > 140 ? 255 : 0;
-          data[i] = data[i+1] = data[i+2] = bw;
-        }
-        ctx.putImageData(imageData, 0, 0);
         canvas.toBlob(resolve, 'image/png');
       };
       img.src = URL.createObjectURL(file);
     });
+  }
+
+  function parseGarmentLabel(text) {
+    let result = { barcodeId: '', size: '', bundleNo: '', styleNo: '' };
+    let barcodeMatch = text.match(/\b(\d{8,20})\b/);
+    if(barcodeMatch) result.barcodeId = barcodeMatch[1];
+    let sizeMatch = text.match(/\b(XS|S|M|L|XL|2XL|3XL|4XL|XXL|XXXL)\b/i);
+    if(sizeMatch) result.size = sizeMatch[1].toUpperCase();
+    let bundleMatch = text.match(/(?:扎号|捆号|扎)[:：]?\s*([^\n\r,，]+)/i);
+    if(bundleMatch) result.bundleNo = bundleMatch[1].trim();
+    let styleMatch = text.match(/(?:款号|款|货号)[:：]?\s*([A-Z0-9\-]+)/i);
+    if(styleMatch) result.styleNo = styleMatch[1].trim();
+    return result;
   }
 
   function fillFromOCRData(data) {
@@ -418,12 +394,7 @@
       for(let opt of sizeSel.options) if(opt.value === data.size) { opt.selected = true; break; }
     }
     document.getElementById('bundleNo').value = data.bundleNo || '';
-    document.getElementById('batchNo').value = data.batchNo || '';
     document.getElementById('styleNo').value = data.styleNo || '';
-    document.getElementById('colorCode').value = data.colorCode || '';
-    document.getElementById('colorName').value = data.colorName || '';
-    document.getElementById('fabricA').value = data.fabricA || '';
-    document.getElementById('fabricB').value = data.fabricB || '';
     document.getElementById('quantity').value = 1;
     document.getElementById('price').value = 0;
     calcAmount();
@@ -435,7 +406,7 @@
     if(data.styleNo) fillByStyle();
   }
 
-  // ==================== 扫码核心逻辑（手机稳定：每次重置事件） ====================
+  // 扫码逻辑
   function fillScanBarcode(barcode){
     document.getElementById('barcodeId').value = barcode;
     document.getElementById('scannedBadge').style.display = 'inline-block';
@@ -443,7 +414,6 @@
     editingIndex = -1;
     let oldStyle = document.getElementById('styleNo').value.trim();
 
-    // 手机关键：每次扫码后重新绑定事件，防止失效
     bindCalcEvents();
     bindStyleEvent();
 
@@ -452,7 +422,7 @@
     } else {
       refreshSeqSelect();
       if(lastConfig && document.getElementById('keepConfigSwitch').checked){
-        const keep = ['size','bundleNo','batchNo','styleNo','colorCode','colorName','fabricA','fabricB','quantity','price'];
+        const keep = ['size','bundleNo','styleNo','quantity','price'];
         keep.forEach(k => { let el = document.getElementById(k); if(el && lastConfig[k]!==undefined) el.value = lastConfig[k]; });
         calcAmount();
       }
@@ -498,7 +468,7 @@
   async function startContinuousScan() {
     isContinuousMode = true;
     editingIndex = -1;
-    showToast('🔄 连续扫码模式开启 · 序号自动递增');
+    showToast('🔄 连续扫码模式开启');
     await startScanInternal();
   }
   
@@ -516,7 +486,7 @@
       await html5QrCode.start({ facingMode:"environment" }, { fps:10, qrbox:{width:280,height:200} }, onScanSuccess, ()=>{});
       document.getElementById('scanStatus').textContent = '🔍 扫描中，对准条码';
     } catch(e){
-      showToast("❌ 摄像头启动失败, 请检查权限");
+      showToast("❌ 摄像头启动失败");
       stopScan(true);
     }
   }
@@ -527,7 +497,7 @@
     currentDupBarcode = barcode;
     let exist = records.findIndex(r => r.barcodeId === barcode);
     if(exist !== -1){
-      document.getElementById('dupMsg').innerHTML = `条码 <strong>${barcode}</strong> 已存在，请选择`;
+      document.getElementById('dupMsg').innerHTML = `条码 <strong>${barcode}</strong> 已存在`;
       document.getElementById('dupModal').classList.add('show');
       return;
     }
@@ -537,7 +507,6 @@
   function dupContinue(){
     document.getElementById('dupModal').classList.remove('show');
     fillScanBarcode(currentDupBarcode);
-    showToast("📥 继续新增入库");
   }
   
   function dupReplace(){
@@ -546,10 +515,9 @@
     if(idx !== -1) records.splice(idx,1);
     saveRecords(); rebuildDailySeqMap(); sortByTime(); renderAll();
     fillScanBarcode(currentDupBarcode);
-    showToast("🔄 覆盖原记录");
   }
   
-  // ==================== 提交入库 ====================
+  // 提交入库
   function submitInbound() {
     let barcode = document.getElementById('barcodeId').value.trim();
     if(!barcode) return showToast("⚠️ 请先扫码或识别标签");
@@ -564,7 +532,7 @@
     if(conflict && editingIndex === -1){
       seq = getNextSequence().toString();
       document.getElementById('sequenceNo').value = seq;
-      showToast("📌 序号冲突，已自动修正");
+      showToast("📌 序号自动修正");
     }
 
     let qty = parseFloat(document.getElementById('quantity').value) || 0;
@@ -577,12 +545,7 @@
       sequenceNo: seq,
       size: document.getElementById('size').value,
       bundleNo: document.getElementById('bundleNo').value,
-      batchNo: document.getElementById('batchNo').value,
       styleNo: document.getElementById('styleNo').value,
-      colorCode: document.getElementById('colorCode').value,
-      colorName: document.getElementById('colorName').value,
-      fabricA: document.getElementById('fabricA').value,
-      fabricB: document.getElementById('fabricB').value,
       quantity: qty,
       price: price,
       amount: amount,
@@ -610,7 +573,6 @@
     }
   }
   
-  // ==================== 新增：清空本日记录 ====================
   function clearTodayRecord(){
     document.getElementById('todayClearModal').classList.add('show');
   }
@@ -622,13 +584,11 @@
     records = records.filter(r => !r.inboundTime?.includes(todayCN));
     saveRecords();
     rebuildDailySeqMap();
-    sortByTime();
-    renderAll();
+    sortByTime(); renderAll();
     hideTodayClearModal();
-    showToast("✅ 本日记录已清空，保留历史数据");
+    showToast("✅ 本日记录已清空");
   }
 
-  // ==================== 增删改查 & 渲染 ====================
   function modifyRecord(i){ 
     if(html5QrCode) stopScan(true); 
     isContinuousMode=false; 
@@ -638,19 +598,13 @@
     document.getElementById('sequenceNo').value=r.sequenceNo; 
     document.getElementById('size').value=r.size; 
     document.getElementById('bundleNo').value=r.bundleNo; 
-    document.getElementById('batchNo').value=r.batchNo; 
     document.getElementById('styleNo').value=r.styleNo; 
-    document.getElementById('colorCode').value=r.colorCode; 
-    document.getElementById('colorName').value=r.colorName; 
-    document.getElementById('fabricA').value=r.fabricA; 
-    document.getElementById('fabricB').value=r.fabricB; 
     document.getElementById('quantity').value=r.quantity; 
     document.getElementById('price').value=r.price; 
     calcAmount();
     document.getElementById('inboundTime').value=r.inboundTime; 
     document.getElementById('scannedBadge').style.display='inline-block'; 
     document.getElementById('formCard').style.display='block'; 
-    showToast("✏️ 编辑模式"); 
   }
   
   function deleteRecord(i){ 
@@ -658,8 +612,7 @@
       records.splice(i,1); 
       saveRecords(); 
       rebuildDailySeqMap(); 
-      sortByTime(); 
-      renderAll(); 
+      sortByTime(); renderAll(); 
       showToast("已删除"); 
     } 
   }
@@ -668,24 +621,32 @@
   function loadRecords(){ let d=localStorage.getItem('garment_inbound_records'); records=d?JSON.parse(d):[]; rebuildDailySeqMap(); sortByTime(); }
   function renderAll(){ renderHistory(); renderStats(); renderMonthSummary(); }
   
+  // 优化后记录渲染布局
   function renderHistory(){
     let container=document.getElementById('history');
     document.getElementById('recordCount').innerText=`${records.length}条`;
-    if(!records.length){ container.innerHTML='<div class="empty-state">📭 暂无入库记录，请扫码或拍照识别标签</div>'; return; }
+    if(!records.length){ 
+      container.innerHTML='<div class="empty-state">📭 暂无入库记录</div>'; 
+      return; 
+    }
     container.innerHTML=records.map((r,i)=>`
       <div class="record-item">
-        <div class="record-header"><span class="barcode-chip">🔢 ${escapeHtml(r.barcodeId)}</span><span class="time-text">${r.inboundTime}</span></div>
-        <div class="detail-grid">
-          <div class="detail-tag"><span>序号</span> ${r.sequenceNo}</div>
-          <div class="detail-tag"><span>尺码</span> ${r.size||'-'}</div>
-          <div class="detail-tag"><span>款号</span> ${r.styleNo||'-'}</div>
-          <div class="detail-tag"><span>色号/色</span> ${r.colorCode||''} ${r.colorName||''}</div>
-          <div class="detail-tag"><span>扎/批</span> ${r.bundleNo||'-'} / ${r.batchNo||'-'}</div>
-          <div class="detail-tag"><span>数量</span> ×${r.quantity}</div>
-          <div class="detail-tag"><span>单价</span> ¥${r.price.toFixed(2)}</div>
-          <div class="detail-tag"><span>金额</span> ¥${r.amount.toFixed(2)}</div>
+        <div class="record-header">
+          <span class="barcode-chip">🔢 ${escapeHtml(r.barcodeId)}</span>
+          <span class="time-text">${r.inboundTime}</span>
         </div>
-        <div class="record-actions"><button class="btn btn-outline btn-sm" onclick="modifyRecord(${i})">✏️ 修改</button><button class="btn btn-danger btn-sm" onclick="deleteRecord(${i})">🗑️ 删除</button></div>
+        <div class="detail-grid">
+          <div class="detail-tag"><span>序号</span>${r.sequenceNo}</div>
+          <div class="detail-tag"><span>款号</span>${r.styleNo||'-'}</div>
+          <div class="detail-tag"><span>尺码</span>${r.size||'-'}</div>
+          <div class="detail-tag"><span>扎号</span>${r.bundleNo||'-'}</div>
+          <div class="detail-tag"><span>数量</span>×${r.quantity}</div>
+          <div class="detail-tag"><span>金额</span>¥${r.amount.toFixed(2)}</div>
+        </div>
+        <div class="record-actions">
+          <button class="btn btn-outline btn-sm" onclick="modifyRecord(${i})">✏️ 修改</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteRecord(${i})">🗑️ 删除</button>
+        </div>
       </div>
     `).join('');
   }
@@ -714,31 +675,26 @@
     });
     let html='';
     for(let [k,v] of [...map.entries()].sort().reverse()){
-      html+=`<div class="month-summary"><strong>📅 ${k}</strong> &nbsp; 总件数: ${v.total} &nbsp; 条码数: ${v.codes.size} &nbsp; 单数: ${v.count} &nbsp; 总金额: ¥${v.totalAmount.toFixed(2)}</div>`;
+      html+=`<div class="month-summary"><strong>📅 ${k}</strong> 总件数: ${v.total} | 条码: ${v.codes.size} | 单数: ${v.count} | 总金额: ¥${v.totalAmount.toFixed(2)}</div>`;
     }
     document.getElementById('monthSummary').innerHTML=html||'<div class="empty-state">暂无月度数据</div>';
   }
   
-  // 导出：两张表 1.入库明细 2.汇总统计(总数量、总金额)
+  // 导出Excel 同步精简字段
   function exportToExcel(){
     if(!records.length) return showToast("无数据导出");
-    // 明细表
     let detail = records.map(r => ({
       '入库时间': r.inboundTime,
       '条码ID': r.barcodeId,
       '序号': r.sequenceNo,
       '款号': r.styleNo || '',
-      '色号': r.colorCode || '',
-      '颜色': r.colorName || '',
       '尺码': r.size || '',
       '扎号': r.bundleNo || '',
-      '批号': r.batchNo || '',
       '数量': r.quantity || 1,
       '单价(¥)': parseFloat(r.price).toFixed(2),
       '金额(¥)': parseFloat(r.amount).toFixed(2)
     }));
 
-    // 汇总表
     let totalQty = records.reduce((sum, r) => sum + (r.quantity || 1), 0);
     let totalMoney = records.reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0);
     let totalOrder = records.length;
@@ -755,11 +711,9 @@
     let ws1 = XLSX.utils.json_to_sheet(detail);
     let ws2 = XLSX.utils.json_to_sheet(summary);
 
-    // 列宽
     ws1['!cols'] = [
       {wch:22},{wch:18},{wch:6},{wch:12},
-      {wch:10},{wch:8},{wch:6},{wch:10},
-      {wch:10},{wch:8},{wch:10},{wch:10}
+      {wch:8},{wch:10},{wch:8},{wch:10},{wch:10}
     ];
     ws2['!cols'] = [{wch:14},{wch:12}];
 
@@ -767,7 +721,7 @@
     XLSX.utils.book_append_sheet(wb, ws2, "数据汇总");
 
     XLSX.writeFile(wb, `服装入库_${new Date().toLocaleDateString()}.xlsx`);
-    showToast("✅ 导出成功！含明细+汇总表");
+    showToast("✅ 导出成功");
   }
   
   function showClearModal(){ document.getElementById('clearModal').classList.add('show'); }
@@ -776,11 +730,11 @@
   function showToast(msg){ let t=document.createElement('div');t.className='toast';t.innerText=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2200); }
   function escapeHtml(str){ if(!str) return ''; return str.replace(/[&<>]/g, m=>m==='&'?'&amp;':m==='<'?'&lt;':m==='>'?'&gt;':m); }
   
-  // ==================== 启动（手机关键：初始化绑定事件） ====================
+  // 启动初始化
   window.addEventListener('beforeinstallprompt', e=>{ e.preventDefault(); });
   loadRecords(); initSequenceSelect(); 
-  bindCalcEvents();   // 初始化绑定金额计算
-  bindStyleEvent();   // 初始化绑定同款填充
+  bindCalcEvents();
+  bindStyleEvent();
   calcAmount(); 
   renderAll();
 </script>
