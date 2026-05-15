@@ -75,6 +75,7 @@
     .badge { background: #d1fae5; color: #065f46; padding: 4px 12px; border-radius: 30px; font-size: 11px; font-weight: 600; }
     .form-grid { display: flex; flex-direction: column; gap: 14px; }
     .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
     .input-field label { font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-light); letter-spacing: 0.5px; margin-bottom: 4px; display: block; }
     .input-field input, .input-field select { width: 100%; padding: 12px; font-size: 14px; border: 1.5px solid var(--border); border-radius: 12px; background: white; transition: 0.2s; }
     .input-field input:focus, .input-field select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
@@ -132,7 +133,7 @@
 <input type="file" id="ocrFileInput" accept="image/*" capture="environment" onchange="handleOCRImage(event)">
 
 <div class="switch-bar">
-  <div class="switch-label">⚙️ 连续扫码时沿用配置 + 序号自动递增</div>
+  <div class="switch-label">⚙️ 连续扫码时沿用配置</div>
   <label class="switch"><input type="checkbox" id="keepConfigSwitch" checked><span class="slider"></span></label>
 </div>
 
@@ -149,19 +150,38 @@
   </div>
   <div class="form-grid">
     <div class="input-field"><label>🔖 条码ID</label><input type="text" id="barcodeId" readonly placeholder="扫码/识别后自动填充"></div>
+    
     <div class="row-2">
-      <div class="input-field"><label>📋 序号</label><select id="sequenceNo"></select></div>
-      <div class="input-field"><label>📏 尺码</label>
-        <select id="size">
+      <div class="input-field">
+        <label>季节</label>
+        <select id="season">
           <option value="">请选择</option>
-          <option value="S">90-100 (S)</option>
-          <option value="M">100-110 (M)</option>
-          <option value="L">110-120 (L)</option>
-          <option value="XL">120-130 (XL)</option>
-          <option value="XXL">130-140 (XXL)</option>
+          <option value="春">春</option>
+          <option value="夏">夏</option>
+          <option value="秋">秋</option>
+          <option value="冬">冬</option>
         </select>
       </div>
+      <div class="input-field">
+        <label>自编序号</label>
+        <input type="text" id="sequenceNo" placeholder="手动输入数字/编号">
+      </div>
     </div>
+
+    <div class="input-field"><label>📏 尺码</label>
+      <select id="size">
+        <option value="">请选择尺码</option>
+        <option value="XS">XS  80-90</option>
+        <option value="S">S   90-100</option>
+        <option value="M">M  100-110</option>
+        <option value="L">L  110-120</option>
+        <option value="XL">XL 120-130</option>
+        <option value="XXL">XXL 130-140</option>
+        <option value="XXXL">XXXL 140-150</option>
+        <option value="XXXXL">XXXXL 150-160</option>
+      </select>
+    </div>
+
     <div class="input-field"><label>🏷️ 扎号</label><input type="text" id="bundleNo" placeholder="捆号/扎号"></div>
     <div class="input-field"><label>👔 款号</label><input type="text" id="styleNo" placeholder="款号"></div>
     <div class="row-2">
@@ -206,7 +226,6 @@
   let lastConfig = {};
   let isContinuousMode = false;
   let currentDupBarcode = '';
-  let dailySeqMap = {};
   let ocrWorker = null;
 
   function calcAmount(){
@@ -254,51 +273,12 @@
   const getTodayStr = () => new Date().toISOString().slice(0,10);
   const getTodayCN = () => new Date().toLocaleDateString('zh-CN');
   
-  function rebuildDailySeqMap() {
-    dailySeqMap = {};
-    records.forEach(r => {
-      if (r.sequenceNo && r.inboundTime) {
-        let d = r.inboundTime.split(' ')[0].replace(/\//g, '-');
-        let parts = d.split('-');
-        if(parts.length===3){
-          let norm = `${parts[0]}-${parts[1].padStart(2,'0')}-${parts[2].padStart(2,'0')}`;
-          let seq = parseInt(r.sequenceNo,10);
-          if(!isNaN(seq)) dailySeqMap[norm] = Math.max(dailySeqMap[norm]||0, seq);
-        }
-      }
-    });
-  }
-  
-  function getNextSequence() {
-    let today = getTodayStr();
-    let max = dailySeqMap[today] || 0;
-    records.forEach(r => {
-      if(r.inboundTime && r.sequenceNo){
-        let d = r.inboundTime.split(' ')[0].replace(/\//g, '-');
-        if(d === today) max = Math.max(max, parseInt(r.sequenceNo,10)||0);
-      }
-    });
-    return Math.min(max+1, 999);
-  }
-  
-  function refreshSeqSelect() {
-    let sel = document.getElementById('sequenceNo');
-    if(!sel) return;
-    if(editingIndex !== -1 && document.getElementById('barcodeId').value) return;
-    let nxt = getNextSequence();
-    sel.value = nxt;
-    if(lastConfig) lastConfig.sequenceNo = sel.value;
-  }
-  
-  function initSequenceSelect() {
-    let sel = document.getElementById('sequenceNo');
-    sel.innerHTML = '';
-    for(let i=1;i<=999;i++){ let opt = document.createElement('option'); opt.value=i; opt.textContent=i; sel.appendChild(opt); }
-    refreshSeqSelect();
-  }
+  function refreshSeqSelect() {}
+  function initSequenceSelect() {}
 
   function saveCurrentConfig() {
     lastConfig = {
+      season: document.getElementById('season').value,
       sequenceNo: document.getElementById('sequenceNo').value,
       size: document.getElementById('size').value,
       bundleNo: document.getElementById('bundleNo').value,
@@ -310,12 +290,9 @@
   
   function applyLastConfigContinuous() {
     if(!document.getElementById('keepConfigSwitch').checked) return;
-    const fields = ['size','bundleNo','styleNo','quantity','price'];
+    const fields = ['season','size','bundleNo','styleNo','quantity','price'];
     fields.forEach(k => { let el = document.getElementById(k); if(el && lastConfig[k] !== undefined) el.value = lastConfig[k]; });
     calcAmount();
-    let newSeq = getNextSequence();
-    document.getElementById('sequenceNo').value = newSeq;
-    lastConfig.sequenceNo = newSeq;
   }
 
   function triggerOCRUpload() { 
@@ -372,7 +349,8 @@
   function parseGarmentLabel(text) {
     let result = { barcodeId: '', size: '', bundleNo: '', styleNo: '' };
     let barcodeMatch = text.match(/\b\d{10,22}\b/); if(barcodeMatch) result.barcodeId = barcodeMatch[0];
-    let sizeMatch = text.match(/(90|100|110|120|130|140|S|M|L|XL|XXL)/gi); if(sizeMatch) result.size = sizeMatch[0].toUpperCase();
+    let sizeMatch = text.match(/(XS|S|M|L|XL|XXL|XXXL|XXXXL|90|100|110|120|130|140|150|160)/gi); 
+    if(sizeMatch) result.size = sizeMatch[0].toUpperCase();
     let bundleReg = /(扎号|捆号|扎|捆)[：:；;,，\s]*([A-Z0-9\-]+)/; let bm = text.match(bundleReg); if(bm) result.bundleNo = bm[2].trim();
     let styleReg = /(款号|货号|款)[：:；;,，\s]*([A-Z0-9\-]{3,})/; let sm = text.match(styleReg); if(sm) result.styleNo = sm[2].trim();
     return result;
@@ -392,7 +370,6 @@
     document.getElementById('inboundTime').value = new Date().toLocaleString('zh-CN');
     document.getElementById('scannedBadge').style.display = 'inline-block';
     editingIndex = -1;
-    refreshSeqSelect();
     document.getElementById('formCard').style.display = 'block';
     if(data.styleNo) fillByStyle();
   }
@@ -407,14 +384,7 @@
     bindCalcEvents(); bindStyleEvent();
 
     if(isContinuousMode && document.getElementById('keepConfigSwitch').checked){ applyLastConfigContinuous(); }
-    else {
-      refreshSeqSelect();
-      if(lastConfig && document.getElementById('keepConfigSwitch').checked){
-        const keep = ['size','bundleNo','styleNo','quantity','price'];
-        keep.forEach(k => { let el = document.getElementById(k); if(el && lastConfig[k]!==undefined) el.value = lastConfig[k]; });
-        calcAmount();
-      }
-    }
+
     let newStyle = document.getElementById('styleNo').value.trim();
     if(newStyle && newStyle!==oldStyle) fillByStyle();
     document.getElementById('formCard').style.display = 'block';
@@ -456,7 +426,6 @@
     document.getElementById('scanBtn').style.display = 'none';
     document.getElementById('continuousBtn').style.display = 'none';
     document.getElementById('closeScanArea').style.display = 'block';
-    document.getElementById('formCard').style.display = 'none';
     document.getElementById('scanStatus').textContent = '📷 请求摄像头...';
     html5QrCode = new Html5Qrcode("reader");
     try {
@@ -474,18 +443,13 @@
   }
   
   function dupContinue(){ document.getElementById('dupModal').classList.remove('show'); fillScanBarcode(currentDupBarcode); }
-  function dupReplace(){ document.getElementById('dupModal').classList.remove('show'); let idx = records.findIndex(r => r.barcodeId === currentDupBarcode); if(idx !== -1) records.splice(idx,1); saveRecords(); rebuildDailySeqMap(); sortByTime(); renderAll(); fillScanBarcode(currentDupBarcode); }
+  function dupReplace(){ document.getElementById('dupModal').classList.remove('show'); let idx = records.findIndex(r => r.barcodeId === currentDupBarcode); if(idx !== -1) records.splice(idx,1); saveRecords(); sortByTime(); renderAll(); fillScanBarcode(currentDupBarcode); }
   
   function submitInbound() {
     let barcode = document.getElementById('barcodeId').value.trim(); if(!barcode) return showToast("⚠️ 请先扫码或识别标签");
-    let seq = document.getElementById('sequenceNo').value; if(!seq) seq = getNextSequence().toString();
-    let today = getTodayStr();
-    let conflict = records.some(r => {
-      if(editingIndex !== -1 && r.id === records[editingIndex]?.id) return false;
-      let d = r.inboundTime?.split(' ')[0]?.replace(/\//g, '-');
-      return d === today && r.sequenceNo === seq;
-    });
-    if(conflict && editingIndex === -1){ seq = getNextSequence().toString(); document.getElementById('sequenceNo').value = seq; showToast("📌 序号自动修正"); }
+    
+    let season = document.getElementById('season').value;
+    let seq = document.getElementById('sequenceNo').value.trim();
 
     let qty = parseFloat(document.getElementById('quantity').value) || 0;
     let price = parseFloat(document.getElementById('price').value) || 0;
@@ -493,13 +457,18 @@
 
     const record = {
       id: editingIndex !== -1 ? records[editingIndex].id : Date.now(),
-      barcodeId: barcode, sequenceNo: seq, size: document.getElementById('size').value,
-      bundleNo: document.getElementById('bundleNo').value, styleNo: document.getElementById('styleNo').value,
-      quantity: qty, price: price, amount: amount, inboundTime: new Date().toLocaleString('zh-CN')
+      barcodeId: barcode, 
+      season: season,
+      sequenceNo: seq, 
+      size: document.getElementById('size').value,
+      bundleNo: document.getElementById('bundleNo').value, 
+      styleNo: document.getElementById('styleNo').value,
+      quantity: qty, price: price, amount: amount, 
+      inboundTime: new Date().toLocaleString('zh-CN')
     };
     if(editingIndex !== -1){ records[editingIndex] = record; editingIndex = -1; showToast("✏️ 修改完成"); }
     else { records.unshift(record); showToast("✅ 入库成功"); }
-    saveRecords(); rebuildDailySeqMap(); sortByTime(); renderAll();
+    saveRecords(); sortByTime(); renderAll();
     document.getElementById('formCard').style.display = 'none'; document.getElementById('scannedBadge').style.display = 'none';
     document.getElementById('barcodeId').value = ''; document.getElementById('price').value = 0; document.getElementById('quantity').value = 1; calcAmount();
     saveCurrentConfig();
@@ -510,22 +479,27 @@
   function hideTodayClearModal(){ document.getElementById('todayClearModal').classList.remove('show'); }
   function clearToday(){
     let todayCN = getTodayCN(); records = records.filter(r => !r.inboundTime?.includes(todayCN));
-    saveRecords(); rebuildDailySeqMap(); sortByTime(); renderAll(); hideTodayClearModal(); showToast("✅ 本日记录已清空");
+    saveRecords(); sortByTime(); renderAll(); hideTodayClearModal(); showToast("✅ 本日记录已清空");
   }
 
   function modifyRecord(i){ 
     if(html5QrCode) stopScan(true); isContinuousMode=false; let r=records[i]; editingIndex=i; 
-    document.getElementById('barcodeId').value=r.barcodeId; document.getElementById('sequenceNo').value=r.sequenceNo; 
-    document.getElementById('size').value=r.size; document.getElementById('bundleNo').value=r.bundleNo; 
-    document.getElementById('styleNo').value=r.styleNo; document.getElementById('quantity').value=r.quantity; 
-    document.getElementById('price').value=r.price; calcAmount(); document.getElementById('inboundTime').value=r.inboundTime; 
+    document.getElementById('barcodeId').value=r.barcodeId; 
+    document.getElementById('season').value=r.season||'';
+    document.getElementById('sequenceNo').value=r.sequenceNo||''; 
+    document.getElementById('size').value=r.size||'';
+    document.getElementById('bundleNo').value=r.bundleNo||''; 
+    document.getElementById('styleNo').value=r.styleNo||'';
+    document.getElementById('quantity').value=r.quantity; 
+    document.getElementById('price').value=r.price; 
+    calcAmount(); document.getElementById('inboundTime').value=r.inboundTime; 
     document.getElementById('scannedBadge').style.display='inline-block'; document.getElementById('formCard').style.display='block'; 
   }
   
-  function deleteRecord(i){ if(confirm("删除该条记录？")){ records.splice(i,1); saveRecords(); rebuildDailySeqMap(); sortByTime(); renderAll(); showToast("已删除"); } }
+  function deleteRecord(i){ if(confirm("删除该条记录？")){ records.splice(i,1); saveRecords(); sortByTime(); renderAll(); showToast("已删除"); } }
   function sortByTime(){ records.sort((a,b)=> new Date(b.inboundTime) - new Date(a.inboundTime)); }
   function saveRecords(){ localStorage.setItem('garment_inbound_records', JSON.stringify(records)); }
-  function loadRecords(){ let d=localStorage.getItem('garment_inbound_records'); records=d?JSON.parse(d):[]; rebuildDailySeqMap(); sortByTime(); }
+  function loadRecords(){ let d=localStorage.getItem('garment_inbound_records'); records=d?JSON.parse(d):[]; sortByTime(); }
   function renderAll(){ renderHistory(); renderStats(); renderMonthSummary(); }
   
   function renderHistory(){
@@ -535,7 +509,8 @@
       <div class="record-item">
         <div class="record-header"><span class="barcode-chip">🔢 ${escapeHtml(r.barcodeId)}</span><span class="time-text">${r.inboundTime}</span></div>
         <div class="detail-grid">
-          <div class="detail-tag"><span>序号</span>${r.sequenceNo}</div>
+          <div class="detail-tag"><span>季节</span>${r.season||'-'}</div>
+          <div class="detail-tag"><span>序号</span>${r.sequenceNo||'-'}</div>
           <div class="detail-tag"><span>款号</span>${r.styleNo||'-'}</div>
           <div class="detail-tag"><span>尺码</span>${r.size||'-'}</div>
           <div class="detail-tag"><span>扎号</span>${r.bundleNo||'-'}</div>
@@ -568,31 +543,46 @@
   function exportToExcel(){
     if(!records.length) return showToast("无数据导出");
     let detail = records.map(r => ({
-      '入库时间': r.inboundTime, '条码ID': r.barcodeId, '序号': r.sequenceNo, '款号': r.styleNo || '',
-      '尺码': r.size || '', '扎号': r.bundleNo || '', '数量': r.quantity || 1,
-      '单价(¥)': parseFloat(r.price).toFixed(2), '金额(¥)': parseFloat(r.amount).toFixed(2)
+      '入库时间': r.inboundTime,
+      '季节序号': (r.season||'') + (r.sequenceNo||''),
+      '款号': r.styleNo || '',
+      '尺码': r.size || '',
+      '扎号': r.bundleNo || '',
+      '数量': r.quantity || 1,
+      '单价(¥)': parseFloat(r.price).toFixed(2),
+      '金额(¥)': parseFloat(r.amount).toFixed(2)
     }));
     let totalQty = records.reduce((sum, r) => sum + (r.quantity || 1), 0);
     let totalMoney = records.reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0);
-    let totalOrder = records.length; let totalCode = new Set(records.map(r=>r.barcodeId)).size;
+    let totalOrder = records.length;
+    let totalCode = new Set(records.map(r=>r.barcodeId)).size;
     let summary = [
-      {统计项目:'总入库单数', 数值:totalOrder}, {统计项目:'总条码种类', 数值:totalCode},
-      {统计项目:'总入库数量', 数值:totalQty}, {统计项目:'总金额(元)', 数值:totalMoney.toFixed(2)}
+      {统计项目:'总入库单数', 数值:totalOrder},
+      {统计项目:'总条码种类', 数值:totalCode},
+      {统计项目:'总入库数量', 数值:totalQty},
+      {统计项目:'总金额(元)', 数值:totalMoney.toFixed(2)}
     ];
-    let wb = XLSX.utils.book_new(); let ws1 = XLSX.utils.json_to_sheet(detail); let ws2 = XLSX.utils.json_to_sheet(summary);
-    ws1['!cols'] = [{wch:22},{wch:18},{wch:6},{wch:12},{wch:8},{wch:10},{wch:8},{wch:10},{wch:10}]; ws2['!cols'] = [{wch:14},{wch:12}];
-    XLSX.utils.book_append_sheet(wb, ws1, "入库明细"); XLSX.utils.book_append_sheet(wb, ws2, "数据汇总");
-    XLSX.writeFile(wb, `服装入库_${new Date().toLocaleDateString()}.xlsx`); showToast("✅ 导出成功");
+    let wb = XLSX.utils.book_new();
+    let ws1 = XLSX.utils.json_to_sheet(detail);
+    let ws2 = XLSX.utils.json_to_sheet(summary);
+    ws1['!cols'] = [
+      {wch:22},{wch:12},{wch:12},{wch:8},{wch:10},{wch:8},{wch:10},{wch:10}
+    ];
+    ws2['!cols'] = [{wch:14},{wch:12}];
+    XLSX.utils.book_append_sheet(wb, ws1, "入库明细");
+    XLSX.utils.book_append_sheet(wb, ws2, "数据汇总");
+    XLSX.writeFile(wb, `服装入库_${new Date().toLocaleDateString()}.xlsx`);
+    showToast("✅ 导出成功");
   }
   
   function showClearModal(){ document.getElementById('clearModal').classList.add('show'); }
   function hideClearModal(){ document.getElementById('clearModal').classList.remove('show'); }
-  function clearAll(){ records=[]; saveRecords(); rebuildDailySeqMap(); renderAll(); hideClearModal(); showToast("已清空所有数据"); }
+  function clearAll(){ records=[]; saveRecords(); renderAll(); hideClearModal(); showToast("已清空所有数据"); }
   function showToast(msg){ let t=document.createElement('div');t.className='toast';t.innerText=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2200); }
   function escapeHtml(str){ if(!str) return ''; return str.replace(/[&<>]/g, m=>m==='&'?'&amp;':m==='<'?'&lt;':m==='>'?'&gt;':m); }
   
   window.addEventListener('beforeinstallprompt', e=>{ e.preventDefault(); });
-  loadRecords(); initSequenceSelect(); bindCalcEvents(); bindStyleEvent(); calcAmount(); renderAll();
+  loadRecords(); bindCalcEvents(); bindStyleEvent(); calcAmount(); renderAll();
 </script>
 </body>
 </html>
