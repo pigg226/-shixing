@@ -168,32 +168,32 @@
       </div>
     </div>
 
-    <!-- 尺码：真正下拉选择框，自动填充后依然可改 -->
+    <!-- 尺码：可输入+下拉，自动填充后依然可下拉、可改、可填 -->
     <div class="input-field">
       <label>📏 尺码</label>
-      <select id="size">
-        <option value="">请选择尺码</option>
-        <option value="XS">XS</option>
-        <option value="S">S</option>
-        <option value="M">M</option>
-        <option value="L">L</option>
-        <option value="XL">XL</option>
-        <option value="XXL">XXL</option>
-        <option value="XXXL">XXXL</option>
-        <option value="XXXXL">XXXXL</option>
-        <option value="80">80</option>
-        <option value="90">90</option>
-        <option value="100">100</option>
-        <option value="110">110</option>
-        <option value="120">120</option>
-        <option value="130">130</option>
-        <option value="140">140</option>
-        <option value="150">150</option>
-        <option value="160">160</option>
-        <option value="170">170</option>
-        <option value="175">175</option>
-        <option value="180">180</option>
-      </select>
+      <input list="sizeList" id="size" placeholder="选择或手动输入尺码">
+      <datalist id="sizeList">
+        <option value="XS"></option>
+        <option value="S"></option>
+        <option value="M"></option>
+        <option value="L"></option>
+        <option value="XL"></option>
+        <option value="XXL"></option>
+        <option value="XXXL"></option>
+        <option value="XXXXL"></option>
+        <option value="80"></option>
+        <option value="90"></option>
+        <option value="100"></option>
+        <option value="110"></option>
+        <option value="120"></option>
+        <option value="130"></option>
+        <option value="140"></option>
+        <option value="150"></option>
+        <option value="160"></option>
+        <option value="170"></option>
+        <option value="175"></option>
+        <option value="180"></option>
+      </datalist>
     </div>
 
     <div class="input-field"><label>🏷️ 扎号</label><input type="text" id="bundleNo" placeholder="捆号/扎号"></div>
@@ -402,6 +402,13 @@
     document.getElementById('formCard').scrollIntoView({behavior:'smooth'});
     if(navigator.vibrate) navigator.vibrate(50);
     showToast("✅ 扫码成功");
+
+    // 关键修复：赋值后手动触发一次下拉提示
+    const sizeInput = document.getElementById('size');
+    sizeInput.focus();
+    setTimeout(() => {
+      sizeInput.blur();
+    }, 50);
   }
   
   async function stopCameraOnly() {
