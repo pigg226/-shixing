@@ -168,17 +168,31 @@
       </div>
     </div>
 
-    <div class="input-field"><label>📏 尺码</label>
+    <!-- 尺码：真正下拉选择框，自动填充后依然可改 -->
+    <div class="input-field">
+      <label>📏 尺码</label>
       <select id="size">
         <option value="">请选择尺码</option>
-        <option value="XS">XS  80-90</option>
-        <option value="S">S   90-100</option>
-        <option value="M">M  100-110</option>
-        <option value="L">L  110-120</option>
-        <option value="XL">XL 120-130</option>
-        <option value="XXL">XXL 130-140</option>
-        <option value="XXXL">XXXL 140-150</option>
-        <option value="XXXXL">XXXXL 150-160</option>
+        <option value="XS">XS</option>
+        <option value="S">S</option>
+        <option value="M">M</option>
+        <option value="L">L</option>
+        <option value="XL">XL</option>
+        <option value="XXL">XXL</option>
+        <option value="XXXL">XXXL</option>
+        <option value="XXXXL">XXXXL</option>
+        <option value="80">80</option>
+        <option value="90">90</option>
+        <option value="100">100</option>
+        <option value="110">110</option>
+        <option value="120">120</option>
+        <option value="130">130</option>
+        <option value="140">140</option>
+        <option value="150">150</option>
+        <option value="160">160</option>
+        <option value="170">170</option>
+        <option value="175">175</option>
+        <option value="180">180</option>
       </select>
     </div>
 
@@ -349,7 +363,7 @@
   function parseGarmentLabel(text) {
     let result = { barcodeId: '', size: '', bundleNo: '', styleNo: '' };
     let barcodeMatch = text.match(/\b\d{10,22}\b/); if(barcodeMatch) result.barcodeId = barcodeMatch[0];
-    let sizeMatch = text.match(/(XS|S|M|L|XL|XXL|XXXL|XXXXL|90|100|110|120|130|140|150|160)/gi); 
+    let sizeMatch = text.match(/(XS|S|M|L|XL|XXL|XXXL|XXXXL|80|90|100|110|120|130|140|150|160)/gi); 
     if(sizeMatch) result.size = sizeMatch[0].toUpperCase();
     let bundleReg = /(扎号|捆号|扎|捆)[：:；;,，\s]*([A-Z0-9\-]+)/; let bm = text.match(bundleReg); if(bm) result.bundleNo = bm[2].trim();
     let styleReg = /(款号|货号|款)[：:；;,，\s]*([A-Z0-9\-]{3,})/; let sm = text.match(styleReg); if(sm) result.styleNo = sm[2].trim();
@@ -358,10 +372,7 @@
 
   function fillFromOCRData(data) {
     if(data.barcodeId) document.getElementById('barcodeId').value = data.barcodeId;
-    if(data.size) {
-      let sizeSel = document.getElementById('size');
-      for(let opt of sizeSel.options) if(opt.value === data.size) { opt.selected = true; break; }
-    }
+    if(data.size) document.getElementById('size').value = data.size;
     document.getElementById('bundleNo').value = data.bundleNo || '';
     document.getElementById('styleNo').value = data.styleNo || '';
     document.getElementById('quantity').value = 1;
@@ -565,14 +576,35 @@
     let wb = XLSX.utils.book_new();
     let ws1 = XLSX.utils.json_to_sheet(detail);
     let ws2 = XLSX.utils.json_to_sheet(summary);
+
+    // 强制设置所有单元格居中对齐
+    const centerAlign = { alignment: { horizontal: "center", vertical: "center" } };
+    // 给表头也加上居中
+    const range1 = XLSX.utils.decode_range(ws1['!ref']);
+    for(let r = range1.s.r; r <= range1.e.r; r++){
+      for(let c = range1.s.c; c <= range1.e.c; c++){
+        const cellAddress = XLSX.utils.encode_cell({r,c});
+        if(!ws1[cellAddress]) continue;
+        ws1[cellAddress].s = centerAlign;
+      }
+    }
+    const range2 = XLSX.utils.decode_range(ws2['!ref']);
+    for(let r = range2.s.r; r <= range2.e.r; r++){
+      for(let c = range2.s.c; c <= range2.e.c; c++){
+        const cellAddress = XLSX.utils.encode_cell({r,c});
+        if(!ws2[cellAddress]) continue;
+        ws2[cellAddress].s = centerAlign;
+      }
+    }
+
     ws1['!cols'] = [
-      {wch:22},{wch:12},{wch:12},{wch:8},{wch:10},{wch:8},{wch:10},{wch:10}
+      {wch:22},{wch:12},{wch:12},{wch:10},{wch:10},{wch:8},{wch:10},{wch:10}
     ];
     ws2['!cols'] = [{wch:14},{wch:12}];
     XLSX.utils.book_append_sheet(wb, ws1, "入库明细");
     XLSX.utils.book_append_sheet(wb, ws2, "数据汇总");
     XLSX.writeFile(wb, `服装入库_${new Date().toLocaleDateString()}.xlsx`);
-    showToast("✅ 导出成功");
+    showToast("✅ 导出成功，表格已全部居中");
   }
   
   function showClearModal(){ document.getElementById('clearModal').classList.add('show'); }
