@@ -196,7 +196,7 @@
       </datalist>
     </div>
 
-    <div class="input-field"><label>🏷️ 扎号</label><input type="text" id="bundleNo" placeholder="捆号/扎号"></div>
+    <div class="input-field"><label>🏷️ 扎号</label><input type="text" id="bundleNo" placeholder="捆号/扎号（手动填）"></div>
     <div class="input-field"><label>👔 款号</label><input type="text" id="styleNo" placeholder="款号"></div>
     <div class="row-2">
       <div class="input-field"><label>📊 自定义数量</label><input type="number" id="quantity" value="1" min="1"></div>
@@ -265,9 +265,9 @@
     let last = records.filter(r=>r.styleNo===style).sort((a,b)=>new Date(b.inboundTime)-new Date(a.inboundTime))[0];
     if(!last) return;
     document.getElementById('price').value = last.price || 0;
-    document.getElementById('bundleNo').value = last.bundleNo || '';
+    // 扎号不再自动填充
     calcAmount();
-    showToast('✅ 同款信息已自动填充');
+    showToast('✅ 同款信息已自动填充（不含扎号）');
   }
   function bindStyleEvent(){
     const style = document.getElementById('styleNo');
@@ -365,7 +365,7 @@
     let barcodeMatch = text.match(/\b\d{10,22}\b/); if(barcodeMatch) result.barcodeId = barcodeMatch[0];
     let sizeMatch = text.match(/(XS|S|M|L|XL|XXL|XXXL|XXXXL|80|90|100|110|120|130|140|150|160)/gi); 
     if(sizeMatch) result.size = sizeMatch[0].toUpperCase();
-    let bundleReg = /(扎号|捆号|扎|捆)[：:；;,，\s]*([A-Z0-9\-]+)/; let bm = text.match(bundleReg); if(bm) result.bundleNo = bm[2].trim();
+    // 扎号不再解析
     let styleReg = /(款号|货号|款)[：:；;,，\s]*([A-Z0-9\-]{3,})/; let sm = text.match(styleReg); if(sm) result.styleNo = sm[2].trim();
     return result;
   }
@@ -373,7 +373,7 @@
   function fillFromOCRData(data) {
     if(data.barcodeId) document.getElementById('barcodeId').value = data.barcodeId;
     if(data.size) document.getElementById('size').value = data.size;
-    document.getElementById('bundleNo').value = data.bundleNo || '';
+    // OCR不再填扎号
     document.getElementById('styleNo').value = data.styleNo || '';
     document.getElementById('quantity').value = 1;
     document.getElementById('price').value = 0;
