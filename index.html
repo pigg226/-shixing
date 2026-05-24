@@ -80,11 +80,12 @@
     .input-field input, .input-field select { width: 100%; padding: 12px; font-size: 14px; border: 1.5px solid var(--border); border-radius: 12px; background: white; transition: 0.2s; }
     .input-field input:focus, .input-field select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
     .input-field input[readonly] { background: #f1f5f9; color: #334155; }
+    .check-row {display:flex;align-items:center;gap:8px;margin-top:6px;font-size:13px;color:var(--text-light);}
 
     .stats-grid { display: flex; gap: 12px; margin: 16px 0; }
     .stat-block { flex: 1; background: var(--card); padding: 14px; border-radius: 16px; text-align: center; box-shadow: var(--shadow); }
     .stat-number { font-size: 26px; font-weight: 800; color: var(--primary); }
-    .section-header { display: flex; justify-content: space-between; align-items: baseline; margin: 20px 0 12px; }
+    .section-header { display: flex; justify-content: space-between; baseline: baseline; margin: 20px 0 12px; }
     .record-item { 
       background: var(--card); border-radius: 16px; padding: 16px; 
       margin-bottom: 10px; box-shadow: var(--shadow);
@@ -168,7 +169,6 @@
       </div>
     </div>
 
-    <!-- 尺码：可输入+下拉，自动填充后依然可下拉、可改、可填 -->
     <div class="input-field">
       <label>📏 尺码</label>
       <input list="sizeList" id="size" placeholder="选择或手动输入尺码">
@@ -198,13 +198,19 @@
 
     <div class="input-field"><label>🏷️ 扎号</label><input type="text" id="bundleNo" placeholder="捆号/扎号（手动填）"></div>
     <div class="input-field"><label>👔 款号</label><input type="text" id="styleNo" placeholder="款号"></div>
-    <div class="row-2">
-      <div class="input-field"><label>📊 自定义数量</label><input type="number" id="quantity" value="1" min="1"></div>
-      <div class="input-field"><label>💰 单价</label><input type="number" id="price" value="0" min="0" step="0.01"></div>
-    </div>
+
     <div class="input-field">
-      <label>💵 合计金额</label>
-      <input type="text" id="amount" readonly value="0.00">
+      <label>📦 入库数量</label>
+      <input type="number" id="stockNum" value="1" min="1" placeholder="自定义入库数量">
+      <div class="check-row">
+        <input type="checkbox" id="inheritStockNum" checked>
+        <label>下次扫码继承该数量</label>
+      </div>
+    </div>
+
+    <div class="row-2">
+      <div class="input-field"><label>💰 单价</label><input type="number" id="price" value="0" min="0" step="0.01"></div>
+      <div class="input-field"><label>💵 合计金额</label><input type="text" id="amount" readonly value="0.00"></div>
     </div>
     <div class="input-field"><label>⏱️ 入库时间</label><input type="text" id="inboundTime" readonly></div>
     <button class="btn btn-primary" onclick="submitInbound()" style="margin-top: 4px;">✅ 确认入库</button>
@@ -237,26 +243,24 @@
   let html5QrCode = null;
   let records = [];
   let editingIndex = -1;
-  let lastConfig = {};
+  let lastStockNum = 1;
   let isContinuousMode = false;
   let currentDupBarcode = '';
   let ocrWorker = null;
 
   function calcAmount(){
-    let qty = parseFloat(document.getElementById('quantity').value) || 0;
+    let num = parseFloat(document.getElementById('stockNum').value) || 1;
     let price = parseFloat(document.getElementById('price').value) || 0;
-    let amt = (qty * price).toFixed(2);
+    let amt = (num * price).toFixed(2);
     document.getElementById('amount').value = amt;
   }
   function bindCalcEvents(){
-    const qty = document.getElementById('quantity');
+    const num = document.getElementById('stockNum');
     const price = document.getElementById('price');
-    qty.addEventListener('input', calcAmount);
-    qty.addEventListener('change', calcAmount);
-    qty.addEventListener('blur', calcAmount);
-    price.addEventListener('input', calcAmount);
-    price.addEventListener('change', calcAmount);
-    price.addEventListener('blur', calcAmount);
+    [num, price].forEach(el => {
+      el.addEventListener('input', calcAmount);
+      el.addEventListener('change', calcAmount);
+    });
   }
 
   function fillByStyle(){
@@ -265,7 +269,6 @@
     let last = records.filter(r=>r.styleNo===style).sort((a,b)=>new Date(b.inboundTime)-new Date(a.inboundTime))[0];
     if(!last) return;
     document.getElementById('price').value = last.price || 0;
-    // 扎号不再自动填充
     calcAmount();
     showToast('✅ 同款信息已自动填充（不含扎号）');
   }
@@ -273,7 +276,6 @@
     const style = document.getElementById('styleNo');
     style.addEventListener('input', fillByStyle);
     style.addEventListener('change', fillByStyle);
-    style.addEventListener('blur', fillByStyle);
   }
 
   (async function preloadOCR() {
@@ -287,26 +289,19 @@
   const getTodayStr = () => new Date().toISOString().slice(0,10);
   const getTodayCN = () => new Date().toLocaleDateString('zh-CN');
   
-  function refreshSeqSelect() {}
-  function initSequenceSelect() {}
-
-  function saveCurrentConfig() {
-    lastConfig = {
-      season: document.getElementById('season').value,
-      sequenceNo: document.getElementById('sequenceNo').value,
-      size: document.getElementById('size').value,
-      bundleNo: document.getElementById('bundleNo').value,
-      styleNo: document.getElementById('styleNo').value,
-      quantity: document.getElementById('quantity').value,
-      price: document.getElementById('price').value
-    };
-  }
-  
-  function applyLastConfigContinuous() {
-    if(!document.getElementById('keepConfigSwitch').checked) return;
-    const fields = ['season','size','bundleNo','styleNo','quantity','price'];
-    fields.forEach(k => { let el = document.getElementById(k); if(el && lastConfig[k] !== undefined) el.value = lastConfig[k]; });
+  function applyStockNum(){
+    const inheritCheck = document.getElementById('inheritStockNum');
+    const numInput = document.getElementById('stockNum');
+    if(inheritCheck.checked){
+      numInput.value = lastStockNum;
+    }else{
+      numInput.value = 1;
+    }
     calcAmount();
+  }
+
+  function saveStockNum(){
+    lastStockNum = document.getElementById('stockNum').value;
   }
 
   function triggerOCRUpload() { 
@@ -365,7 +360,6 @@
     let barcodeMatch = text.match(/\b\d{10,22}\b/); if(barcodeMatch) result.barcodeId = barcodeMatch[0];
     let sizeMatch = text.match(/(XS|S|M|L|XL|XXL|XXXL|XXXXL|80|90|100|110|120|130|140|150|160)/gi); 
     if(sizeMatch) result.size = sizeMatch[0].toUpperCase();
-    // 扎号不再解析
     let styleReg = /(款号|货号|款)[：:；;,，\s]*([A-Z0-9\-]{3,})/; let sm = text.match(styleReg); if(sm) result.styleNo = sm[2].trim();
     return result;
   }
@@ -373,9 +367,8 @@
   function fillFromOCRData(data) {
     if(data.barcodeId) document.getElementById('barcodeId').value = data.barcodeId;
     if(data.size) document.getElementById('size').value = data.size;
-    // OCR不再填扎号
     document.getElementById('styleNo').value = data.styleNo || '';
-    document.getElementById('quantity').value = 1;
+    applyStockNum();
     document.getElementById('price').value = 0;
     calcAmount();
     document.getElementById('inboundTime').value = new Date().toLocaleString('zh-CN');
@@ -393,8 +386,7 @@
     let oldStyle = document.getElementById('styleNo').value.trim();
 
     bindCalcEvents(); bindStyleEvent();
-
-    if(isContinuousMode && document.getElementById('keepConfigSwitch').checked){ applyLastConfigContinuous(); }
+    applyStockNum();
 
     let newStyle = document.getElementById('styleNo').value.trim();
     if(newStyle && newStyle!==oldStyle) fillByStyle();
@@ -402,13 +394,6 @@
     document.getElementById('formCard').scrollIntoView({behavior:'smooth'});
     if(navigator.vibrate) navigator.vibrate(50);
     showToast("✅ 扫码成功");
-
-    // 关键修复：赋值后手动触发一次下拉提示
-    const sizeInput = document.getElementById('size');
-    sizeInput.focus();
-    setTimeout(() => {
-      sizeInput.blur();
-    }, 50);
   }
   
   async function stopCameraOnly() {
@@ -464,12 +449,13 @@
   function dupReplace(){ document.getElementById('dupModal').classList.remove('show'); let idx = records.findIndex(r => r.barcodeId === currentDupBarcode); if(idx !== -1) records.splice(idx,1); saveRecords(); sortByTime(); renderAll(); fillScanBarcode(currentDupBarcode); }
   
   function submitInbound() {
-    let barcode = document.getElementById('barcodeId').value.trim(); if(!barcode) return showToast("⚠️ 请先扫码或识别标签");
+    let barcode = document.getElementById('barcodeId').value.trim(); 
+    if(!barcode) return showToast("⚠️ 请先扫码或识别标签");
+    saveStockNum();
     
     let season = document.getElementById('season').value;
     let seq = document.getElementById('sequenceNo').value.trim();
-
-    let qty = parseFloat(document.getElementById('quantity').value) || 0;
+    let stockNum = parseFloat(document.getElementById('stockNum').value) || 1;
     let price = parseFloat(document.getElementById('price').value) || 0;
     let amount = parseFloat(document.getElementById('amount').value) || 0;
 
@@ -481,16 +467,21 @@
       size: document.getElementById('size').value,
       bundleNo: document.getElementById('bundleNo').value, 
       styleNo: document.getElementById('styleNo').value,
-      quantity: qty, price: price, amount: amount, 
+      stockNum: stockNum,
+      price: price, 
+      amount: amount, 
       inboundTime: new Date().toLocaleString('zh-CN')
     };
     if(editingIndex !== -1){ records[editingIndex] = record; editingIndex = -1; showToast("✏️ 修改完成"); }
     else { records.unshift(record); showToast("✅ 入库成功"); }
     saveRecords(); sortByTime(); renderAll();
-    document.getElementById('formCard').style.display = 'none'; document.getElementById('scannedBadge').style.display = 'none';
-    document.getElementById('barcodeId').value = ''; document.getElementById('price').value = 0; document.getElementById('quantity').value = 1; calcAmount();
-    saveCurrentConfig();
-    if(isContinuousMode && document.getElementById('keepConfigSwitch').checked){ setTimeout(() => { startScanInternal(); }, 400); }
+    document.getElementById('formCard').style.display = 'none'; 
+    document.getElementById('scannedBadge').style.display = 'none';
+    document.getElementById('barcodeId').value = ''; 
+    document.getElementById('price').value = 0;
+    document.getElementById('stockNum').value = 1;
+    calcAmount();
+    if(isContinuousMode){ setTimeout(() => startScanInternal(), 400); }
   }
   
   function clearTodayRecord(){ document.getElementById('todayClearModal').classList.add('show'); }
@@ -508,10 +499,13 @@
     document.getElementById('size').value=r.size||'';
     document.getElementById('bundleNo').value=r.bundleNo||''; 
     document.getElementById('styleNo').value=r.styleNo||'';
-    document.getElementById('quantity').value=r.quantity; 
+    document.getElementById('stockNum').value=r.stockNum||1;
+    lastStockNum = r.stockNum||1;
     document.getElementById('price').value=r.price; 
-    calcAmount(); document.getElementById('inboundTime').value=r.inboundTime; 
-    document.getElementById('scannedBadge').style.display='inline-block'; document.getElementById('formCard').style.display='block'; 
+    calcAmount(); 
+    document.getElementById('inboundTime').value=r.inboundTime; 
+    document.getElementById('scannedBadge').style.display='inline-block'; 
+    document.getElementById('formCard').style.display='block'; 
   }
   
   function deleteRecord(i){ if(confirm("删除该条记录？")){ records.splice(i,1); saveRecords(); sortByTime(); renderAll(); showToast("已删除"); } }
@@ -521,7 +515,8 @@
   function renderAll(){ renderHistory(); renderStats(); renderMonthSummary(); }
   
   function renderHistory(){
-    let container=document.getElementById('history'); document.getElementById('recordCount').innerText=`${records.length}条`;
+    let container=document.getElementById('history'); 
+    document.getElementById('recordCount').innerText=`${records.length}条`;
     if(!records.length){ container.innerHTML='<div class="empty-state">📭 暂无入库记录</div>'; return; }
     container.innerHTML=records.map((r,i)=>`
       <div class="record-item">
@@ -532,7 +527,7 @@
           <div class="detail-tag"><span>款号</span>${r.styleNo||'-'}</div>
           <div class="detail-tag"><span>尺码</span>${r.size||'-'}</div>
           <div class="detail-tag"><span>扎号</span>${r.bundleNo||'-'}</div>
-          <div class="detail-tag"><span>数量</span>×${r.quantity}</div>
+          <div class="detail-tag"><span>入库数量</span>${r.stockNum}</div>
           <div class="detail-tag"><span>金额</span>¥${r.amount.toFixed(2)}</div>
         </div>
         <div class="record-actions"><button class="btn btn-outline btn-sm" onclick="modifyRecord(${i})">✏️ 修改</button><button class="btn btn-danger btn-sm" onclick="deleteRecord(${i})">🗑️ 删除</button></div>
@@ -541,18 +536,29 @@
   }
   
   function renderStats(){
-    let total=records.reduce((s,r)=>s+(r.quantity||1),0); let unique=new Set(records.map(r=>r.barcodeId)).size;
-    let todayDate=new Date().toLocaleDateString('zh-CN'); let todayQty=records.filter(r=>r.inboundTime?.includes(todayDate)).reduce((s,r)=>s+(r.quantity||1),0);
-    document.getElementById('statTotal').textContent=total; document.getElementById('statBarcodes').textContent=unique; document.getElementById('statToday').textContent=todayQty;
+    let total=records.reduce((s,r)=>s+(Number(r.stockNum)||1),0); 
+    let unique=new Set(records.map(r=>r.barcodeId)).size;
+    let todayDate=new Date().toLocaleDateString('zh-CN'); 
+    let todayQty=records.filter(r=>r.inboundTime?.includes(todayDate))
+        .reduce((s,r)=>s+(Number(r.stockNum)||1),0);
+    document.getElementById('statTotal').textContent=total; 
+    document.getElementById('statBarcodes').textContent=unique; 
+    document.getElementById('statToday').textContent=todayQty;
   }
   
   function renderMonthSummary(){
     let map=new Map(); records.forEach(r=>{
-      let d=new Date(r.inboundTime); let key=`${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2,'0')}`;
+      let d=new Date(r.inboundTime); 
+      let key=`${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2,'0')}`;
       if(!map.has(key)) map.set(key,{total:0, codes:new Set(), count:0, totalAmount:0});
-      let item=map.get(key); item.total+=r.quantity||1; item.codes.add(r.barcodeId); item.count+=1; item.totalAmount += parseFloat(r.amount) || 0;
+      let item=map.get(key); 
+      item.total += Number(r.stockNum)||1; 
+      item.codes.add(r.barcodeId); 
+      item.count+=1; 
+      item.totalAmount += parseFloat(r.amount) || 0;
     });
-    let html=''; for(let [k,v] of [...map.entries()].sort().reverse()){
+    let html=''; 
+    for(let [k,v] of [...map.entries()].sort().reverse()){
       html+=`<div class="month-summary"><strong>📅 ${k}</strong> 总件数: ${v.total} | 条码: ${v.codes.size} | 单数: ${v.count} | 总金额: ¥${v.totalAmount.toFixed(2)}</div>`;
     }
     document.getElementById('monthSummary').innerHTML=html||'<div class="empty-state">暂无月度数据</div>';
@@ -566,11 +572,11 @@
       '款号': r.styleNo || '',
       '尺码': r.size || '',
       '扎号': r.bundleNo || '',
-      '数量': r.quantity || 1,
+      '入库数量': r.stockNum || 1,
       '单价(¥)': parseFloat(r.price).toFixed(2),
       '金额(¥)': parseFloat(r.amount).toFixed(2)
     }));
-    let totalQty = records.reduce((sum, r) => sum + (r.quantity || 1), 0);
+    let totalQty = records.reduce((sum, r) => sum + (Number(r.stockNum)||1), 0);
     let totalMoney = records.reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0);
     let totalOrder = records.length;
     let totalCode = new Set(records.map(r=>r.barcodeId)).size;
@@ -584,9 +590,7 @@
     let ws1 = XLSX.utils.json_to_sheet(detail);
     let ws2 = XLSX.utils.json_to_sheet(summary);
 
-    // 强制设置所有单元格居中对齐
     const centerAlign = { alignment: { horizontal: "center", vertical: "center" } };
-    // 给表头也加上居中
     const range1 = XLSX.utils.decode_range(ws1['!ref']);
     for(let r = range1.s.r; r <= range1.e.r; r++){
       for(let c = range1.s.c; c <= range1.e.c; c++){
@@ -597,16 +601,14 @@
     }
     const range2 = XLSX.utils.decode_range(ws2['!ref']);
     for(let r = range2.s.r; r <= range2.e.r; r++){
-      for(let c = range2.s.c; c <= range2.e.c; c++){
+      for(let c = range2.s.c; c <= range2.s.c; c++){
         const cellAddress = XLSX.utils.encode_cell({r,c});
         if(!ws2[cellAddress]) continue;
         ws2[cellAddress].s = centerAlign;
       }
     }
 
-    ws1['!cols'] = [
-      {wch:22},{wch:12},{wch:12},{wch:10},{wch:10},{wch:8},{wch:10},{wch:10}
-    ];
+    ws1['!cols'] = [{wch:22},{wch:12},{wch:12},{wch:10},{wch:10},{wch:10},{wch:10},{wch:10}];
     ws2['!cols'] = [{wch:14},{wch:12}];
     XLSX.utils.book_append_sheet(wb, ws1, "入库明细");
     XLSX.utils.book_append_sheet(wb, ws2, "数据汇总");
@@ -620,7 +622,7 @@
   function showToast(msg){ let t=document.createElement('div');t.className='toast';t.innerText=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2200); }
   function escapeHtml(str){ if(!str) return ''; return str.replace(/[&<>]/g, m=>m==='&'?'&amp;':m==='<'?'&lt;':m==='>'?'&gt;':m); }
   
-  window.addEventListener('beforeinstallprompt', e=>{ e.preventDefault(); });
+  window.addEventListener('beforeinstallprompt', e=>e.preventDefault());
   loadRecords(); bindCalcEvents(); bindStyleEvent(); calcAmount(); renderAll();
 </script>
 </body>
