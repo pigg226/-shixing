@@ -6,10 +6,24 @@
   <title>服装扫码入库系统</title>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="扫码入库">
   <meta name="theme-color" content="#1e293b">
   
-  <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+  <!-- 双源CDN确保库加载成功 -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script>
+    if (typeof XLSX === 'undefined') {
+      document.write('<script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"><\/script>');
+    }
+  </script>
+  <script>
+    window.addEventListener('load', function() {
+      setTimeout(function() {
+        if (typeof XLSX === 'undefined') console.error('XLSX库加载失败');
+        else console.log('XLSX库加载成功');
+      }, 1000);
+    });
+  </script>
+  
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   
@@ -45,6 +59,7 @@
       padding: 12px 16px; font-size: 14px; font-weight: 600; border: none;
       border-radius: 60px; cursor: pointer; transition: 0.2s; flex: 1;
       background: var(--card); color: var(--text); box-shadow: var(--shadow);
+      min-width: fit-content;
     }
     .btn:active { transform: scale(0.96); }
     .btn-primary { background: var(--primary); color: white; box-shadow: 0 4px 12px rgba(59,130,246,0.3); }
@@ -75,7 +90,6 @@
     .badge { background: #d1fae5; color: #065f46; padding: 4px 12px; border-radius: 30px; font-size: 11px; font-weight: 600; }
     .form-grid { display: flex; flex-direction: column; gap: 14px; }
     .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
     .input-field label { font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-light); letter-spacing: 0.5px; margin-bottom: 4px; display: block; }
     .input-field input, .input-field select { width: 100%; padding: 12px; font-size: 14px; border: 1.5px solid var(--border); border-radius: 12px; background: white; transition: 0.2s; }
     .input-field input:focus, .input-field select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
@@ -85,7 +99,7 @@
     .stats-grid { display: flex; gap: 12px; margin: 16px 0; }
     .stat-block { flex: 1; background: var(--card); padding: 14px; border-radius: 16px; text-align: center; box-shadow: var(--shadow); }
     .stat-number { font-size: 26px; font-weight: 800; color: var(--primary); }
-    .section-header { display: flex; justify-content: space-between; baseline: baseline; margin: 20px 0 12px; }
+    .section-header { display: flex; justify-content: space-between; align-items: baseline; margin: 20px 0 12px; }
     .record-item { 
       background: var(--card); border-radius: 16px; padding: 16px; 
       margin-bottom: 10px; box-shadow: var(--shadow);
@@ -98,7 +112,33 @@
     .detail-tag span:first-child { color: var(--text-light); margin-right: 4px; font-size:11px; }
     .record-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; border-top: 1px solid var(--border); padding-top: 10px; }
     .empty-state { text-align: center; padding: 48px 20px; color: #94a3b8; }
-    .month-summary { background: #f1f5f9; border-radius: 12px; padding: 12px; margin-bottom: 8px; font-size: 13px; }
+    
+    .summary-section { margin-bottom: 16px; border-radius: 8px; overflow: hidden; border: 1px solid #ddd; }
+    .summary-header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 12px 16px; background: #f5f5f5; cursor: pointer;
+      border-bottom: 1px solid #ddd;
+    }
+    .summary-header:hover { background: #eaeaea; }
+    .summary-header .left { display: flex; align-items: center; gap: 8px; }
+    .summary-header .arrow { transition: transform 0.2s; }
+    .summary-header.open .arrow { transform: rotate(90deg); }
+    .summary-body { display: none; background: #fff; }
+    .summary-body.open { display: block; }
+    .summary-row {
+      display: grid; grid-template-columns: 2fr 1fr 1fr;
+      padding: 10px 16px; border-bottom: 1px solid #eee;
+      font-size: 14px;
+    }
+    .summary-total {
+      display: grid; grid-template-columns: 2fr 1fr 1fr;
+      padding: 10px 16px; background: #f0f0f0; font-weight: bold;
+    }
+    .detail-row {
+      display: grid; grid-template-columns: 1fr 1fr 1fr;
+      padding: 8px 16px; font-size: 12px; color: #666; background: #fafafa;
+      border-top: 1px solid #eee;
+    }
     .toast {
       position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
       background: #1e293b; color: white; padding: 10px 20px; border-radius: 40px;
@@ -196,8 +236,8 @@
       </datalist>
     </div>
 
-    <div class="input-field"><label>🏷️ 扎号</label><input type="text" id="bundleNo" placeholder="捆号/扎号（手动填）"></div>
-    <div class="input-field"><label>👔 款号</label><input type="text" id="styleNo" placeholder="款号"></div>
+    <div class="input-field"><label>🏷️ 工序名称</label><input type="text" id="processName" placeholder="如：查片/查披肩"></div>
+    <div class="input-field"><label>👔 款号</label><input type="text" id="styleNo" placeholder="款号（如：Rxxxx）"></div>
 
     <div class="input-field">
       <label>📦 入库数量</label>
@@ -223,8 +263,8 @@
   <div class="stat-block"><div class="stat-number" id="statToday">0</div><div>今日入库</div></div>
 </div>
 
-<div class="section-header"><h3>📅 月度汇总</h3><span style="font-size:12px">按月份统计</span></div>
-<div id="monthSummary" class="card" style="padding: 12px;"></div>
+<div class="section-header"><h3>📋 工序工资汇总（点击展开）</h3><span style="font-size:12px">按工序+款号统计</span></div>
+<div id="processSummary" class="card" style="padding: 12px;"></div>
 
 <div class="section-header"><h3>📋 入库记录</h3><span id="recordCount">0 条</span></div>
 <div id="history"></div>
@@ -236,7 +276,7 @@
 </div>
 
 <div class="modal-mask" id="clearModal"><div class="modal-box"><h4>⚠️ 确认清空全部</h4><p>所有入库数据将永久删除，建议先导出备份。</p><div class="btn-group" style="margin-top:12px;"><button class="btn btn-outline btn-sm" onclick="hideClearModal()">取消</button><button class="btn btn-danger btn-sm" onclick="clearAll()">确认清空</button></div></div></div>
-<div class="modal-mask" id="todayClearModal"><div class="modal-box"><h4>⚠️ 确认清空本日</h4><p>仅删除今天入库记录，保留历史月度数据。</p><div class="btn-group" style="margin-top:12px;"><button class="btn btn-outline btn-sm" onclick="hideTodayClearModal()">取消</button><button class="btn btn-warning btn-sm" onclick="clearToday()">确认清空本日</button></div></div></div>
+<div class="modal-mask" id="todayClearModal"><div class="modal-box"><h4>⚠️ 确认清空本日</h4><p>仅删除今天入库记录，保留历史数据。</p><div class="btn-group" style="margin-top:12px;"><button class="btn btn-outline btn-sm" onclick="hideTodayClearModal()">取消</button><button class="btn btn-warning btn-sm" onclick="clearToday()">确认清空本日</button></div></div></div>
 <div class="modal-mask" id="dupModal"><div class="modal-box"><h4>⚠️ 条码重复</h4><p id="dupMsg"></p><div class="btn-group" style="margin-top:12px;"><button class="btn btn-success btn-sm" onclick="dupContinue()">继续新增</button><button class="btn btn-primary btn-sm" onclick="dupReplace()">覆盖数据</button></div></div></div>
 
 <script>
@@ -269,8 +309,9 @@
     let last = records.filter(r=>r.styleNo===style).sort((a,b)=>new Date(b.inboundTime)-new Date(a.inboundTime))[0];
     if(!last) return;
     document.getElementById('price').value = last.price || 0;
+    document.getElementById('processName').value = last.processName || '';
     calcAmount();
-    showToast('✅ 同款信息已自动填充（不含扎号）');
+    showToast('✅ 同款工序信息已自动填充');
   }
   function bindStyleEvent(){
     const style = document.getElementById('styleNo');
@@ -356,7 +397,7 @@
   }
 
   function parseGarmentLabel(text) {
-    let result = { barcodeId: '', size: '', bundleNo: '', styleNo: '' };
+    let result = { barcodeId: '', size: '', styleNo: '' };
     let barcodeMatch = text.match(/\b\d{10,22}\b/); if(barcodeMatch) result.barcodeId = barcodeMatch[0];
     let sizeMatch = text.match(/(XS|S|M|L|XL|XXL|XXXL|XXXXL|80|90|100|110|120|130|140|150|160)/gi); 
     if(sizeMatch) result.size = sizeMatch[0].toUpperCase();
@@ -465,8 +506,8 @@
       season: season,
       sequenceNo: seq, 
       size: document.getElementById('size').value,
-      bundleNo: document.getElementById('bundleNo').value, 
-      styleNo: document.getElementById('styleNo').value,
+      processName: document.getElementById('processName').value || '未指定工序',
+      styleNo: document.getElementById('styleNo').value || '无款号',
       stockNum: stockNum,
       price: price, 
       amount: amount, 
@@ -497,7 +538,7 @@
     document.getElementById('season').value=r.season||'';
     document.getElementById('sequenceNo').value=r.sequenceNo||''; 
     document.getElementById('size').value=r.size||'';
-    document.getElementById('bundleNo').value=r.bundleNo||''; 
+    document.getElementById('processName').value=r.processName||''; 
     document.getElementById('styleNo').value=r.styleNo||'';
     document.getElementById('stockNum').value=r.stockNum||1;
     lastStockNum = r.stockNum||1;
@@ -512,7 +553,7 @@
   function sortByTime(){ records.sort((a,b)=> new Date(b.inboundTime) - new Date(a.inboundTime)); }
   function saveRecords(){ localStorage.setItem('garment_inbound_records', JSON.stringify(records)); }
   function loadRecords(){ let d=localStorage.getItem('garment_inbound_records'); records=d?JSON.parse(d):[]; sortByTime(); }
-  function renderAll(){ renderHistory(); renderStats(); renderMonthSummary(); }
+  function renderAll(){ renderHistory(); renderStats(); renderProcessSummary(); }
   
   function renderHistory(){
     let container=document.getElementById('history'); 
@@ -522,11 +563,9 @@
       <div class="record-item">
         <div class="record-header"><span class="barcode-chip">🔢 ${escapeHtml(r.barcodeId)}</span><span class="time-text">${r.inboundTime}</span></div>
         <div class="detail-grid">
-          <div class="detail-tag"><span>季节</span>${r.season||'-'}</div>
-          <div class="detail-tag"><span>序号</span>${r.sequenceNo||'-'}</div>
+          <div class="detail-tag"><span>工序</span>${r.processName||'-'}</div>
           <div class="detail-tag"><span>款号</span>${r.styleNo||'-'}</div>
           <div class="detail-tag"><span>尺码</span>${r.size||'-'}</div>
-          <div class="detail-tag"><span>扎号</span>${r.bundleNo||'-'}</div>
           <div class="detail-tag"><span>入库数量</span>${r.stockNum}</div>
           <div class="detail-tag"><span>金额</span>¥${r.amount.toFixed(2)}</div>
         </div>
@@ -545,77 +584,207 @@
     document.getElementById('statBarcodes').textContent=unique; 
     document.getElementById('statToday').textContent=todayQty;
   }
-  
-  function renderMonthSummary(){
-    let map=new Map(); records.forEach(r=>{
-      let d=new Date(r.inboundTime); 
-      let key=`${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2,'0')}`;
-      if(!map.has(key)) map.set(key,{total:0, codes:new Set(), count:0, totalAmount:0});
-      let item=map.get(key); 
-      item.total += Number(r.stockNum)||1; 
-      item.codes.add(r.barcodeId); 
-      item.count+=1; 
-      item.totalAmount += parseFloat(r.amount) || 0;
+
+  function renderProcessSummary(){
+    const processMap = new Map();
+    records.forEach(r => {
+      const process = r.processName || '未指定工序';
+      const style = r.styleNo || '无款号';
+      if(!processMap.has(process)){
+        processMap.set(process, new Map());
+      }
+      const styleMap = processMap.get(process);
+      if(!styleMap.has(style)){
+        styleMap.set(style, { totalQty: 0, totalAmount: 0, items: [] });
+      }
+      const styleData = styleMap.get(style);
+      styleData.totalQty += Number(r.stockNum) || 1;
+      styleData.totalAmount += Number(r.amount) || 0;
+      styleData.items.push(r);
     });
-    let html=''; 
-    for(let [k,v] of [...map.entries()].sort().reverse()){
-      html+=`<div class="month-summary"><strong>📅 ${k}</strong> 总件数: ${v.total} | 条码: ${v.codes.size} | 单数: ${v.count} | 总金额: ¥${v.totalAmount.toFixed(2)}</div>`;
+
+    const container = document.getElementById('processSummary');
+    if(processMap.size === 0){
+      container.innerHTML = '<div class="empty-state">暂无数据</div>';
+      return;
     }
-    document.getElementById('monthSummary').innerHTML=html||'<div class="empty-state">暂无月度数据</div>';
+
+    let html = '';
+    let processIndex = 0;
+    for(const [process, styleMap] of processMap){
+      const processId = `process-${processIndex}`;
+      let processTotalQty = 0;
+      let processTotalAmount = 0;
+      for(const [, styleData] of styleMap){
+        processTotalQty += styleData.totalQty;
+        processTotalAmount += styleData.totalAmount;
+      }
+
+      html += `
+        <div class="summary-section">
+          <div class="summary-header" onclick="toggleProcess('${processId}')" id="header-${processId}">
+            <div class="left">
+              <span class="arrow">▶</span>
+              <strong>${escapeHtml(process)}</strong>
+            </div>
+            <div>小计：数量${processTotalQty} | 金额¥${processTotalAmount.toFixed(2)}</div>
+          </div>
+          <div class="summary-body" id="body-${processId}">
+      `;
+
+      let styleIndex = 0;
+      for(const [style, styleData] of styleMap){
+        html += `
+          <div class="summary-row">
+            <div>${escapeHtml(style)}</div>
+            <div>${styleData.totalQty}</div>
+            <div>¥${styleData.totalAmount.toFixed(2)}</div>
+          </div>
+          <div class="detail-row">
+            明细：${styleData.items.map(i => `${i.size||'无码'} | ${i.stockNum}件 | ¥${i.amount.toFixed(2)}`).join(' · ')}
+          </div>
+        `;
+        styleIndex++;
+      }
+
+      html += `
+          <div class="summary-total">
+            <div>小计</div>
+            <div>${processTotalQty}</div>
+            <div>¥${processTotalAmount.toFixed(2)}</div>
+          </div>
+          </div>
+        </div>
+      `;
+      processIndex++;
+    }
+
+    container.innerHTML = html;
   }
-  
+
+  function toggleProcess(processId){
+    const header = document.getElementById(`header-${processId}`);
+    const body = document.getElementById(`body-${processId}`);
+    header.classList.toggle('open');
+    body.classList.toggle('open');
+  }
+
+  // ====================== 【优化版：带工序小计的导出函数】 ======================
   function exportToExcel(){
     if(!records.length) return showToast("无数据导出");
-    let detail = records.map(r => ({
-      '入库时间': r.inboundTime,
-      '季节序号': (r.season||'') + (r.sequenceNo||''),
-      '款号': r.styleNo || '',
-      '尺码': r.size || '',
-      '扎号': r.bundleNo || '',
-      '入库数量': r.stockNum || 1,
-      '单价(¥)': parseFloat(r.price).toFixed(2),
-      '金额(¥)': parseFloat(r.amount).toFixed(2)
-    }));
-    let totalQty = records.reduce((sum, r) => sum + (Number(r.stockNum)||1), 0);
-    let totalMoney = records.reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0);
-    let totalOrder = records.length;
-    let totalCode = new Set(records.map(r=>r.barcodeId)).size;
-    let summary = [
-      {统计项目:'总入库单数', 数值:totalOrder},
-      {统计项目:'总条码种类', 数值:totalCode},
-      {统计项目:'总入库数量', 数值:totalQty},
-      {统计项目:'总金额(元)', 数值:totalMoney.toFixed(2)}
+
+    // 1. 按工序分组，准备明细+小计数据
+    const processMap = new Map();
+    records.forEach(r => {
+      const process = r.processName || '未指定工序';
+      if(!processMap.has(process)) processMap.set(process, []);
+      processMap.get(process).push(r);
+    });
+
+    // 2. 构建明细数据（含工序小计）
+    const detailHeaders = ['入库时间', '工序名称', '款号', '尺码', '入库数量', '单价(¥)', '金额(¥)'];
+    let detailData = [detailHeaders];
+    let allProcessStats = []; // 用于汇总表的工序统计
+
+    for(const [process, items] of processMap){
+      // 先添加该工序的所有明细行
+      items.forEach(r => {
+        detailData.push([
+          r.inboundTime,
+          r.processName,
+          r.styleNo,
+          r.size,
+          r.stockNum,
+          parseFloat(r.price).toFixed(2),
+          parseFloat(r.amount).toFixed(2)
+        ]);
+      });
+
+      // 计算该工序的小计
+      const processTotalQty = items.reduce((sum, r) => sum + (Number(r.stockNum)||1), 0);
+      const processTotalAmount = items.reduce((sum, r) => sum + (parseFloat(r.amount)||0), 0);
+      // 添加小计行
+      detailData.push([
+        `【${process} 小计】`,
+        '',
+        '',
+        '',
+        processTotalQty,
+        '',
+        processTotalAmount.toFixed(2)
+      ]);
+      // 空行分隔不同工序
+      detailData.push(['', '', '', '', '', '', '']);
+
+      // 保存工序统计到汇总表
+      allProcessStats.push({
+        '工序名称': process,
+        '总入库数量': processTotalQty,
+        '总金额(¥)': processTotalAmount.toFixed(2),
+        '记录条数': items.length
+      });
+    }
+
+    // 3. 构建优化后的汇总表数据
+    const totalQty = records.reduce((sum, r) => sum + (Number(r.stockNum)||1), 0);
+    const totalAmount = records.reduce((sum, r) => sum + (parseFloat(r.amount)||0), 0);
+    const totalOrder = records.length;
+    const totalCode = new Set(records.map(r=>r.barcodeId)).size;
+    const avgPrice = totalQty > 0 ? (totalAmount / totalQty).toFixed(2) : 0;
+    const maxQty = Math.max(...records.map(r => Number(r.stockNum)||1));
+
+    const summaryData = [
+      ['===== 基础信息统计 =====', ''],
+      ['统计项目', '数值'],
+      ['总入库单数', totalOrder],
+      ['唯一条码数量', totalCode],
+      ['总入库数量', totalQty],
+      ['总金额(元)', totalAmount.toFixed(2)],
+      ['平均单价(元/件)', avgPrice],
+      ['最大单条入库数量', maxQty],
+      ['', ''],
+      ['===== 各工序明细统计 =====', ''],
+      ['工序名称', '总入库数量', '总金额(¥)', '记录条数'],
+      ...allProcessStats.map(s => [s['工序名称'], s['总入库数量'], s['总金额(¥)'], s['记录条数']])
     ];
-    let wb = XLSX.utils.book_new();
-    let ws1 = XLSX.utils.json_to_sheet(detail);
-    let ws2 = XLSX.utils.json_to_sheet(summary);
 
-    const centerAlign = { alignment: { horizontal: "center", vertical: "center" } };
-    const range1 = XLSX.utils.decode_range(ws1['!ref']);
-    for(let r = range1.s.r; r <= range1.e.r; r++){
-      for(let c = range1.s.c; c <= range1.e.c; c++){
-        const cellAddress = XLSX.utils.encode_cell({r,c});
-        if(!ws1[cellAddress]) continue;
-        ws1[cellAddress].s = centerAlign;
-      }
-    }
-    const range2 = XLSX.utils.decode_range(ws2['!ref']);
-    for(let r = range2.s.r; r <= range2.e.r; r++){
-      for(let c = range2.s.c; c <= range2.s.c; c++){
-        const cellAddress = XLSX.utils.encode_cell({r,c});
-        if(!ws2[cellAddress]) continue;
-        ws2[cellAddress].s = centerAlign;
-      }
-    }
+    // 4. 创建Excel工作簿
+    const wb = XLSX.utils.book_new();
+    // 明细工作表
+    const ws1 = XLSX.utils.aoa_to_sheet(detailData);
+    // 汇总工作表
+    const ws2 = XLSX.utils.aoa_to_sheet(summaryData);
 
-    ws1['!cols'] = [{wch:22},{wch:12},{wch:12},{wch:10},{wch:10},{wch:10},{wch:10},{wch:10}];
-    ws2['!cols'] = [{wch:14},{wch:12}];
-    XLSX.utils.book_append_sheet(wb, ws1, "入库明细");
+    // 5. 列宽适配
+    ws1['!cols'] = [
+      {wch:22},{wch:12},{wch:12},
+      {wch:10},{wch:12},{wch:10},{wch:12}
+    ];
+    ws2['!cols'] = [{wch:20},{wch:15},{wch:15},{wch:12}];
+
+    // 6. 追加工作表到工作簿
+    XLSX.utils.book_append_sheet(wb, ws1, "入库明细（含工序小计）");
     XLSX.utils.book_append_sheet(wb, ws2, "数据汇总");
-    XLSX.writeFile(wb, `服装入库_${new Date().toLocaleDateString()}.xlsx`);
-    showToast("✅ 导出成功，表格已全部居中");
+
+    // 7. 原生Blob下载，确保兼容性
+    try {
+      const data = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+      const blob = new Blob([data], { type: 'application/octet-stream' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `服装入库_${new Date().toLocaleDateString()}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast("✅ 导出成功，已自动添加工序小计");
+    } catch (e) {
+      showToast("❌ 导出失败");
+      console.error(e);
+    }
   }
-  
+
   function showClearModal(){ document.getElementById('clearModal').classList.add('show'); }
   function hideClearModal(){ document.getElementById('clearModal').classList.remove('show'); }
   function clearAll(){ records=[]; saveRecords(); renderAll(); hideClearModal(); showToast("已清空所有数据"); }
