@@ -180,8 +180,10 @@
   <button class="btn btn-success" onclick="startContinuousScan()" id="continuousBtn">🔄 连续扫码入库</button>
   <button class="btn btn-warning" onclick="triggerOCRUpload()">📸 拍照识别标签</button>
   <button class="btn btn-outline" onclick="exportToExcel()">📎 导出</button>
+  <button class="btn btn-outline" onclick="triggerImportExcel()">📥 导入</button>
 </div>
 <input type="file" id="ocrFileInput" accept="image/*" capture="environment" onchange="handleOCRImage(event)">
+<input type="file" id="importFileInput" accept=".xlsx,.xls" style="display:none" onchange="handleImportExcel(event)">
 
 <div class="switch-bar">
   <div class="switch-label">⚙️ 连续扫码时沿用配置</div>
@@ -303,6 +305,7 @@
 <div class="modal-mask" id="clearModal"><div class="modal-box"><h4>⚠️ 确认清空全部</h4><p>所有入库数据将永久删除，建议先导出Excel备份。</p><div class="btn-group" style="margin-top:8px;"><button class="btn btn-warning btn-sm" onclick="exportToExcel()" style="flex:1;">📥 先导出备份</button></div><input class="clear-confirm-input" id="clearConfirmInput" type="text" placeholder="请输入"确认删除"四个字" oninput="checkClearConfirm()" autocomplete="off"><p id="clearConfirmMsg" style="font-size:11px;color:var(--danger);margin-top:6px;display:none;">还需输入"确认删除"</p><div class="btn-group" style="margin-top:10px;"><button class="btn btn-outline btn-sm" onclick="hideClearModal()">取消</button><button class="btn btn-danger btn-sm" id="clearConfirmBtn" onclick="clearAll()" disabled style="opacity:0.5;">确认清空</button></div></div></div>
 <div class="modal-mask" id="todayClearModal"><div class="modal-box"><h4>⚠️ 确认清空本日</h4><p>仅删除今天入库记录，保留历史数据。</p><div class="btn-group" style="margin-top:12px;"><button class="btn btn-outline btn-sm" onclick="hideTodayClearModal()">取消</button><button class="btn btn-warning btn-sm" onclick="clearToday()">确认清空本日</button></div></div></div>
 <div class="modal-mask" id="dupModal"><div class="modal-box"><h4>⚠️ 条码重复</h4><p id="dupMsg"></p><div class="btn-group" style="margin-top:12px;"><button class="btn btn-success btn-sm" onclick="dupContinue()">继续新增</button><button class="btn btn-primary btn-sm" onclick="dupReplace()">覆盖数据</button></div></div></div>
+<div class="modal-mask" id="importModal"><div class="modal-box"><h4>📥 导入数据</h4><p id="importMsg">检测到 <strong id="importCount">0</strong> 条数据</p><p style="font-size:12px;color:var(--text-light);margin-top:8px;">请选择导入方式</p><div class="btn-group" style="margin-top:12px;"><button class="btn btn-success btn-sm" onclick="importMerge()">合并导入</button><button class="btn btn-warning btn-sm" onclick="importOverwrite()">覆盖导入</button><button class="btn btn-outline btn-sm" onclick="hideImportModal()">取消</button></div></div></div>
 
 <script>
   let html5QrCode = null;
@@ -312,6 +315,7 @@
   let isContinuousMode = false;
   let currentDupBarcode = '';
   let ocrWorker = null;
+  let pendingImportData = [];
 
   function calcAmount(){
     let num = parseFloat(document.getElementById('stockNum').value) || 1;
@@ -721,6 +725,100 @@
       URL.revokeObjectURL(url);
       showToast('✅ 导出成功');
     } catch (e) { showToast('❌ 导出失败'); console.error(e); }
+  }
+
+  function triggerImportExcel() {
+    if(html5QrCode) stopScan(true);
+    document.getElementById('importFileInput').click();
+  }
+  
+  function hideImportModal() {
+    document.getElementById('importModal').classList.remove('show');
+    pendingImportData = [];
+  }
+  
+  function handleImportExcel(event) {
+    const file = event.target.files[0];
+    if(!file) return;
+    
+    showToast('🔍 正在解析Excel...');
+    const reader = new FileReader();
+    
+    reader.onload = function(e) {
+      try {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        
+        // 读取第一个工作表（入库明细）
+        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+        const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+        
+        // 解析并转换数据格式
+        const importedRecords = [];
+        jsonData.forEach((row, idx) => {
+          // 跳过小计行和空行
+          if(!row['入库时间'] || String(row['入库时间']).includes('小计')) return;
+          
+          // 生成条码ID（如果没有，用时间戳+索引）
+          let barcodeId = row['条码ID'] || row['条码'] || '';
+          if(!barcodeId) barcodeId = 'IMP' + Date.now() + idx;
+          
+          const record = {
+            id: Date.now() + idx,
+            barcodeId: String(barcodeId),
+            season: row['季节'] || '',
+            sequenceNo: row['自编序号'] || row['序号'] || '',
+            size: String(row['尺码'] || ''),
+            processName: String(row['工序名称'] || row['工序'] || '未指定工序'),
+            styleNo: String(row['款号'] || ''),
+            stockNum: parseFloat(row['入库数量']) || 1,
+            price: parseFloat(row['单价(¥)'] || row['单价']) || 0,
+            amount: parseFloat(row['金额(¥)'] || row['金额']) || 0,
+            inboundTime: String(row['入库时间'] || new Date().toLocaleString('zh-CN'))
+          };
+          
+          // 重新计算金额确保正确
+          record.amount = (record.stockNum * record.price).toFixed(2) * 1;
+          importedRecords.push(record);
+        });
+        
+        if(importedRecords.length === 0) {
+          showToast('❌ 未找到有效数据');
+          return;
+        }
+        
+        pendingImportData = importedRecords;
+        document.getElementById('importCount').textContent = importedRecords.length;
+        document.getElementById('importModal').classList.add('show');
+        
+      } catch(err) {
+        console.error(err);
+        showToast('❌ 解析失败，请检查文件格式');
+      }
+    };
+    
+    reader.readAsArrayBuffer(file);
+    document.getElementById('importFileInput').value = '';
+  }
+  
+  function importMerge() {
+    // 合并：保留原有数据，追加新数据
+    records = [...pendingImportData, ...records];
+    saveRecords();
+    sortByTime();
+    renderAll();
+    hideImportModal();
+    showToast(`✅ 成功导入 ${pendingImportData.length} 条数据（合并模式）`);
+  }
+  
+  function importOverwrite() {
+    // 覆盖：清空原有数据，只保留导入的数据
+    records = pendingImportData;
+    saveRecords();
+    sortByTime();
+    renderAll();
+    hideImportModal();
+    showToast(`✅ 成功导入 ${pendingImportData.length} 条数据（覆盖模式）`);
   }
 
   function showClearModal(){ document.getElementById('clearModal').classList.add('show'); }
