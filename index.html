@@ -80,11 +80,9 @@
     .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 3px; bottom: 3px; background-color: white; border-radius: 50%; transition: 0.2s; }
     input:checked + .slider { background-color: var(--primary); }
     input:checked + .slider:before { transform: translateX(22px); }
-
     #reader { width: 100%; border-radius: 24px; overflow: hidden; margin: 8px 0; border: 2px solid var(--primary); display: none; box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
     .scan-status { text-align: center; font-size: 12px; color: var(--text-light); margin: 6px 0; }
     .close-scan { text-align: center; margin: 6px 0; display: none; }
-
     .card { background: var(--card); border-radius: 20px; padding: 20px; margin: 14px 0; box-shadow: var(--shadow); }
     .card-title { font-size: 18px; font-weight: 700; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
     .badge { background: #d1fae5; color: #065f46; padding: 4px 12px; border-radius: 30px; font-size: 11px; font-weight: 600; }
@@ -95,7 +93,6 @@
     .input-field input:focus, .input-field select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
     .input-field input[readonly] { background: #f1f5f9; color: #334155; }
     .check-row {display:flex;align-items:center;gap:8px;margin-top:6px;font-size:13px;color:var(--text-light);}
-
     .stats-grid { display: flex; gap: 12px; margin: 16px 0; }
     .stat-block { flex: 1; background: var(--card); padding: 14px; border-radius: 16px; text-align: center; box-shadow: var(--shadow); }
     .stat-number { font-size: 26px; font-weight: 800; color: var(--primary); }
@@ -166,36 +163,51 @@
     .modal-box { background: white; width: 300px; border-radius: 20px; padding: 24px; text-align: center; }
     .ocr-loading { position: fixed; bottom: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.8); color: white; padding: 12px 24px; border-radius: 60px; z-index: 1200; font-size: 14px; }
     #ocrFileInput { display: none; }
+    #imgUploadInput { display: none; }
+    .img-full-modal {
+      z-index: 2000;
+      background: rgba(0,0,0,0.9);
+    }
+    .img-full-modal img {
+      max-width: 90vw;
+      max-height: 90vh;
+    }
+    .record-img-thumb {
+      width: 60px;
+      height: 60px;
+      object-fit: cover;
+      border-radius: 8px;
+      cursor: pointer;
+      border: 1px solid var(--border);
+    }
   </style>
 </head>
 <body>
-
 <div class="header">
   <h1>📦 服装扫码入库系统</h1>
-  <div class="sub">扫码入库 | 拍照识别标签 | 连续扫码模式</div>
+  <div class="sub">扫码入库 | 拍照识别标签 | 连续扫码模式 | 款式照片上传</div>
 </div>
-
 <div class="btn-group">
   <button class="btn btn-primary" onclick="startSingleScan()" id="scanBtn">📷 扫码入库</button>
   <button class="btn btn-success" onclick="startContinuousScan()" id="continuousBtn">🔄 连续扫码入库</button>
   <button class="btn btn-warning" onclick="triggerOCRUpload()">📸 拍照识别标签</button>
-  <button class="btn btn-outline" onclick="exportToExcel()">📎 导出</button>
+  <button class="btn btn-outline" onclick="exportToExcel()">📎 导出Excel</button>
+  <button class="btn btn-outline" onclick="exportToHtml()">🖼️ 导出HTML(含图)</button>
   <button class="btn btn-outline" onclick="triggerImportExcel()">📥 导入</button>
 </div>
 <input type="file" id="ocrFileInput" accept="image/*" capture="environment" onchange="handleOCRImage(event)">
 <input type="file" id="importFileInput" accept=".xlsx,.xls" style="display:none" onchange="handleImportExcel(event)">
-
+<!-- 款式图片上传input -->
+<input type="file" id="imgUploadInput" accept="image/*" capture="environment" onchange="handleUploadStyleImg(event)">
 <div class="switch-bar">
   <div class="switch-label">⚙️ 连续扫码时沿用配置</div>
   <label class="switch"><input type="checkbox" id="keepConfigSwitch" checked><span class="slider"></span></label>
 </div>
-
 <div class="scan-status" id="scanStatus"></div>
 <div class="close-scan" id="closeScanArea">
   <button class="btn btn-outline btn-sm" onclick="stopScan(true)">✕ 关闭扫码器</button>
 </div>
 <div id="reader"></div>
-
 <div class="card" id="formCard" style="display:none;">
   <div class="card-title">
     📝 入库明细
@@ -203,6 +215,17 @@
   </div>
   <div class="form-grid">
     <div class="input-field"><label>🔖 条码ID</label><input type="text" id="barcodeId" readonly placeholder="扫码/识别后自动填充"></div>
+    <!-- 新增：款式照片上传区域 -->
+    <div class="img-upload-wrap" style="border:1.5px dashed var(--border);border-radius:12px;padding:12px;">
+      <label style="font-size:11px;font-weight:700;color:var(--text-light);display:block;margin-bottom:8px;">👕 款式照片（可选）</label>
+      <div class="img-preview-box" id="imgPreviewBox" style="width:100%;max-height:180px;border-radius:8px;overflow:hidden;margin-bottom:10px;display:none;">
+        <img id="styleImgPreview" src="" alt="款式图" style="width:100%;height:auto;display:block;">
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-sm btn-outline" onclick="triggerStyleImgUpload()">📷 拍照/相册上传</button>
+        <button class="btn btn-sm btn-danger" onclick="clearStyleImg()" id="delImgBtn" style="display:none;">删除图片</button>
+      </div>
+    </div>
     
     <div class="row-2">
       <div class="input-field">
@@ -220,7 +243,6 @@
         <input type="text" id="sequenceNo" placeholder="手动输入数字/编号">
       </div>
     </div>
-
     <div class="input-field">
       <label>📏 尺码</label>
       <input list="sizeList" id="size" placeholder="选择或手动输入尺码">
@@ -247,10 +269,8 @@
         <option value="180"></option>
       </datalist>
     </div>
-
     <div class="input-field"><label>🏷️ 工序名称</label><input type="text" id="processName" placeholder="如：查片/查披肩"></div>
     <div class="input-field"><label>👔 款号</label><input type="text" id="styleNo" placeholder="款号（如：Rxxxx）"></div>
-
     <div class="input-field">
       <label>📦 入库数量</label>
       <input type="number" id="stockNum" value="1" min="1" placeholder="自定义入库数量">
@@ -259,7 +279,6 @@
         <label>下次扫码继承该数量</label>
       </div>
     </div>
-
     <div class="row-2">
       <div class="input-field"><label>💰 单价</label><input type="number" id="price" value="0" min="0" step="0.01"></div>
       <div class="input-field"><label>💵 合计金额</label><input type="text" id="amount" readonly value="0.00"></div>
@@ -268,13 +287,11 @@
     <button class="btn btn-primary" onclick="submitInbound()" style="margin-top: 4px;">✅ 确认入库</button>
   </div>
 </div>
-
 <div class="stats-grid">
   <div class="stat-block"><div class="stat-number" id="statTotal">0</div><div>总件数</div></div>
   <div class="stat-block"><div class="stat-number" id="statBarcodes">0</div><div>唯一条码</div></div>
   <div class="stat-block"><div class="stat-number" id="statToday">0</div><div>今日入库</div></div>
 </div>
-
 <div class="section-header"><h3>📋 工序工资汇总（点击展开）</h3><span style="font-size:12px">按工序+款号统计</span></div>
 <div id="processSummary" class="card" style="padding: 12px;"></div>
 <div class="card" style="padding:16px;">
@@ -286,7 +303,6 @@
   </div>
   <div id="summaryContent" style="min-height:60px;"></div>
 </div>
-
 <div class="section-header"><h3>📋 入库记录</h3><span id="recordCount">0 条</span></div>
 <div class="filter-bar" id="filterBar">
   <div class="filter-chip active" onclick="switchDateFilter(7,this)">最近7天</div>
@@ -295,18 +311,19 @@
   <div class="filter-chip" onclick="switchDateFilter(-1,this)">全部</div>
 </div>
 <div id="history"></div>
-
 <div style="display:flex; gap:12px; margin-top: 12px;">
   <button class="btn btn-warning" onclick="exportToExcel()" style="flex:1;">📥 导出 Excel</button>
   <button class="btn btn-outline btn-sm" onclick="clearTodayRecord()">🗑️ 清空本日</button>
   <button class="btn btn-danger btn-sm" onclick="showClearModal()">清空全部</button>
 </div>
-
+<!-- 图片全屏弹窗 -->
+<div class="modal-mask img-full-modal" id="imgFullModal" onclick="closeImgModal()">
+  <img id="fullImgSrc" src="" onclick="event.stopPropagation()" />
+</div>
 <div class="modal-mask" id="clearModal"><div class="modal-box"><h4>⚠️ 确认清空全部</h4><p>所有入库数据将永久删除，建议先导出Excel备份。</p><div class="btn-group" style="margin-top:8px;"><button class="btn btn-warning btn-sm" onclick="exportToExcel()" style="flex:1;">📥 先导出备份</button></div><input class="clear-confirm-input" id="clearConfirmInput" type="text" placeholder="请输入"确认删除"四个字" oninput="checkClearConfirm()" autocomplete="off"><p id="clearConfirmMsg" style="font-size:11px;color:var(--danger);margin-top:6px;display:none;">还需输入"确认删除"</p><div class="btn-group" style="margin-top:10px;"><button class="btn btn-outline btn-sm" onclick="hideClearModal()">取消</button><button class="btn btn-danger btn-sm" id="clearConfirmBtn" onclick="clearAll()" disabled style="opacity:0.5;">确认清空</button></div></div></div>
 <div class="modal-mask" id="todayClearModal"><div class="modal-box"><h4>⚠️ 确认清空本日</h4><p>仅删除今天入库记录，保留历史数据。</p><div class="btn-group" style="margin-top:12px;"><button class="btn btn-outline btn-sm" onclick="hideTodayClearModal()">取消</button><button class="btn btn-warning btn-sm" onclick="clearToday()">确认清空本日</button></div></div></div>
 <div class="modal-mask" id="dupModal"><div class="modal-box"><h4>⚠️ 条码重复</h4><p id="dupMsg"></p><div class="btn-group" style="margin-top:12px;"><button class="btn btn-success btn-sm" onclick="dupContinue()">继续新增</button><button class="btn btn-primary btn-sm" onclick="dupReplace()">覆盖数据</button></div></div></div>
 <div class="modal-mask" id="importModal"><div class="modal-box"><h4>📥 导入数据</h4><p id="importMsg">检测到 <strong id="importCount">0</strong> 条数据</p><p style="font-size:12px;color:var(--text-light);margin-top:8px;">请选择导入方式</p><div class="btn-group" style="margin-top:12px;"><button class="btn btn-success btn-sm" onclick="importMerge()">合并导入</button><button class="btn btn-warning btn-sm" onclick="importOverwrite()">覆盖导入</button><button class="btn btn-outline btn-sm" onclick="hideImportModal()">取消</button></div></div></div>
-
 <script>
   let html5QrCode = null;
   let records = [];
@@ -316,7 +333,63 @@
   let currentDupBarcode = '';
   let ocrWorker = null;
   let pendingImportData = [];
-
+  // 全局存储当前表单图片base64
+  let currentStyleImgBase64 = '';
+  // ========== 图片上传相关函数 【全部修复】 ==========
+  function triggerStyleImgUpload() {
+    document.getElementById('imgUploadInput').value = '';
+    document.getElementById('imgUploadInput').click();
+  }
+  function clearStyleImg() {
+    currentStyleImgBase64 = '';
+    document.getElementById('styleImgPreview').src = '';
+    document.getElementById('imgPreviewBox').style.display = 'none';
+    document.getElementById('delImgBtn').style.display = 'none';
+  }
+  function handleUploadStyleImg(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function (e) {
+      // 压缩图片
+      compressImage(e.target.result, 800, 800, (base64) => {
+        currentStyleImgBase64 = base64;
+        document.getElementById('styleImgPreview').src = base64;
+        document.getElementById('imgPreviewBox').style.display = 'block';
+        document.getElementById('delImgBtn').style.display = 'inline-flex';
+      })
+    }
+    reader.readAsDataURL(file);
+    document.getElementById('imgUploadInput').value = '';
+  }
+  function compressImage(base64Str, maxWidth, maxHeight, callback) {
+    const img = new Image();
+    img.src = base64Str;
+    img.onerror = function() { callback(base64Str); };
+    img.onload = function() {
+      let w = img.width, h = img.height;
+      if (w > maxWidth) { h = h * maxWidth / w; w = maxWidth; }
+      if (h > maxHeight) { w = w * maxHeight / h; h = maxHeight; }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      const resBase64 = canvas.toDataURL('image/jpeg', 0.6);
+      callback(resBase64);
+    };
+  }
+  function safeBase64Encode(str) {
+    return str.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+  }
+  // 打开大图弹窗
+  function openImgModal(base64) {
+    document.getElementById('fullImgSrc').src = base64;
+    document.getElementById('imgFullModal').classList.add('show');
+  }
+  function closeImgModal() {
+    document.getElementById('imgFullModal').classList.remove('show');
+    document.getElementById('fullImgSrc').src = '';
+  }
   function calcAmount(){
     let num = parseFloat(document.getElementById('stockNum').value) || 1;
     let price = parseFloat(document.getElementById('price').value) || 0;
@@ -331,7 +404,6 @@
       el.addEventListener('change', calcAmount);
     });
   }
-
   function fillByStyle(){
     let style = document.getElementById('styleNo').value.trim();
     if(!style) return;
@@ -348,6 +420,7 @@
     style.addEventListener('change', fillByStyle);
   }
   function fillBySequenceNo(){
+    clearStyleImg();
     let seq = document.getElementById('sequenceNo').value.trim();
     if(!seq) return;
     let last = records.filter(r => r.sequenceNo === seq).sort((a,b) => new Date(b.inboundTime) - new Date(a.inboundTime))[0];
@@ -365,7 +438,6 @@
     seq.addEventListener('input', fillBySequenceNo);
     seq.addEventListener('change', fillBySequenceNo);
   }
-
   (async function preloadOCR() {
     try {
       ocrWorker = await Tesseract.createWorker();
@@ -373,7 +445,6 @@
       await ocrWorker.initialize('eng+chi_sim');
     } catch(e) {}
   })();
-
   const getTodayStr = () => new Date().toISOString().slice(0,10);
   const getTodayCN = () => new Date().toLocaleDateString('zh-CN');
   
@@ -387,13 +458,13 @@
     }
     calcAmount();
   }
-
   function saveStockNum(){
     lastStockNum = document.getElementById('stockNum').value;
   }
-
   function triggerOCRUpload() { 
     if(html5QrCode) stopScan(true);
+    clearStyleImg(); // OCR识别清空旧图片
+    document.getElementById('ocrFileInput').value = '';
     document.getElementById('ocrFileInput').click(); 
   }
   
@@ -442,7 +513,6 @@
       img.src = URL.createObjectURL(file);
     });
   }
-
   function parseGarmentLabel(text) {
     let result = { barcodeId: '', size: '', styleNo: '' };
     let barcodeMatch = text.match(/\b\d{10,22}\b/); if(barcodeMatch) result.barcodeId = barcodeMatch[0];
@@ -451,8 +521,8 @@
     let styleReg = /(款号|货号|款)[：:；;,，\s]*([A-Z0-9\-]{3,})/; let sm = text.match(styleReg); if(sm) result.styleNo = sm[2].trim();
     return result;
   }
-
   function fillFromOCRData(data) {
+    clearStyleImg();
     if(data.barcodeId) document.getElementById('barcodeId').value = data.barcodeId;
     if(data.size) document.getElementById('size').value = data.size;
     document.getElementById('styleNo').value = data.styleNo || '';
@@ -465,17 +535,15 @@
     document.getElementById('formCard').style.display = 'block';
     if(data.styleNo) fillByStyle();
   }
-
   function fillScanBarcode(barcode){
     document.getElementById('barcodeId').value = barcode;
     document.getElementById('scannedBadge').style.display = 'inline-block';
     document.getElementById('inboundTime').value = new Date().toLocaleString('zh-CN');
     editingIndex = -1;
+    clearStyleImg(); // 扫码新条码清空图片缓存
     let oldStyle = document.getElementById('styleNo').value.trim();
-
     bindCalcEvents(); bindStyleEvent(); bindSequenceNoEvent();
     applyStockNum();
-
     let newStyle = document.getElementById('styleNo').value.trim();
     if(newStyle && newStyle!==oldStyle) fillByStyle();
     document.getElementById('formCard').style.display = 'block';
@@ -546,7 +614,6 @@
     let stockNum = parseFloat(document.getElementById('stockNum').value) || 1;
     let price = parseFloat(document.getElementById('price').value) || 0;
     let amount = parseFloat(document.getElementById('amount').value) || 0;
-
     const record = {
       id: editingIndex !== -1 ? records[editingIndex].id : Date.now(),
       barcodeId: barcode, 
@@ -558,11 +625,12 @@
       stockNum: stockNum,
       price: price, 
       amount: amount, 
+      imgBase64: currentStyleImgBase64,
       inboundTime: new Date().toLocaleString('zh-CN')
     };
     if(editingIndex !== -1){ records[editingIndex] = record; editingIndex = -1; showToast("✏️ 修改完成"); }
     else { records.unshift(record); showToast("✅ 入库成功"); }
-    saveRecords(); sortByTime(); renderAll();
+    clearStyleImg(); saveRecords(); sortByTime(); renderAll();
     document.getElementById('formCard').style.display = 'none'; 
     document.getElementById('scannedBadge').style.display = 'none';
     document.getElementById('barcodeId').value = ''; 
@@ -578,7 +646,6 @@
     let todayCN = getTodayCN(); records = records.filter(r => !r.inboundTime?.includes(todayCN));
     saveRecords(); sortByTime(); renderAll(); hideTodayClearModal(); showToast("✅ 本日记录已清空");
   }
-
   function modifyRecord(i){ 
     if(html5QrCode) stopScan(true); isContinuousMode=false; let r=records[i]; editingIndex=i; 
     document.getElementById('barcodeId').value=r.barcodeId; 
@@ -591,11 +658,19 @@
     lastStockNum = r.stockNum||1;
     document.getElementById('price').value=r.price; 
     calcAmount(); 
-    document.getElementById('inboundTime').value=r.inboundTime; 
+    document.getElementById('inboundTime').value=r.inboundTime;
+    // 回填图片
+    currentStyleImgBase64 = r.imgBase64 || '';
+    if(currentStyleImgBase64) {
+      document.getElementById('styleImgPreview').src = currentStyleImgBase64;
+      document.getElementById('imgPreviewBox').style.display = 'block';
+      document.getElementById('delImgBtn').style.display = 'inline-flex';
+    } else {
+      clearStyleImg();
+    }
     document.getElementById('scannedBadge').style.display='inline-block'; 
     document.getElementById('formCard').style.display='block'; 
   }
-
   function renderStats(){
     let total=records.reduce((s,r)=>s+(Number(r.stockNum)||1),0); 
     let unique=new Set(records.map(r=>r.barcodeId)).size;
@@ -606,7 +681,6 @@
     document.getElementById('statBarcodes').textContent=unique; 
     document.getElementById('statToday').textContent=todayQty;
   }
-
   function renderProcessSummary(){
     const processMap = new Map();
     records.forEach(r => {
@@ -624,13 +698,11 @@
       styleData.totalAmount += Number(r.amount) || 0;
       styleData.items.push(r);
     });
-
     const container = document.getElementById('processSummary');
     if(processMap.size === 0){
       container.innerHTML = '<div class="empty-state">暂无数据</div>';
       return;
     }
-
     let html = '';
     let processIndex = 0;
     for(const [process, styleMap] of processMap){
@@ -641,29 +713,23 @@
         processTotalQty += styleData.totalQty;
         processTotalAmount += styleData.totalAmount;
       }
-
       html += '<div class="summary-section"><div class="summary-header" onclick="toggleProcess(\'' + processId + '\')" id="header-' + processId + '"><div class="left"><span class="arrow">▶</span><strong>' + escapeHtml(process) + '</strong></div><div>小计：数量' + processTotalQty + ' | 金额¥' + processTotalAmount.toFixed(2) + '</div></div><div class="summary-body" id="body-' + processId + '">';
-
       let styleIndex = 0;
       for(const [style, styleData] of styleMap){
         html += '<div class="summary-row"><div>' + escapeHtml(style) + '</div><div>' + styleData.totalQty + '</div><div>¥' + styleData.totalAmount.toFixed(2) + '</div></div><div class="detail-row">明细：' + styleData.items.map(i => (i.size||'无码') + ' | ' + i.stockNum + '件 | ¥' + i.amount.toFixed(2)).join(' · ') + '</div>';
         styleIndex++;
       }
-
       html += '<div class="summary-total"><div>小计</div><div>' + processTotalQty + '</div><div>¥' + processTotalAmount.toFixed(2) + '</div></div></div></div>';
       processIndex++;
     }
-
     container.innerHTML = html;
   }
-
   function toggleProcess(processId){
     const header = document.getElementById('header-' + processId);
     const body = document.getElementById('body-' + processId);
     header.classList.toggle('open');
     body.classList.toggle('open');
   }
-
   function exportToExcel(){
     if(!records.length) return showToast("无数据导出");
     const processMap = new Map();
@@ -672,17 +738,42 @@
       if(!processMap.has(process)) processMap.set(process, []);
       processMap.get(process).push(r);
     });
-    const detailHeaders = ['入库时间', '工序名称', '款号', '尺码', '入库数量', '单价(¥)', '金额(¥)'];
+    const detailHeaders = ['序号', '入库时间', '工序名称', '款号', '尺码', '入库数量', '单价(¥)', '金额(¥)', '款式图片'];
     let detailData = [detailHeaders];
     let allProcessStats = [];
+    let imgIndex = 1;
+    const imgIndexData = [['序号', '条码/款号', '入库时间', '图片信息']];
     for(const [process, items] of processMap){
       items.forEach(r => {
-        detailData.push([r.inboundTime, r.processName, r.styleNo, r.size, r.stockNum, parseFloat(r.price).toFixed(2), parseFloat(r.amount).toFixed(2)]);
+        let imgLabel = '无';
+        if(r.imgBase64 && r.imgBase64.length > 100) {
+          // 截取Base64前50字符作为图片标识（实际图片内容不可直接在Excel预览）
+          const prefix = r.imgBase64.substring(0, 40);
+          imgLabel = '有图片 (base64:' + prefix + '...)';
+        }
+        detailData.push([
+          imgIndex,
+          r.inboundTime,
+          r.processName,
+          r.styleNo,
+          r.size,
+          r.stockNum,
+          parseFloat(r.price).toFixed(2),
+          parseFloat(r.amount).toFixed(2),
+          imgLabel
+        ]);
+        imgIndexData.push([
+          imgIndex,
+          (r.barcodeId || '') + ' / ' + (r.styleNo || ''),
+          r.inboundTime,
+          (r.imgBase64 && r.imgBase64.length > 100) ? '✅ 有图片 (图片数据已保存在系统中，打开本系统可见)' : '❌ 无图片'
+        ]);
+        imgIndex++;
       });
       const processTotalQty = items.reduce((sum, r) => sum + (Number(r.stockNum)||1), 0);
       const processTotalAmount = items.reduce((sum, r) => sum + (parseFloat(r.amount)||0), 0);
-      detailData.push(['[' + process + ' 小计]', '', '', '', processTotalQty, '', processTotalAmount.toFixed(2)]);
-      detailData.push(['', '', '', '', '', '', '']);
+      detailData.push(['[' + process + ' 小计]', '', '', '', '', processTotalQty, '', processTotalAmount.toFixed(2), '']);
+      detailData.push(['', '', '', '', '', '', '', '', '']);
       allProcessStats.push({'工序名称': process, '总入库数量': processTotalQty, '总金额(¥)': processTotalAmount.toFixed(2), '记录条数': items.length});
     }
     const totalQty = records.reduce((sum, r) => sum + (Number(r.stockNum)||1), 0);
@@ -708,10 +799,13 @@
     const wb = XLSX.utils.book_new();
     const ws1 = XLSX.utils.aoa_to_sheet(detailData);
     const ws2 = XLSX.utils.aoa_to_sheet(summaryData);
-    ws1['!cols'] = [{wch:22},{wch:12},{wch:12},{wch:10},{wch:12},{wch:10},{wch:12}];
+    const ws3 = XLSX.utils.aoa_to_sheet(imgIndexData);
+    ws1['!cols'] = [{wch:6},{wch:22},{wch:12},{wch:12},{wch:10},{wch:12},{wch:10},{wch:12},{wch:50}];
     ws2['!cols'] = [{wch:20},{wch:15},{wch:15},{wch:12}];
+    ws3['!cols'] = [{wch:6},{wch:22},{wch:18},{wch:50}];
     XLSX.utils.book_append_sheet(wb, ws1, '入库明细');
     XLSX.utils.book_append_sheet(wb, ws2, '数据汇总');
+    XLSX.utils.book_append_sheet(wb, ws3, '图片索引');
     try {
       const data = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
       const blob = new Blob([data], { type: 'application/octet-stream' });
@@ -723,12 +817,95 @@
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      showToast('✅ 导出成功');
+      showToast('✅ 导出成功（含图片索引表）');
     } catch (e) { showToast('❌ 导出失败'); console.error(e); }
   }
-
-  function triggerImportExcel() {
+  function exportToHtml(){
+    if(!records.length) return showToast("无数据导出");
+    let html = '<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8">';
+    html += '<title>服装入库报告</title>';
+    html += '<style>';
+    html += 'body{font-family:system-ui,sans-serif;padding:20px;max-width:1000px;margin:0 auto;background:#f5f5f5}';
+    html += 'h1{text-align:center;color:#1e293b;font-size:22px}';
+    html += '.stats{background:#fff;border-radius:12px;padding:16px;margin:16px 0;box-shadow:0 2px 8px rgba(0,0,0,0.06)}';
+    html += '.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;text-align:center}';
+    html += '.stat-item{background:#f8fafc;border-radius:8px;padding:12px;font-size:13px}';
+    html += '.stat-item .num{font-size:22px;font-weight:800;color:#3b82f6;display:block}';
+    html += '.stat-item .lbl{color:#64748b;font-size:11px;margin-top:4px}';
+    html += 'table{width:100%;border-collapse:collapse;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.06)}';
+    html += 'th{background:#1e293b;color:#fff;padding:10px 8px;font-size:12px;text-align:left;white-space:nowrap}';
+    html += 'td{padding:10px 8px;font-size:13px;border-bottom:1px solid #e2e8f0;vertical-align:middle}';
+    html += 'tr:hover{background:#f1f5f9}';
+    html += 'img.thumb{width:60px;height:60px;object-fit:cover;border-radius:8px;border:1px solid #e2e8f0;display:block}';
+    html += '.no-img{color:#94a3b8;font-size:11px;font-style:italic}';
+    html += '.footer{text-align:center;color:#94a3b8;font-size:11px;margin-top:30px;padding:20px}';
+    html += '@media print{body{background:#fff}table{box-shadow:none}.stats{box-shadow:none}}';
+    html += '</style></head><body>';
+    
+    // 统计信息
+    const totalQty = records.reduce((s,r) => s + (Number(r.stockNum)||1), 0);
+    const totalAmount = records.reduce((s,r) => s + (parseFloat(r.amount)||0), 0);
+    const totalOrders = records.length;
+    const totalCodes = new Set(records.map(r=>r.barcodeId)).size;
+    html += '<h1>📊 服装入库报告</h1>';
+    html += '<div class="stats"><div class="stats-grid">';
+    html += '<div class="stat-item"><span class="num">'+totalOrders+'</span><span class="lbl">入库单数</span></div>';
+    html += '<div class="stat-item"><span class="num">'+totalCodes+'</span><span class="lbl">唯一条码</span></div>';
+    html += '<div class="stat-item"><span class="num">'+totalQty+'</span><span class="lbl">入库数量</span></div>';
+    html += '<div class="stat-item"><span class="num">¥'+totalAmount.toFixed(2)+'</span><span class="lbl">总金额</span></div>';
+    html += '</div></div>';
+    
+    // 表格
+    html += '<table><thead><tr>';
+    html += '<th>序号</th><th>入库时间</th><th>条码</th><th>款号</th><th>尺码</th><th>工序</th><th>数量</th><th>单价</th><th>金额</th><th>款式图片</th>';
+    html += '</tr></thead><tbody>';
+    
+    let imgWarn = false;
+    records.forEach((r, i) => {
+      const idx = i + 1;
+      const hasImg = !!(r.imgBase64 && r.imgBase64.length > 100);
+      if(hasImg) imgWarn = true;
+      html += '<tr>';
+      html += '<td>'+idx+'</td>';
+      html += '<td>'+(r.inboundTime||'')+'</td>';
+      html += '<td>'+(r.barcodeId||'')+'</td>';
+      html += '<td>'+(r.styleNo||'')+'</td>';
+      html += '<td>'+(r.size||'')+'</td>';
+      html += '<td>'+(r.processName||'')+'</td>';
+      html += '<td>'+(r.stockNum||'')+'</td>';
+      html += '<td>¥'+(parseFloat(r.price).toFixed(2))+'</td>';
+      html += '<td>¥'+(parseFloat(r.amount).toFixed(2))+'</td>';
+      html += '<td>';
+      if(hasImg) {
+        html += '<img class="thumb" src="'+r.imgBase64+'" alt="款式图" onclick="window.open(this.src)">';
+      } else {
+        html += '<span class="no-img">无图片</span>';
+      }
+      html += '</td></tr>';
+    });
+    
+    html += '</tbody></table>';
+    if(imgWarn) {
+      html += '<p style="font-size:11px;color:#94a3b8;margin-top:8px;text-align:right">💡 点击图片可查看大图</p>';
+    }
+    html += '<div class="footer">报告生成时间: '+new Date().toLocaleString('zh-CN')+' | 服装扫码入库系统</div>';
+    html += '</body></html>';
+    
+    // 下载
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = '服装入库报告_' + new Date().toLocaleDateString('zh-CN').replace(/\//g, '-') + '.html';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('✅ HTML报告导出成功（图片已内嵌）');
+  }
+function triggerImportExcel() {
     if(html5QrCode) stopScan(true);
+    document.getElementById('importFileInput').value = '';
     document.getElementById('importFileInput').click();
   }
   
@@ -774,7 +951,8 @@
             stockNum: parseFloat(row['入库数量']) || 1,
             price: parseFloat(row['单价(¥)'] || row['单价']) || 0,
             amount: parseFloat(row['金额(¥)'] || row['金额']) || 0,
-            inboundTime: String(row['入库时间'] || new Date().toLocaleString('zh-CN'))
+            inboundTime: String(row['入库时间'] || new Date().toLocaleString('zh-CN')),
+            imgBase64: '' // 导入不再读取图片，防止卡顿溢出
           };
           
           // 重新计算金额确保正确
@@ -820,7 +998,6 @@
     hideImportModal();
     showToast(`✅ 成功导入 ${pendingImportData.length} 条数据（覆盖模式）`);
   }
-
   function showClearModal(){ document.getElementById('clearModal').classList.add('show'); }
   function hideClearModal(){ document.getElementById('clearModal').classList.remove('show'); }
   function clearAll(){ records=[]; saveRecords(); renderAll(); hideClearModal(); document.getElementById('clearConfirmInput').value=''; document.getElementById('clearConfirmBtn').disabled=true; document.getElementById('clearConfirmBtn').style.opacity='0.5'; showToast('已清空所有数据'); }
@@ -832,9 +1009,23 @@
       const saved = localStorage.getItem('garmentRecords');
       if(saved) records = JSON.parse(saved);
     }catch(e){ records = []; }
+    // 读取后过滤超大图片
+    records = records.map(r => {
+      if(r.imgBase64 && r.imgBase64.length > 150000) {
+        r.imgBase64 = '';
+      }
+      return r;
+    })
   }
   function saveRecords(){
-    localStorage.setItem('garmentRecords', JSON.stringify(records));
+    // 存储前过滤超大图片，避免localStorage溢出
+    const saveList = records.map(r => {
+      if(r.imgBase64 && r.imgBase64.length > 150000) {
+        r.imgBase64 = '';
+      }
+      return r;
+    })
+    localStorage.setItem('garmentRecords', JSON.stringify(saveList));
   }
   function sortByTime(){
     records.sort((a,b) => new Date(b.inboundTime) - new Date(a.inboundTime));
@@ -896,10 +1087,17 @@
     }
     let html = '';
     filtered.forEach((r,i)=>{
+      // 图片缩略图 修复Base64引号转义报错
+      let thumbHtml = '';
+      if(r.imgBase64) {
+        const safeImg = safeBase64Encode(r.imgBase64);
+        thumbHtml = `<img class="record-img-thumb" src="${r.imgBase64}" onclick="openImgModal('${safeImg}')" alt="款式图">`;
+      }
       html += `
       <div class="record-item">
         <div class="record-header">
           <span class="barcode-chip">${escapeHtml(r.barcodeId)}</span>
+          ${thumbHtml}
           <span class="time-text">${r.inboundTime}</span>
         </div>
         <div class="detail-grid">
@@ -939,7 +1137,7 @@
   }
   
   window.addEventListener('beforeinstallprompt', e=>e.preventDefault());
-  loadRecords(); bindCalcEvents(); bindStyleEvent(); bindSequenceNoEvent(); calcAmount(); renderAll();
+  loadRecords(); bindCalcEvents(); bindStyleEvent(); bindSequenceNoEvent();
 </script>
 </body>
 </html>
