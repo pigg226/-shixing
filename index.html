@@ -412,15 +412,21 @@
     document.getElementById('price').value = last.price || 0;
     document.getElementById('processName').value = last.processName || '';
     calcAmount();
-    showToast('✅ 同款工序信息已自动填充');
-  }
-  function bindStyleEvent(){
+    if(last.imgBase64 && last.imgBase64.length > 100) {
+      currentStyleImgBase64 = last.imgBase64;
+      document.getElementById('styleImgPreview').src = last.imgBase64;
+      document.getElementById('imgPreviewBox').style.display = 'block';
+      document.getElementById('delImgBtn').style.display = 'inline-flex';
+      showToast('✅ 同款工序、图片已自动填充');
+    } else {
+      showToast('✅ 同款工序信息已自动填充');
+    }
+  }function bindStyleEvent(){
     const style = document.getElementById('styleNo');
     style.addEventListener('input', fillByStyle);
     style.addEventListener('change', fillByStyle);
   }
   function fillBySequenceNo(){
-    clearStyleImg();
     let seq = document.getElementById('sequenceNo').value.trim();
     if(!seq) return;
     let last = records.filter(r => r.sequenceNo === seq).sort((a,b) => new Date(b.inboundTime) - new Date(a.inboundTime))[0];
@@ -431,9 +437,15 @@
     document.getElementById('styleNo').value = last.styleNo || '';
     document.getElementById('price').value = last.price || 0;
     calcAmount();
+    // 序号关联图片自动填充
+    if(last.imgBase64 && last.imgBase64.length > 100) {
+      currentStyleImgBase64 = last.imgBase64;
+      document.getElementById('styleImgPreview').src = last.imgBase64;
+      document.getElementById('imgPreviewBox').style.display = 'block';
+      document.getElementById('delImgBtn').style.display = 'inline-flex';
+    }
     showToast('✅ 序号关联信息已自动填充');
-  }
-  function bindSequenceNoEvent(){
+  }function bindSequenceNoEvent(){
     const seq = document.getElementById('sequenceNo');
     seq.addEventListener('input', fillBySequenceNo);
     seq.addEventListener('change', fillBySequenceNo);
@@ -1009,25 +1021,25 @@ function triggerImportExcel() {
       const saved = localStorage.getItem('garmentRecords');
       if(saved) records = JSON.parse(saved);
     }catch(e){ records = []; }
-    // 读取后过滤超大图片
+    // 读取后过滤超大图片 (深拷贝避免后续引用问题)
     records = records.map(r => {
-      if(r.imgBase64 && r.imgBase64.length > 150000) {
-        r.imgBase64 = '';
+      const copy = {...r};
+      if(copy.imgBase64 && copy.imgBase64.length > 150000) {
+        copy.imgBase64 = '';
       }
-      return r;
+      return copy;
     })
-  }
-  function saveRecords(){
-    // 存储前过滤超大图片，避免localStorage溢出
+  }function saveRecords(){
+    // 存储前过滤超大图片，避免localStorage溢出 (深拷贝避免修改原数据)
     const saveList = records.map(r => {
-      if(r.imgBase64 && r.imgBase64.length > 150000) {
-        r.imgBase64 = '';
+      const copy = {...r};
+      if(copy.imgBase64 && copy.imgBase64.length > 150000) {
+        copy.imgBase64 = '';
       }
-      return r;
+      return copy;
     })
     localStorage.setItem('garmentRecords', JSON.stringify(saveList));
-  }
-  function sortByTime(){
+  }function sortByTime(){
     records.sort((a,b) => new Date(b.inboundTime) - new Date(a.inboundTime));
   }
   function switchDateFilter(days, el){
