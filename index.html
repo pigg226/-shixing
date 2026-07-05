@@ -929,32 +929,99 @@ function renderSummary(){
 // ========== 导出 ==========
 function exportToExcel(){
   if(!records.length) return showToast("无数据");
-  const wb=XLSX.utils.book_new();
-  const data=[['条码','季节','序号','尺码','工序','款号','数量','单价','金额','入库时间']];
-  records.forEach(r=>{
-    data.push([r.barcodeId,r.season,r.sequenceNo,r.size,r.processName,r.styleNo,r.stockNum,r.price,r.amount.toFixed(2),r.inboundTime]);
+  var wb=XLSX.utils.book_new();
+  
+  // 按工序分组
+  var processOrder=[];
+  var processMap={};
+  records.forEach(function(r){
+    var p=r.processName||"未指定";
+    if(!processMap[p]){processMap[p]=[];processOrder.push(p);}
+    processMap[p].push(r);
   });
-  const ws=XLSX.utils.aoa_to_sheet(data);
-  XLSX.utils.book_append_sheet(wb,ws,'入库记录');
-  XLSX.writeFile(wb,`服装入库_${getTodayCN()}.xlsx`);
+
+  // ====== Sheet1: 入库明细 ======
+  var detail=[["入库时间","工序名称","款号","尺码","入库数量","单价(¥)","金额(¥)"]];
+  for(var pi=0;pi<processOrder.length;pi++){
+    var pn=processOrder[pi];
+    var items=processMap[pn];
+    for(var ri=0;ri<items.length;ri++){
+      var r=items[ri];
+      detail.push([r.inboundTime,r.processName,r.styleNo,r.size||"",Number(r.stockNum)||1,parseFloat(r.price)||0,parseFloat(r.amount).toFixed(2)]);
+    }
+    var sQty=items.reduce(function(s,r){return s+(Number(r.stockNum)||1);},0);
+    var sAmt=items.reduce(function(s,r){return s+(parseFloat(r.amount)||0);},0);
+    detail.push(["["+pn+" 小计]","","","",sQty,"",sAmt.toFixed(2)]);
+    detail.push(["","","","","","",""]);
+  }
+  var ws1=XLSX.utils.aoa_to_sheet(detail);
+  var hdrRng=XLSX.utils.decode_range("A1:G1");
+  for(var c=hdrRng.s.c;c<=hdrRng.e.c;c++){
+    var ref=XLSX.utils.encode_cell({r:0,c:c});
+    if(!ws1[ref]) ws1[ref]={};
+    if(!ws1[ref].s) ws1[ref].s={};
+    ws1[ref].s.font={bold:true,color:{rgb:"FFFFFF"}};
+    ws1[ref].s.fill={fgColor:{rgb:"1e293b"}};
+    ws1[ref].s.alignment={horizontal:"center"};
+  }
+  ws1["!cols"]=[{wch:18},{wch:18},{wch:12},{wch:10},{wch:10},{wch:10},{wch:10}];
+  ws1["!autofilter"]={ref:"A1:G"+(detail.length)};
+  ws1["!freeze"]={xSplit:0,ySplit:1};
+  XLSX.utils.book_append_sheet(wb,ws1,"入库明细");
+
+  // ====== Sheet2: 数据汇总 ======
+  var totalQty=records.reduce(function(s,r){return s+(Number(r.stockNum)||1);},0);
+  var totalAmt=records.reduce(function(s,r){return s+(parseFloat(r.amount)||0);},0);
+  var uniqueCodes={};
+  records.forEach(function(r){uniqueCodes[r.barcodeId]=true;});
+  var avgPrice=totalQty>0?(totalAmt/totalQty):0;
+  var maxQty=0;
+  records.forEach(function(r){var n=Number(r.stockNum)||1;if(n>maxQty)maxQty=n;});
+
+  var summary=[];
+  summary.push(["===== 基础信息统计 =====",""]);
+  summary.push(["统计项目","数值"]);
+  summary.push(["总入库单数",records.length]);
+  summary.push(["唯一条码数量",Object.keys(uniqueCodes).length]);
+  summary.push(["总入库数量",totalQty]);
+  summary.push(["总金额(元)",totalAmt.toFixed(2)]);
+  summary.push(["平均单价(元/件)",avgPrice.toFixed(2)]);
+  summary.push(["最大单条入库数量",maxQty]);
+  summary.push([]);
+  summary.push(["===== 各工序明细统计 =====","","",""]);
+  summary.push(["工序名称","总入库数量","总金额(¥)","记录条数"]);
+  for(var pi=0;pi<processOrder.length;pi++){
+    var pn=processOrder[pi];
+    var items=processMap[pn];
+    var pQty=items.reduce(function(s,r){return s+(Number(r.stockNum)||1);},0);
+    var pAmt=items.reduce(function(s,r){return s+(parseFloat(r.amount)||0);},0);
+    summary.push([pn,pQty,pAmt.toFixed(2),items.length]);
+  }
+  var ws2=XLSX.utils.aoa_to_sheet(summary);
+  ws2["!cols"]=[{wch:30},{wch:14},{wch:14},{wch:10}];
+  XLSX.utils.book_append_sheet(wb,ws2,"数据汇总");
+
+  XLSX.writeFile(wb,"服装入库_"+getTodayCN()+".xlsx");
   showToast("✅ 导出成功");
 }
 function exportToHtml(){
   if(!records.length) return showToast("无数据");
-  let html=`<html><head><meta charset="utf-8"><title>入库报告</title><style>body{font-family:system-ui;padding:20px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ddd;padding:8px;text-align:left}th{background:#f5f5f5}</style></head><body><h2>服装入库报告 ${getTodayCN()}</h2><table><tr><th>条码</th><th>款号</th><th>尺码</th><th>工序</th><th>数量</th><th>金额</th><th>时间</th></tr>`;
-  records.forEach(r=>{
-    html+=`<tr><td>${escapeHtml(r.barcodeId)}</td><td>${escapeHtml(r.styleNo)}</td><td>${escapeHtml(r.size)}</td><td>${escapeHtml(r.processName)}</td><td>${r.stockNum}</td><td>¥${r.amount.toFixed(2)}</td><td>${r.inboundTime}</td></tr>`;
+  var hasImg=false;
+  records.forEach(function(r){if(r.imgBase64)hasImg=true;});
+  var html='<html><head><meta charset="utf-8"><title>入库报告</title><style>body{font-family:system-ui;padding:20px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ddd;padding:8px;text-align:left;vertical-align:middle}th{background:#f5f5f5}img{max-width:100px;max-height:100px;display:block}</style></head><body><h2>服装入库报告 '+getTodayCN()+'</h2><table><tr><th>条码</th><th>款号</th><th>尺码</th><th>工序</th><th>数量</th><th>金额</th><th>时间</th>'+(hasImg?'<th>图片</th>':'')+'</tr>';
+  records.forEach(function(r){
+    html+='<tr><td>'+escapeHtml(r.barcodeId)+'</td><td>'+escapeHtml(r.styleNo)+'</td><td>'+escapeHtml(r.size)+'</td><td>'+escapeHtml(r.processName)+'</td><td>'+r.stockNum+'</td><td>'+r.amount.toFixed(2)+'</td><td>'+r.inboundTime+'</td>';
+    if(hasImg) html+='<td>'+(r.imgBase64?'<img src="'+r.imgBase64+'" />':'')+'</td>';
+    html+='</tr>';
   });
-  html+=`</table></body></html>`;
-  const blob=new Blob([html],{type:'text/html'});
-  const a=document.createElement('a');
+  html+='</table></body></html>';
+  var blob=new Blob([html],{type:"text/html"});
+  var a=document.createElement("a");
   a.href=URL.createObjectURL(blob);
-  a.download=`服装入库_${getTodayCN()}.html`;
+  a.download="服装入库_"+getTodayCN()+".html";
   a.click();
   showToast("✅ HTML导出成功");
 }
-
-// ========== 导入 ==========
 function triggerImportExcel(){
   if(html5QrCode) stopScan();
   document.getElementById('importFileInput').value='';
@@ -971,26 +1038,81 @@ function handleImportExcel(e){
   r.onload=ev=>{
     try{
       const wb=XLSX.read(ev.target.result,{type:'array'});
-      const data=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
-      const arr=[];
-      data.forEach(function(row){
-        if(!row["入库时间"]) return;
-        var _b=row["条码"]||row["条码ID"]||"IMP"+Date.now();
-        var _s=row["季节"]||"";
-        var _seq=row["序号"]||"";
-        var _sz=row["尺码"]||"";
-        var _p=row["工序"]||row["工序名称"]||row["工序名"]||"未指定";
-        var _st=row["款号"]||"";
-        var _q=parseFloat(row["数量"])||parseFloat(row["入库数量"])||1;
-        var _pr=parseFloat(row["单价"])||parseFloat(row["单价(¥)"])||parseFloat(row["单价(元)"])||0;
-        var _t=row["入库时间"]||new Date().toLocaleString();
-        arr.push({id:Date.now()+Math.random(),barcodeId:_b,season:_s,sequenceNo:_seq,size:_sz,processName:_p,styleNo:_st,stockNum:_q,price:_pr,amount:_q*_pr,inboundTime:_t,imgBase64:""});
-      });
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      var raw=XLSX.utils.sheet_to_json(ws,{header:1,defval:""});
+      var hdrIdx=-1;
+      for(var hi=0;hi<raw.length;hi++){
+        var row=raw[hi];
+        if(!row||!row.length) continue;
+        var txt=row.join(" ");
+        if(txt.indexOf("入库时间")>=0||txt.indexOf("条码")>=0||txt.indexOf("工序")>=0){
+          hdrIdx=hi;
+          break;
+        }
+      }
+      if(hdrIdx<0){showToast("❌ 未找到表头");return;}
+
+      var headers=raw[hdrIdx];
+      var colMap={};
+      for(var hi=0;hi<headers.length;hi++){
+        var h=(headers[hi]||"").toString().trim();
+        if(!h) continue;
+        if(/入库时间|时间|日期/.test(h)) colMap.time=hi;
+        if(/条码|条码ID|barcode/i.test(h)) colMap.barcode=hi;
+        if(/季节/.test(h)) colMap.season=hi;
+        if(/序号|自编序号/.test(h)) colMap.seq=hi;
+        if(/尺码|尺寸|size/i.test(h)) colMap.size=hi;
+        if(/工序|工序名称|工序名|process/i.test(h)) colMap.process=hi;
+        if(/款号|款号|style/i.test(h)) colMap.style=hi;
+        if(/数量|入库数量|件数|stock/i.test(h)) colMap.qty=hi;
+        if(/单价|单价\(¥|单价\(元|price/i.test(h)) colMap.price=hi;
+        if(/金额|金额\(¥|金额\(元|amount|总金额|合计/i.test(h)) colMap.amount=hi;
+      }
+
+      var arr=[];
+      for(var ri=hdrIdx+1;ri<raw.length;ri++){
+        var row=raw[ri];
+        if(!row||!row.length) continue;
+        var rowTxt=row.join("").toString().trim();
+        if(rowTxt.indexOf("=====")>=0||rowTxt.indexOf("小计")>=0||!rowTxt) continue;
+        var _t="";
+        if(colMap.time!==undefined&&row[colMap.time]){
+          var tv=row[colMap.time];
+          if(typeof tv==="number"){
+            var d=XLSX.SSF.parse_date_code(tv);
+            if(d) _t=d.y+"-"+(d.m<10?"0"+d.m:d.m)+"-"+(d.d<10?"0"+d.d:d.d)+" "+(d.H<10?"0"+d.H:d.H)+":"+(d.M<10?"0"+d.M:d.M)+":"+(d.S<10?"0"+d.S:d.S);
+          } else {_t=tv.toString().trim();}
+        }
+        if(!_t && row[0] && typeof row[0]==="number" && row[0]>40000 && row[0]<60000){
+          var d=XLSX.SSF.parse_date_code(row[0]);
+          if(d) _t=d.y+"-"+(d.m<10?"0"+d.m:d.m)+"-"+(d.d<10?"0"+d.d:d.d)+" "+(d.H<10?"0"+d.H:d.H)+":"+(d.M<10?"0"+d.M:d.M)+":"+(d.S<10?"0"+d.S:d.S);
+          colMap.time=0;
+        }
+        if(!_t) continue;
+        
+        var _b=colMap.barcode!==undefined?row[colMap.barcode].toString().trim():"IMP"+Date.now()+Math.random();
+        var _s=colMap.season!==undefined?row[colMap.season].toString().trim():"";
+        var _seq=colMap.seq!==undefined?row[colMap.seq].toString().trim():"";
+        var _sz=colMap.size!==undefined?row[colMap.size].toString().trim():"";
+        var _p=colMap.process!==undefined?row[colMap.process].toString().trim():"未指定";
+        var _st=colMap.style!==undefined?row[colMap.style].toString().trim():"";
+        if(!_st) continue;
+        var _q=colMap.qty!==undefined?(parseFloat(row[colMap.qty])||1):1;
+        var _pr=colMap.price!==undefined?(parseFloat(row[colMap.price])||0):0;
+        var _amt=colMap.amount!==undefined?(parseFloat(row[colMap.amount])||_q*_pr):_q*_pr;
+        
+        arr.push({id:Date.now()+Math.random(),barcodeId:_b,season:_s,sequenceNo:_seq,size:_sz,processName:_p,styleNo:_st,stockNum:_q,price:_pr,amount:_amt,inboundTime:_t,imgBase64:""});
+      }
+
       pendingImportData=arr;
       document.getElementById('importCount').textContent=arr.length;
-      document.getElementById('importModal').classList.add('show');
+      if(arr.length>0){
+        document.getElementById('importModal').classList.add('show');
+      }else{
+        showToast("⚠️ 未找到有效数据行");
+      }
     }catch(e){
-      showToast("❌ 解析失败");
+      showToast("❌ 解析失败: "+e.message);
     }
   };
   r.readAsArrayBuffer(file);
