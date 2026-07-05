@@ -1121,7 +1121,7 @@ function triggerImportExcel() {
           <div class="detail-tag"><span>金额</span>¥${parseFloat(r.amount).toFixed(2)}</div>
         </div>
         <div class="record-actions">
-          <button class="btn btn-outline btn-sm" onclick="modifyRecord(${i})">✏️ 修改</button>
+          <button class="btn btn-outline btn-sm" onclick="modifyRecord(${i})">✏️ 修改</button><button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger);" onclick="deleteRecord(${i})">🗑️ 删除</button>
         </div>
       </div>`;
     });
@@ -1141,6 +1141,39 @@ function triggerImportExcel() {
       msg.style.display = 'block';
     }
   }
+  function deleteRecord(idx){
+    if(!confirm('确定要删除第 ' + (idx+1) + ' 条记录吗？此操作不可恢复！')) return;
+    records.splice(idx, 1);
+    saveRecords();
+    sortByTime();
+    renderAll();
+    showToast('🗑️ 记录已删除');
+  }
+  function showToast(msg){
+    const t = document.createElement('div');
+    t.className = 'toast-msg'; t.textContent = msg;
+    t.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#1e293b;color:#fff;padding:10px 24px;border-radius:10px;font-size:14px;z-index:9999;opacity:0;transition:opacity 0.3s;box-shadow:0 4px 12px rgba(0,0,0,0.3);';
+    document.body.appendChild(t);
+    requestAnimationFrame(()=>{ t.style.opacity='1'; });
+    setTimeout(()=>{ t.style.opacity='0'; setTimeout(()=>t.remove(),300); }, 2000);
+  }
+  function showLazyImg(el){
+    const imgData = el.getAttribute('data-img');
+    if(!imgData) return;
+    el.innerHTML = '<img class="record-img-thumb" src="' + imgData + '" style="width:50px;height:50px;object-fit:cover;border-radius:8px;" onclick="event.stopPropagation();openImgModal(\'' + safeBase64Encode(imgData) + '\')" alt="款式图">';
+    el.style.background = 'transparent';
+  }
+  function safeBase64Encode(str) {
+    return str.replace(/\\\\/g, '\\\\\\\\').replace(/'/g, "\\\\'");
+  }
+  function openImgModal(base64) {
+    document.getElementById('fullImgSrc').src = base64;
+    document.getElementById('imgFullModal').classList.add('show');
+  }
+  function closeImgModal() {
+    document.getElementById('imgFullModal').classList.remove('show');
+    document.getElementById('fullImgSrc').src = '';
+  }
   function renderAll(){
     renderStats();
     renderProcessSummary();
@@ -1149,7 +1182,9 @@ function triggerImportExcel() {
   }
   
   window.addEventListener('beforeinstallprompt', e=>e.preventDefault());
-  loadRecords(); bindCalcEvents(); bindStyleEvent(); bindSequenceNoEvent();
+  loadRecords(); renderAll(); bindCalcEvents(); bindStyleEvent(); bindSequenceNoEvent();
 </script>
 </body>
 </html>
+
+
