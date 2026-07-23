@@ -1,0 +1,1168 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>服装扫码入库系统</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="theme-color" content="#1e293b">
+  
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script>
+    if (typeof XLSX === 'undefined') {
+      document.write('<script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"><\/script>');
+    }
+  </script>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    :root {
+      --bg: #f1f5f9;
+      --card: #ffffff;
+      --primary: #3b82f6;
+      --success: #10b981;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --text: #0f172a;
+      --text-light: #64748b;
+      --border: #e2e8f0;
+      --shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.02);
+    }
+    body {
+      font-family: system-ui, -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      background: var(--bg);
+      padding: 16px;
+      max-width: 520px;
+      margin: 0 auto;
+      min-height: 100vh;
+      padding-bottom: 40px;
+    }
+    .header { text-align: center; margin-bottom: 16px; }
+    .header h1 { font-size: 24px; font-weight: 800; color: var(--primary); }
+    .sub { font-size: 12px; color: var(--text-light); margin-top: 4px; }
+    .btn-group { display: flex; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      padding: 12px 16px; font-size: 14px; font-weight: 600; border: none;
+      border-radius: 60px; cursor: pointer; transition: 0.2s; flex: 1;
+      background: var(--card); color: var(--text); box-shadow: var(--shadow);
+      min-width: fit-content;
+    }
+    .btn:active { transform: scale(0.96); }
+    .btn-primary { background: var(--primary); color: white; box-shadow: 0 4px 12px rgba(59,130,246,0.3); }
+    .btn-success { background: var(--success); color: white; }
+    .btn-warning { background: var(--warning); color: white; }
+    .btn-outline { background: transparent; border: 1.5px solid var(--primary); color: var(--primary); }
+    .btn-danger { background: transparent; border: 1.5px solid var(--danger); color: var(--danger); }
+    .btn-sm { padding: 8px 14px; font-size: 12px; flex: none; }
+    .switch-bar {
+      background: var(--card); border-radius: 40px; padding: 8px 18px;
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 16px; box-shadow: var(--shadow);
+    }
+    .switch-label { font-size: 13px; font-weight: 500; display: flex; gap: 6px; align-items: center; }
+    .switch { position: relative; width: 48px; height: 26px; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #cbd5e1; border-radius: 34px; transition: 0.2s; }
+    .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 3px; bottom: 3px; background-color: white; border-radius: 50%; transition: 0.2s; }
+    input:checked + .slider { background-color: var(--primary); }
+    input:checked + .slider:before { transform: translateX(22px); }
+    #reader { width: 100%; border-radius: 24px; overflow: hidden; margin: 8px 0; border: 2px solid var(--primary); display: none; box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
+    .scan-status { text-align: center; font-size: 12px; color: var(--text-light); margin: 6px 0; }
+    .close-scan { text-align: center; margin: 6px 0; display: none; }
+    .card { background: var(--card); border-radius: 20px; padding: 20px; margin: 14px 0; box-shadow: var(--shadow); }
+    .card-title { font-size: 18px; font-weight: 700; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
+    .badge { background: #d1fae5; color: #065f46; padding: 4px 12px; border-radius: 30px; font-size: 11px; font-weight: 600; }
+    .form-grid { display: flex; flex-direction: column; gap: 14px; }
+    .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .input-field label { font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-light); letter-spacing: 0.5px; margin-bottom: 4px; display: block; }
+    .input-field input, .input-field select { width: 100%; padding: 12px; font-size: 14px; border: 1.5px solid var(--border); border-radius: 12px; background: white; transition: 0.2s; }
+    .input-field input:focus, .input-field select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+    .input-field input[readonly] { background: #f1f5f9; color: #334155; }
+    .check-row {display:flex;align-items:center;gap:8px;margin-top:6px;font-size:13px;color:var(--text-light);}
+    .stats-grid { display: flex; gap: 12px; margin: 16px 0; }
+    .stat-block { flex: 1; background: var(--card); padding: 14px; border-radius: 16px; text-align: center; box-shadow: var(--shadow); }
+    .stat-number { font-size: 26px; font-weight: 800; color: var(--primary); }
+    .section-header { display: flex; justify-content: space-between; align-items: baseline; margin: 20px 0 12px; }
+    .record-item { 
+      background: var(--card); border-radius: 16px; padding: 16px; 
+      margin-bottom: 10px; box-shadow: var(--shadow);
+    }
+    .record-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 6px; }
+    .barcode-chip { font-family: monospace; background: #eef2ff; padding: 4px 12px; border-radius: 30px; font-size: 12px; font-weight: 700; color: var(--primary); }
+    .time-text { font-size: 10px; color: #94a3b8; }
+    .detail-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin: 10px 0; }
+    .detail-tag { background: #f8fafc; padding: 6px 8px; border-radius: 10px; font-size: 12px; text-align:center; }
+    .detail-tag span:first-child { color: var(--text-light); margin-right: 4px; font-size:11px; }
+    .record-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; border-top: 1px solid var(--border); padding-top: 10px; }
+    .empty-state { text-align: center; padding: 48px 20px; color: #94a3b8; }
+    
+    .summary-section { margin-bottom: 16px; border-radius: 8px; overflow: hidden; border: 1px solid #ddd; }
+    .summary-header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 12px 16px; background: #f5f5f5; cursor: pointer;
+      border-bottom: 1px solid #ddd;
+    }
+    .summary-header:hover { background: #eaeaea; }
+    .summary-header .left { display: flex; align-items: center; gap: 8px; }
+    .summary-header .arrow { transition: transform 0.2s; }
+    .summary-header.open .arrow { transform: rotate(90deg); }
+    .summary-body { display: none; background: #fff; }
+    .summary-body.open { display: block; }
+    .summary-row {
+      display: grid; grid-template-columns: 2fr 1fr 1fr;
+      padding: 10px 16px; border-bottom: 1px solid #eee;
+      font-size: 14px;
+    }
+    .summary-total {
+      display: grid; grid-template-columns: 2fr 1fr 1fr;
+      padding: 10px 16px; background: #f0f0f0; font-weight: bold;
+    }
+    .detail-row {
+      display: grid; grid-template-columns: 1fr 1fr 1fr;
+      padding: 8px 16px; font-size: 12px; color: #666; background: #fafafa;
+      border-top: 1px solid #eee;
+    }
+    .toast {
+      position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+      background: #1e293b; color: white; padding: 10px 20px; border-radius: 40px;
+      font-size: 13px; font-weight: 500; z-index: 1100;
+      animation: fadeOutUp 2.2s forwards; white-space: nowrap;
+    }
+    @keyframes fadeOutUp {
+      0% { opacity: 0; transform: translateX(-50%) translateY(20px); }
+      15% { opacity: 1; transform: translateX(-50%) translateY(0); }
+      80% { opacity: 1; }
+      100% { opacity: 0; visibility: hidden; }
+    }
+    .modal-mask { display: none; position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); z-index: 1000; align-items: center; justify-content: center; }
+    .modal-mask.show { display: flex; }
+    .summary-tabs { display: flex; gap: 6px; margin-bottom: 14px; }
+    .summary-tab { padding: 8px 20px; border-radius: 20px; border: 1.5px solid var(--border); background: var(--card); cursor: pointer; font-size: 13px; font-weight: 600; transition: 0.2s; flex: 1; text-align: center; }
+    .summary-tab.active { background: var(--primary); color: white; border-color: var(--primary); }
+    .summary-row-line { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+    .summary-row-line.total { font-weight: 700; border-top: 2px solid var(--primary); margin-top: 4px; padding-top: 10px; }
+    .filter-bar { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+    .filter-chip { padding: 6px 14px; border-radius: 20px; border: 1.5px solid var(--border); background: var(--card); cursor: pointer; font-size: 12px; font-weight: 500; transition: 0.2s; }
+    .filter-chip.active { background: var(--primary); color: white; border-color: var(--primary); }
+    .clear-confirm-input { width: 100%; padding: 10px; margin-top: 10px; border: 1.5px solid var(--danger); border-radius: 10px; font-size: 14px; text-align: center; outline: none; }
+    .clear-confirm-input:focus { box-shadow: 0 0 0 3px rgba(239,68,68,0.15); }
+    .modal-box { background: white; width: 300px; border-radius: 20px; padding: 24px; text-align: center; }
+    .ocr-loading { position: fixed; bottom: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.8); color: white; padding: 12px 24px; border-radius: 60px; z-index: 1200; font-size: 14px; }
+    #ocrFileInput { display: none; }
+    #imgUploadInput { display: none; }
+    .img-full-modal {
+      z-index: 2000;
+      background: rgba(0,0,0,0.9);
+    }
+    .img-full-modal img {
+      max-width: 90vw;
+      max-height: 90vh;
+    }
+    .record-img-thumb {
+      width: 60px;
+      height: 60px;
+      object-fit: cover;
+      border-radius: 8px;
+      cursor: pointer;
+      border: 1px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+<div class="header">
+  <h1>📦 服装扫码入库系统</h1>
+  <div class="sub">扫码入库 | 拍照识别标签 | 连续扫码模式 | 款式照片上传</div>
+</div>
+<div class="btn-group">
+  <button class="btn btn-primary" onclick="startSingleScan()" id="scanBtn">📷 扫码入库</button>
+  <button class="btn btn-success" onclick="startContinuousScan()" id="continuousBtn">🔄 连续扫码入库</button>
+  <button class="btn btn-warning" onclick="triggerOCRUpload()">📸 拍照识别标签</button>
+  <button class="btn btn-outline" onclick="exportToExcel()">📎 导出Excel</button>
+  <button class="btn btn-outline" onclick="exportToHtml()">🖼️ 导出HTML(含图)</button>
+  <button class="btn btn-outline" onclick="triggerImportExcel()">📥 导入</button>
+</div>
+<input type="file" id="ocrFileInput" accept="image/*" capture="environment" onchange="handleOCRImage(event)">
+<input type="file" id="importFileInput" accept=".xlsx,.xls" style="display:none" onchange="handleImportExcel(event)">
+<input type="file" id="imgUploadInput" accept="image/*" capture="environment" onchange="handleUploadStyleImg(event)">
+<div class="switch-bar">
+  <div class="switch-label">⚙️ 连续扫码时沿用配置</div>
+  <label class="switch"><input type="checkbox" id="keepConfigSwitch" checked><span class="slider"></span></label>
+</div>
+<div class="scan-status" id="scanStatus"></div>
+<div class="close-scan" id="closeScanArea">
+  <button class="btn btn-outline btn-sm" onclick="stopScan(true)">✕ 关闭扫码器</button>
+</div>
+<div id="reader"></div>
+<div class="card" id="formCard" style="display:none;">
+  <div class="card-title">
+    📝 入库明细
+    <span class="badge" id="scannedBadge" style="display:none;">✓ 已识别</span>
+  </div>
+  <div class="form-grid">
+    <div class="input-field"><label>🔖 条码ID</label><input type="text" id="barcodeId" readonly placeholder="扫码/识别后自动填充"></div>
+    <div class="img-upload-wrap" style="border:1.5px dashed var(--border);border-radius:12px;padding:12px;">
+      <label style="font-size:11px;font-weight:700;color:var(--text-light);display:block;margin-bottom:8px;">👕 款式照片（可选）</label>
+      <div class="img-preview-box" id="imgPreviewBox" style="width:100%;max-height:180px;border-radius:8px;overflow:hidden;margin-bottom:10px;display:none;">
+        <img id="styleImgPreview" src="" alt="款式图" style="width:100%;height:auto;display:block;">
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-sm btn-outline" onclick="triggerStyleImgUpload()">📷 拍照/相册上传</button>
+        <button class="btn btn-sm btn-danger" onclick="clearStyleImg()" id="delImgBtn" style="display:none;">删除图片</button>
+      </div>
+    </div>
+    
+    <div class="row-2">
+      <div class="input-field">
+        <label>季节</label>
+        <select id="season">
+          <option value="">请选择</option>
+          <option value="春">春</option>
+          <option value="夏">夏</option>
+          <option value="秋">秋</option>
+          <option value="冬">冬</option>
+        </select>
+      </div>
+      <div class="input-field">
+        <label>自编序号</label>
+        <input type="text" id="sequenceNo" placeholder="手动输入数字/编号">
+      </div>
+    </div>
+    <div class="input-field">
+      <label>📏 尺码</label>
+      <input list="sizeList" id="size" placeholder="选择或手动输入尺码">
+      <datalist id="sizeList">
+        <option value="XS"></option>
+        <option value="S"></option>
+        <option value="M"></option>
+        <option value="L"></option>
+        <option value="XL"></option>
+        <option value="XXL"></option>
+        <option value="XXXL"></option>
+        <option value="XXXXL"></option>
+        <option value="80"></option>
+        <option value="90"></option>
+        <option value="100"></option>
+        <option value="110"></option>
+        <option value="120"></option>
+        <option value="130"></option>
+        <option value="140"></option>
+        <option value="150"></option>
+        <option value="160"></option>
+        <option value="170"></option>
+        <option value="175"></option>
+        <option value="180"></option>
+      </datalist>
+    </div>
+    <div class="input-field"><label>🏷️ 工序名称</label><input type="text" id="processName" placeholder="如：查片/查披肩"></div>
+    <div class="input-field"><label>👔 款号</label><input type="text" id="styleNo" placeholder="款号（如：Rxxxx）"></div>
+    <div class="input-field">
+      <label>📦 入库数量</label>
+      <input type="number" id="stockNum" value="1" min="1" placeholder="自定义入库数量">
+      <div class="check-row">
+        <input type="checkbox" id="inheritStockNum" checked>
+        <label>下次扫码继承该数量</label>
+      </div>
+    </div>
+    <div class="row-2">
+      <div class="input-field"><label>💰 单价</label><input type="number" id="price" value="0" min="0" step="0.01"></div>
+      <div class="input-field"><label>💵 合计金额</label><input type="text" id="amount" readonly value="0.00"></div>
+    </div>
+    <div class="input-field"><label>⏱️ 入库时间</label><input type="text" id="inboundTime" readonly></div>
+    <button class="btn btn-primary" onclick="submitInbound()" style="margin-top: 4px;">✅ 确认入库</button>
+  </div>
+</div>
+<div class="stats-grid">
+  <div class="stat-block"><div class="stat-number" id="statTotal">0</div><div>总件数</div></div>
+  <div class="stat-block"><div class="stat-number" id="statBarcodes">0</div><div>唯一条码</div></div>
+  <div class="stat-block"><div class="stat-number" id="statToday">0</div><div>今日入库</div></div>
+</div>
+<div class="section-header"><h3>📋 工序工资汇总（点击展开）</h3><span style="font-size:12px">按工序+款号统计</span></div>
+<div id="processSummary" class="card" style="padding: 12px;"></div>
+<div class="card" style="padding:16px;">
+  <div class="card-title">📊 数据汇总</div>
+  <div class="summary-tabs">
+    <div class="summary-tab active" onclick="switchSummaryTab(this, 0)">今日</div>
+    <div class="summary-tab" onclick="switchSummaryTab(this, 1)">本月</div>
+    <div class="summary-tab" onclick="switchSummaryTab(this, 2)">今年</div>
+  </div>
+  <div id="summaryContent" style="min-height:60px;"></div>
+</div>
+<div class="section-header"><h3>📋 入库记录</h3><span id="recordCount">0 条</span></div>
+<div class="filter-bar" id="filterBar">
+  <div class="filter-chip active" onclick="switchDateFilter(7,this)">最近7天</div>
+  <div class="filter-chip" onclick="switchDateFilter(0,this)">今日</div>
+  <div class="filter-chip" onclick="switchDateFilter(30,this)">本月</div>
+  <div class="filter-chip" onclick="switchDateFilter(-1,this)">全部</div>
+</div>
+<div id="history"></div>
+<div style="display:flex; gap:12px; margin-top: 12px;">
+  <button class="btn btn-warning" onclick="exportToExcel()" style="flex:1;">📥 导出 Excel</button>
+  <button class="btn btn-outline btn-sm" onclick="clearTodayRecord()">🗑️ 清空本日</button>
+  <button class="btn btn-danger btn-sm" onclick="showClearModal()">清空全部</button></div>
+<div style="text-align:center;margin:8px 0;"><button class="btn btn-outline btn-sm" id="loadMore" onclick="loadMore()" style="display:none;width:100%;padding:10px;">📄 加载更多</button>
+</div>
+<div class="modal-mask img-full-modal" id="imgFullModal" onclick="closeImgModal()">
+  <img id="fullImgSrc" src="" onclick="event.stopPropagation()" />
+</div>
+<div class="modal-mask" id="clearModal"><div class="modal-box"><h4>⚠️ 确认清空全部</h4><p>所有入库数据将永久删除，建议先导出Excel备份。</p><div class="btn-group" style="margin-top:8px;"><button class="btn btn-warning btn-sm" onclick="exportToExcel()" style="flex:1;">📥 先导出备份</button></div><input class="clear-confirm-input" id="clearConfirmInput" type="text" placeholder="请输入“确认删除”四个字" oninput="checkClearConfirm()" autocomplete="off"><p id="clearConfirmMsg" style="font-size:11px;color:var(--danger);margin-top:6px;display:none;">还需输入"确认删除"</p><div class="btn-group" style="margin-top:10px;"><button class="btn btn-outline btn-sm" onclick="hideClearModal()">取消</button><button class="btn btn-danger btn-sm" id="clearConfirmBtn" onclick="clearAll()" disabled style="opacity:0.5;">确认清空</button></div></div></div>
+<div class="modal-mask" id="todayClearModal"><div class="modal-box"><h4>⚠️ 确认清空本日</h4><p>仅删除今天入库记录，保留历史数据。</p><div class="btn-group" style="margin-top:12px;"><button class="btn btn-outline btn-sm" onclick="hideTodayClearModal()">取消</button><button class="btn btn-warning btn-sm" onclick="clearToday()">确认清空本日</button></div></div></div>
+<div class="modal-mask" id="dupModal"><div class="modal-box"><h4>⚠️ 条码重复</h4><p id="dupMsg"></p><div class="btn-group" style="margin-top:12px;"><button class="btn btn-success btn-sm" onclick="dupContinue()">继续新增</button><button class="btn btn-primary btn-sm" onclick="dupReplace()">覆盖数据</button></div></div></div>
+<div class="modal-mask" id="importModal"><div class="modal-box"><h4>📥 导入数据</h4><p id="importMsg">检测到 <strong id="importCount">0</strong> 条数据</p><p style="font-size:12px;color:var(--text-light);margin-top:8px;">请选择导入方式</p><div class="btn-group" style="margin-top:12px;"><button class="btn btn-success btn-sm" onclick="importMerge()">合并导入</button><button class="btn btn-warning btn-sm" onclick="importOverwrite()">覆盖导入</button><button class="btn btn-outline btn-sm" onclick="hideImportModal()">取消</button></div></div></div>
+<script>
+// ========== IndexedDB 数据库封装 ==========
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open('GarmentDB', 1);
+    request.onupgradeneeded = (event) => {
+      const db = event.target.result;
+      if (!db.objectStoreNames.contains('records')) {
+        db.createObjectStore('records', { keyPath: 'id' });
+      }
+    };
+    request.onsuccess = (event) => resolve(event.target.result);
+    request.onerror = (event) => reject(event.target.error);
+  });
+}
+
+// 【修复版】保存：先localStorage兜底，不先清空IDB防止数据全丢
+async function saveRecords() {
+  // 【修复】localStorage和IDB分开处理，防止一处失败导致数据全丢
+  try {
+    localStorage.setItem('garmentRecordsBackup', JSON.stringify(records.map(r => ({...r, imgBase64: r.imgBase64 ? '(有图片)' : ''}))));
+  } catch (e) {
+    try {
+      localStorage.setItem('garmentRecordsBackup', JSON.stringify(records.map(r => ({...r, imgBase64: ''}))));
+    } catch (e2) {} 
+  }
+  try {
+    const db = await openDB();
+    const store = db.transaction('records', 'readwrite').objectStore('records');
+    for (const record of records) {
+      await new Promise((resolve, reject) => {
+        const req = store.put(record);
+        req.onsuccess = resolve;
+        req.onerror = () => reject(req.error);
+      });
+    }
+    await new Promise((resolve, reject) => {
+      store.transaction.oncomplete = resolve;
+      store.transaction.onerror = () => reject(store.transaction.error);
+    });
+  } catch (e) {
+    console.error('IndexedDB保存失败', e);
+  }
+}
+
+// 【修复版】加载：优先localStorage，再合并IDB数据
+async function loadRecords() {
+  records = [];
+  // 优先从IndexedDB读取完整数据（含图片）
+  try {
+    const db = await openDB();
+    const store = db.transaction('records', 'readonly').objectStore('records');
+    const allRecords = await new Promise((resolve, reject) => {
+      const req = store.getAll();
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+    if (allRecords && allRecords.length > 0) {
+      records = allRecords;
+      // 回写localStorage备份（不含大图片以免超限）
+      try {
+        localStorage.setItem('garmentRecordsBackup', JSON.stringify(records.map(r => ({...r, imgBase64: r.imgBase64 ? '(有图片)' : ''}))));
+      } catch (e) {} 
+      return;
+    }
+  } catch (e) {
+    console.error('读取IndexedDB失败，尝试localStorage兜底', e);
+  }
+  // 兜底：从localStorage读取
+  const local = localStorage.getItem('garmentRecordsBackup');
+  if (local) {
+    try {
+      records = JSON.parse(local);
+    } catch (e) {
+      records = [];
+    }
+  }
+}
+
+let html5QrCode = null;
+let records = [];
+let editingIndex = -1;
+let lastStockNum = 1;
+let isContinuousMode = false;
+let currentDupBarcode = '';
+let ocrWorker = null;
+let pendingImportData = [];
+let currentStyleImgBase64 = '';
+let currentDateFilter = 7;
+// ========== 图片上传 ==========
+function triggerStyleImgUpload() {
+  document.getElementById('imgUploadInput').value = '';
+  document.getElementById('imgUploadInput').click();
+}
+function clearStyleImg() {
+  currentStyleImgBase64 = '';
+  document.getElementById('styleImgPreview').src = '';
+  document.getElementById('imgPreviewBox').style.display = 'none';
+  document.getElementById('delImgBtn').style.display = 'none';
+}
+function handleUploadStyleImg(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function (e) {
+    compressImage(e.target.result, 800, 800, (base64) => {
+      currentStyleImgBase64 = base64;
+      document.getElementById('styleImgPreview').src = base64;
+      document.getElementById('imgPreviewBox').style.display = 'block';
+      document.getElementById('delImgBtn').style.display = 'inline-flex';
+    })
+  }
+  reader.readAsDataURL(file);
+  document.getElementById('imgUploadInput').value = '';
+}
+// 【修复】降低图片质量减少localStorage超限
+function compressImage(base64Str, maxWidth, maxHeight, callback) {
+  const img = new Image();
+  img.src = base64Str;
+  img.onerror = () => callback(base64Str);
+  img.onload = function() {
+    let w = img.width, h = img.height;
+    if (w > maxWidth) { h = h * maxWidth / w; w = maxWidth; }
+    if (h > maxHeight) { w = w * maxHeight / h; h = maxHeight; }
+    const canvas = document.createElement('canvas');
+    canvas.width = w; canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0,0,w,h);
+    callback(canvas.toDataURL('image/jpeg', 0.4));
+  };
+}
+function openImgModal(base64) {
+  document.getElementById('fullImgSrc').src = base64;
+  document.getElementById('imgFullModal').classList.add('show');
+}
+function closeImgModal() {
+  document.getElementById('imgFullModal').classList.remove('show');
+  document.getElementById('fullImgSrc').src = '';
+}
+// ========== 计算金额 ==========
+function calcAmount(){
+  let num = parseFloat(document.getElementById('stockNum').value) || 1;
+  let price = parseFloat(document.getElementById('price').value) || 0;
+  document.getElementById('amount').value = (num * price).toFixed(2);
+}
+function bindCalcEvents(){
+  const num = document.getElementById('stockNum');
+  const price = document.getElementById('price');
+  [num, price].forEach(el => {
+    el.addEventListener('input', calcAmount);
+    el.addEventListener('change', calcAmount);
+  });
+}
+// ========== 自动填充 ==========
+function fillByStyle(){
+  let style = document.getElementById('styleNo').value.trim();
+  if(!style) return;
+  let last = records.filter(r=>r.styleNo===style).sort((a,b)=>new Date(b.inboundTime)-new Date(a.inboundTime))[0];
+  if(!last) return;
+  document.getElementById('price').value = last.price || 0;
+  document.getElementById('processName').value = last.processName || '';
+  calcAmount();
+  if(last.imgBase64) {
+    currentStyleImgBase64 = last.imgBase64;
+    document.getElementById('styleImgPreview').src = last.imgBase64;
+    document.getElementById('imgPreviewBox').style.display = 'block';
+    document.getElementById('delImgBtn').style.display = 'inline-flex';
+  }
+}
+function bindStyleEvent(){
+  const style = document.getElementById('styleNo');
+  style.addEventListener('input', fillByStyle);
+  style.addEventListener('change', fillByStyle);
+}
+function fillBySequenceNo(){
+  let seq = document.getElementById('sequenceNo').value.trim();
+  if(!seq) return;
+  let last = records.filter(r => r.sequenceNo === seq).sort((a,b) => new Date(b.inboundTime) - new Date(a.inboundTime))[0];
+  if(!last) return;
+  document.getElementById('season').value = last.season || '';
+  document.getElementById('size').value = last.size || '';
+  document.getElementById('processName').value = last.processName || '';
+  document.getElementById('styleNo').value = last.styleNo || '';
+  document.getElementById('price').value = last.price || 0;
+  calcAmount();
+  if(last.imgBase64) {
+    currentStyleImgBase64 = last.imgBase64;
+    document.getElementById('styleImgPreview').src = last.imgBase64;
+    document.getElementById('imgPreviewBox').style.display = 'block';
+    document.getElementById('delImgBtn').style.display = 'inline-flex';
+  }
+}
+function bindSequenceNoEvent(){
+  const seq = document.getElementById('sequenceNo');
+  seq.addEventListener('input', fillBySequenceNo);
+  seq.addEventListener('change', fillBySequenceNo);
+}
+// ========== OCR 识别 ==========
+(async function preloadOCR() {
+  try {
+    ocrWorker = await Tesseract.createWorker();
+    await ocrWorker.loadLanguage('eng+chi_sim');
+    await ocrWorker.initialize('eng+chi_sim');
+  } catch(e) {}
+})();
+const getTodayCN = () => new Date().toLocaleDateString('zh-CN');
+function applyStockNum(){
+  const inheritCheck = document.getElementById('inheritStockNum');
+  const numInput = document.getElementById('stockNum');
+  numInput.value = inheritCheck.checked ? lastStockNum : 1;
+  calcAmount();
+}
+function saveStockNum(){
+  lastStockNum = document.getElementById('stockNum').value;
+}
+function triggerOCRUpload() { 
+  if(html5QrCode) stopScan(true);
+  clearStyleImg();
+  document.getElementById('ocrFileInput').value = '';
+  document.getElementById('ocrFileInput').click(); 
+}
+async function handleOCRImage(event) {
+  const file = event.target.files[0];
+  if(!file) return;
+  showToast("🔍 识别中...");
+  let loading = document.createElement('div');
+  loading.className = 'ocr-loading';
+  loading.innerText = '正在识别标签';
+  document.body.appendChild(loading);
+  try {
+    const blob = await preprocessImage(file);
+    const { data } = await (ocrWorker || Tesseract).recognize(blob);
+    const parsed = parseGarmentLabel(data.text);
+    fillFromOCRData(parsed);
+    showToast("✅ 识别成功");
+  } catch(err) {
+    showToast("❌ 识别失败");
+  } finally {
+    document.body.removeChild(loading);
+    document.getElementById('ocrFileInput').value = '';
+  }
+}
+function preprocessImage(file) {
+  return new Promise(resolve => {
+    const img = new Image();
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    img.onload = () => {
+      canvas.width = img.width;
+      canvas.height = img.height;
+      ctx.drawImage(img,0,0);
+      const idata = ctx.getImageData(0,0,canvas.width,canvas.height);
+      const data = idata.data;
+      for(let i=0;i<data.length;i+=4){
+        const gray = data[i]*0.3+data[i+1]*0.59+data[i+2]*0.11;
+        const bw = gray>140?255:0;
+        data[i]=data[i+1]=data[i+2]=bw;
+      }
+      ctx.putImageData(idata,0,0);
+      canvas.toBlob(resolve,'image/png');
+    };
+    img.src = URL.createObjectURL(file);
+  });
+}
+function parseGarmentLabel(text) {
+  let r = { barcodeId:'', size:'', styleNo:'' };
+  const bm = text.match(/\b\d{10,22}\b/);
+  if(bm) r.barcodeId = bm[0];
+  const sm = text.match(/(XS|S|M|L|XL|XXL|XXXL|80|90|100|110|120|130|140|150)/gi);
+  if(sm) r.size = sm[0].toUpperCase();
+  const st = text.match(/(款号|货号|款)[：:\s]([A-Z0-9\-]{3,})/i);
+  if(st) r.styleNo = st[2].trim();
+  return r;
+}
+function fillFromOCRData(data) {
+  clearStyleImg();
+  if(data.barcodeId) document.getElementById('barcodeId').value = data.barcodeId;
+  if(data.size) document.getElementById('size').value = data.size;
+  document.getElementById('styleNo').value = data.styleNo || '';
+  applyStockNum();
+  document.getElementById('price').value = 0;
+  calcAmount();
+  document.getElementById('inboundTime').value = new Date().toLocaleString('zh-CN');
+  document.getElementById('scannedBadge').style.display = 'inline-block';
+  editingIndex = -1;
+  document.getElementById('formCard').style.display = 'block';
+  if(data.styleNo) fillByStyle();
+}
+// ========== 扫码 ==========
+function fillScanBarcode(barcode){
+  document.getElementById('barcodeId').value = barcode;
+  document.getElementById('scannedBadge').style.display = 'inline-block';
+  document.getElementById('inboundTime').value = new Date().toLocaleString('zh-CN');
+  editingIndex = -1;
+  clearStyleImg();
+  applyStockNum();
+  document.getElementById('formCard').style.display = 'block';
+  if(navigator.vibrate) navigator.vibrate(50);
+  showToast("✅ 扫码成功");
+}
+async function stopCameraOnly() {
+  if(html5QrCode){ try{ await html5QrCode.stop(); }catch(e){} html5QrCode=null; }
+  document.getElementById('reader').style.display = 'none';
+  document.getElementById('scanBtn').style.display = 'block';
+  document.getElementById('continuousBtn').style.display = 'block';
+  document.getElementById('closeScanArea').style.display = 'none';
+}
+function stopScan(reset=true) {
+  if(reset) isContinuousMode=false;
+  if(html5QrCode){ try{ html5QrCode.stop(); }catch(e){} html5QrCode=null; }
+  document.getElementById('reader').style.display='none';
+  document.getElementById('scanBtn').style.display='block';
+  document.getElementById('continuousBtn').style.display='block';
+  document.getElementById('closeScanArea').style.display='none';
+}
+async function startSingleScan() {
+  isContinuousMode=false; await startScanInternal();
+}
+async function startContinuousScan() {
+  isContinuousMode=true; editingIndex=-1; showToast('🔄 连续扫码'); await startScanInternal();
+}
+async function startScanInternal() {
+  if(html5QrCode) try{ await html5QrCode.stop(); }catch(e){}
+  document.getElementById('reader').innerHTML='';
+  document.getElementById('reader').style.display='block';
+  document.getElementById('scanBtn').style.display='none';
+  document.getElementById('continuousBtn').style.display='none';
+  document.getElementById('closeScanArea').style.display='block';
+  html5QrCode = new Html5Qrcode("reader");
+  try {
+    await html5QrCode.start({facingMode:"environment"},{fps:10,qrbox:{width:280,height:200}},onScanSuccess,()=>{});
+    document.getElementById('scanStatus').textContent='扫描中';
+  }catch(e){ showToast("❌ 摄像头失败"); stopScan(); }
+}
+async function onScanSuccess(text) {
+  await stopCameraOnly();
+  const code = text.trim();
+  currentDupBarcode = code;
+  if(records.some(r=>r.barcodeId===code)){
+    document.getElementById('dupMsg').innerHTML=`条码 ${code} 已存在`;
+    document.getElementById('dupModal').classList.add('show');
+    return;
+  }
+  fillScanBarcode(code);
+}
+function dupContinue(){
+  document.getElementById('dupModal').classList.remove('show');
+  fillScanBarcode(currentDupBarcode);
+}
+async function dupReplace(){
+  document.getElementById('dupModal').classList.remove('show');
+  records = records.filter(r=>r.barcodeId!==currentDupBarcode);
+  await saveRecords();
+  renderAll();
+  fillScanBarcode(currentDupBarcode);
+}
+// ========== 提交入库 ==========
+async function submitInbound() {
+  const barcode = document.getElementById('barcodeId').value.trim();
+  if(!barcode) return showToast("⚠️ 请先扫码");
+  saveStockNum();
+  const r = {
+    id: editingIndex!==-1 ? records[editingIndex].id : Date.now(),
+    barcodeId: barcode,
+    season: document.getElementById('season').value,
+    sequenceNo: document.getElementById('sequenceNo').value.trim(),
+    size: document.getElementById('size').value,
+    processName: document.getElementById('processName').value || '未指定',
+    styleNo: document.getElementById('styleNo').value || '无款号',
+    stockNum: parseFloat(document.getElementById('stockNum').value)||1,
+    price: parseFloat(document.getElementById('price').value)||0,
+    amount: parseFloat(document.getElementById('amount').value)||0,
+    imgBase64: currentStyleImgBase64,
+    inboundTime: new Date().toLocaleString('zh-CN')
+  };
+  if(editingIndex!==-1){
+    records[editingIndex] = r;
+    editingIndex=-1;
+    showToast("✏️ 修改完成");
+  }else{
+    records.unshift(r);
+    showToast("✅ 入库成功");
+  }
+  clearStyleImg();
+  await saveRecords();
+  sortByTime();
+  renderAll();
+  document.getElementById('formCard').style.display='none';
+  document.getElementById('scannedBadge').style.display='none';
+  document.getElementById('barcodeId').value='';
+  document.getElementById('price').value=0;
+  document.getElementById('stockNum').value=1;
+  calcAmount();
+  // 【修复】延长等待，保证存储完成再开扫码
+  if(isContinuousMode) setTimeout(startScanInternal, 800);
+}
+// ========== 清空 ==========
+function clearTodayRecord(){ document.getElementById('todayClearModal').classList.add('show'); }
+function hideTodayClearModal(){ document.getElementById('todayClearModal').classList.remove('show'); }
+async function clearToday(){
+  const today = getTodayCN();
+  records = records.filter(r=>!r.inboundTime.includes(today));
+  await saveRecords();
+  renderAll();
+  hideTodayClearModal();
+  showToast("✅ 清空本日");
+}
+function showClearModal(){ document.getElementById('clearModal').classList.add('show'); }
+function hideClearModal(){ document.getElementById('clearModal').classList.remove('show'); }
+function checkClearConfirm(){
+  const v = document.getElementById('clearConfirmInput').value.trim();
+  const btn = document.getElementById('clearConfirmBtn');
+  const msg = document.getElementById('clearConfirmMsg');
+  if(v==='确认删除'){
+    btn.disabled=false; btn.style.opacity='1'; msg.style.display='none';
+  }else{
+    btn.disabled=true; btn.style.opacity='0.5'; msg.style.display='block';
+  }
+}
+// 【修复】清空全部同步删除localStorage备份
+async function clearAll(){
+  records=[];
+  try{
+    const db=await openDB();
+    const tx=db.transaction('records','readwrite');
+    await tx.objectStore('records').clear();
+  }catch(e){}
+  localStorage.removeItem('garmentRecordsBackup');
+  renderAll();
+  hideClearModal();
+  document.getElementById('clearConfirmInput').value='';
+  document.getElementById('clearConfirmBtn').disabled=true;
+  showToast("✅ 已清空全部");
+}
+// ========== 删除记录 ==========
+function deleteRecord(idx){
+  if(!confirm("确定删除第 " + (idx+1) + " 条记录吗？此操作不可恢复！")) return;
+  records.splice(idx, 1);
+  saveRecords();
+  sortByTime();
+  renderAll();
+  showToast("🗑️ 已删除");
+}
+// ========== 修改记录 ==========
+function modifyRecord(i){
+  if(html5QrCode) stopScan();
+  isContinuousMode=false;
+  const r=records[i];
+  editingIndex=i;
+  document.getElementById('barcodeId').value=r.barcodeId;
+  document.getElementById('season').value=r.season||'';
+  document.getElementById('sequenceNo').value=r.sequenceNo||'';
+  document.getElementById('size').value=r.size||'';
+  document.getElementById('processName').value=r.processName||'';
+  document.getElementById('styleNo').value=r.styleNo||'';
+  document.getElementById('stockNum').value=r.stockNum||1;
+  lastStockNum=r.stockNum||1;
+  document.getElementById('price').value=r.price;
+  calcAmount();
+  document.getElementById('inboundTime').value=r.inboundTime;
+  currentStyleImgBase64=r.imgBase64||'';
+  if(currentStyleImgBase64){
+    document.getElementById('styleImgPreview').src=currentStyleImgBase64;
+    document.getElementById('imgPreviewBox').style.display='block';
+    document.getElementById('delImgBtn').style.display='inline-flex';
+  }else{
+    clearStyleImg();
+  }
+  document.getElementById('scannedBadge').style.display='inline-block';
+  document.getElementById('formCard').style.display='block';
+}
+// ========== 渲染 ==========
+function showLazyImg(el){
+  const imgData=el.getAttribute('data-img');
+  if(!imgData)return;
+  el.innerHTML='<img src="'+imgData+'" style="width:50px;height:50px;object-fit:cover;border-radius:8px;" onclick="event.stopPropagation();openImgModal(\''+safeBase64Encode(imgData)+'\')">';
+  el.style.background='transparent';
+}
+function safeBase64Encode(str){
+  return str.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+}
+function renderStats(){
+  const total=records.reduce((s,r)=>s+(Number(r.stockNum)||1),0);
+  const unique=new Set(records.map(r=>r.barcodeId)).size;
+  const today=records.filter(r=>r.inboundTime.includes(getTodayCN())).reduce((s,r)=>s+(Number(r.stockNum)||1),0);
+  document.getElementById('statTotal').textContent=total;
+  document.getElementById('statBarcodes').textContent=unique;
+  document.getElementById('statToday').textContent=today;
+}
+function renderProcessSummary(){
+  const map=new Map();
+  records.forEach(r=>{
+    const p=r.processName||'未指定';
+    const s=r.styleNo||'无款号';
+    if(!map.has(p)) map.set(p,new Map());
+    const sm=map.get(p);
+    if(!sm.has(s)) sm.set(s,{q:0,a:0});
+    const d=sm.get(s);
+    d.q+=Number(r.stockNum)||1;
+    d.a+=Number(r.amount)||0;
+  });
+  const c=document.getElementById('processSummary');
+  if(map.size===0){ c.innerHTML='<div class="empty-state">暂无数据</div>'; return; }
+  let html='';
+  let idx=0;
+  for(const [p,sm] of map){
+    const id='p'+idx++;
+    let tq=0,ta=0;
+    sm.forEach(d=>{tq+=d.q;ta+=d.a;});
+    html+=`<div class="summary-section"><div class="summary-header" id="h${id}" onclick="toggleProcess('${id}')"><div class="left"><span class="arrow">▶</span><strong>${escapeHtml(p)}</strong></div><div>数量：${tq} · 金额：¥${ta.toFixed(2)}</div></div><div class="summary-body" id="b${id}">`;
+    sm.forEach((d,s)=>{
+      html+=`<div class="summary-row"><div>${escapeHtml(s)}</div><div>${d.q}</div><div>¥${d.a.toFixed(2)}</div></div>`;
+    });
+    html+=`</div></div>`;
+  }
+  c.innerHTML=html;
+}
+function toggleProcess(id){
+  document.getElementById('h'+id).classList.toggle('open');
+  document.getElementById('b'+id).classList.toggle('open');
+}
+function escapeHtml(s){
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace( />/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+}
+// ========== 筛选 ==========
+// 【修复】切换筛选重载缓存
+async function switchDateFilter(days,el){
+  currentDateFilter=days;
+  document.querySelectorAll('.filter-chip').forEach(ch=>ch.classList.remove('active'));
+  el.classList.add('active');
+  await loadRecords();
+  renderHistory();
+}
+function getFilteredRecords(){
+  if(currentDateFilter===-1) return records;
+  const now=new Date();
+  const limit=new Date(now.setDate(now.getDate()-currentDateFilter));
+  return records.filter(r=>{
+    const t=new Date(r.inboundTime);
+    return t>=limit;
+  });
+}
+let currentPage = 1;
+const PAGE_SIZE = 30;
+function renderHistory(){
+  var list = getFilteredRecords();
+  document.getElementById("recordCount").textContent = list.length + " 条";
+  if (list.length === 0) {
+    document.getElementById("history").innerHTML = "<div class='empty-state'>暂无记录</div>";
+    var lm = document.getElementById("loadMore");
+    if (lm) lm.style.display = "none";
+    return;
+  }
+  currentPage = 1;
+  renderHistoryPage(list, 1, true);
+  var lm = document.getElementById("loadMore");
+  if (lm) lm.style.display = list.length > PAGE_SIZE ? "block" : "none";
+}
+function renderHistoryPage(list, page, replace){
+  var start = (page - 1) * PAGE_SIZE;
+  var end = Math.min(start + PAGE_SIZE, list.length);
+  var pageItems = list.slice(start, end);
+  var html = "";
+  for (var idx = 0; idx < pageItems.length; idx++) {
+    var r = pageItems[idx];
+    var ri = records.indexOf(r);
+    html += "<div class='record-item'><div class='record-header'><div class='barcode-chip'>" + escapeHtml(r.barcodeId) + "</div><div class='time-text'>" + r.inboundTime + "</div></div>";
+    if (r.imgBase64) {
+      html += "<div class='img-lazy-wrap' style='width:50px;height:50px;background:#f1f5f9;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;overflow:hidden;margin-bottom:8px;' data-img='" + r.imgBase64 + "' onclick='showLazyImg(this)'>🖼️</div>";
+    }
+    html += "<div class='detail-grid'><div class='detail-tag'><span>款号</span><span>" + escapeHtml(r.styleNo) + "</span></div><div class='detail-tag'><span>尺码</span><span>" + escapeHtml(r.size) + "</span></div><div class='detail-tag'><span>工序</span><span>" + escapeHtml(r.processName) + "</span></div></div>";
+    html += "<div class='detail-grid'><div class='detail-tag'><span>数量</span><span>" + r.stockNum + "</span></div><div class='detail-tag'><span>单价</span><span>¥" + r.price + "</span></div><div class='detail-tag'><span>金额</span><span>¥" + (parseFloat(r.amount)||0).toFixed(2) + "</span></div></div>";
+    html += "<div class='record-actions'><button class='btn btn-sm btn-outline' onclick='modifyRecord(" + ri + ")'>修 改</button><button class='btn btn-sm' style='color:var(--danger);border-color:var(--danger);margin-left:8px;' onclick='deleteRecord(" + ri + ")'>🗑️ 删除</button></div></div>";
+  }
+  if (replace) {
+    document.getElementById("history").innerHTML = html;
+  } else {
+    document.getElementById("history").innerHTML += html;
+  }
+  var lm = document.getElementById("loadMore");
+  if (lm) {
+    lm.style.display = end >= list.length ? "none" : "block";
+    lm.innerHTML = "📄 加载更多 (" + (list.length - end) + " 条)";
+  }
+}
+function loadMore(){
+  var list = getFilteredRecords();
+  currentPage++;
+  renderHistoryPage(list, currentPage, false);
+}
+// ========== 汇总 ==========
+let summaryTab=0;
+// 【修复】切换汇总重载缓存
+async function switchSummaryTab(el,idx){
+  summaryTab=idx;
+  document.querySelectorAll('.summary-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  await loadRecords();
+  renderSummary();
+}
+function renderSummary(){
+  const now=new Date();
+  let list=records;
+  if(summaryTab===0){
+    // 【修复】统一使用zh-CN日期格式，与inboundTime存储格式一致
+    const t=now.toLocaleDateString('zh-CN');
+    list=records.filter(r=>r.inboundTime.includes(t));
+  }else if(summaryTab===1){
+    const m=now.getMonth();
+    const y=now.getFullYear();
+    list=records.filter(r=>{
+      const d=new Date(r.inboundTime);
+      return d.getFullYear()===y&&d.getMonth()===m;
+    });
+  }else if(summaryTab===2){
+    const y=now.getFullYear();
+    list=records.filter(r=>new Date(r.inboundTime).getFullYear()===y);
+  }
+  const qty=list.reduce((s,r)=>s+(Number(r.stockNum)||1),0);
+  const amt=list.reduce((s,r)=>s+(Number(r.amount)||0),0);
+  const cnt=list.length;
+  const c=document.getElementById('summaryContent');
+  c.innerHTML=`<div class="summary-row-line"><div>入库单数</div><div>${cnt}</div></div><div class="summary-row-line"><div>总数量</div><div>${qty} 件</div></div><div class="summary-row-line total"><div>总金额</div><div>¥${amt.toFixed(2)}</div></div>`;
+}
+// ========== 导出 ==========
+function exportToExcel(){
+  if(!records.length) return showToast("无数据");
+  var wb=XLSX.utils.book_new();
+  
+  // 按工序分组
+  var processOrder=[];
+  var processMap={};
+  records.forEach(function(r){
+    var p=r.processName||"未指定";
+    if(!processMap[p]){processMap[p]=[];processOrder.push(p);}
+    processMap[p].push(r);
+  });
+  // ====== Sheet1: 入库明细 ======
+  var detail=[["入库时间","工序名称","款号","尺码","入库数量","单价(¥)","金额(¥)"]];
+  for(var pi=0;pi<processOrder.length;pi++){
+    var pn=processOrder[pi];
+    var items=processMap[pn];
+    for(var ri=0;ri<items.length;ri++){
+      var r=items[ri];
+      detail.push([r.inboundTime,r.processName,r.styleNo,r.size||"",Number(r.stockNum)||1,parseFloat(r.price)||0,parseFloat(r.amount).toFixed(2)]);
+    }
+    var sQty=items.reduce(function(s,r){return s+(Number(r.stockNum)||1);},0);
+    var sAmt=items.reduce(function(s,r){return s+(parseFloat(r.amount)||0);},0);
+    detail.push(["["+pn+" 小计]","","","",sQty,"",sAmt.toFixed(2)]);
+    detail.push(["","","","","","",""]);
+  }
+  var ws1=XLSX.utils.aoa_to_sheet(detail);
+  var hdrRng=XLSX.utils.decode_range("A1:G1");
+  for(var c=hdrRng.s.c;c<=hdrRng.e.c;c++){
+    var ref=XLSX.utils.encode_cell({r:0,c:c});
+    if(!ws1[ref]) ws1[ref]={};
+    if(!ws1[ref].s) ws1[ref].s={};
+    ws1[ref].s.font={bold:true,color:{rgb:"FFFFFF"}};
+    ws1[ref].s.fill={fgColor:{rgb:"1e293b"}};
+    ws1[ref].s.alignment={horizontal:"center"};
+  }
+  ws1["!cols"]=[{wch:18},{wch:18},{wch:12},{wch:10},{wch:10},{wch:10},{wch:10}];
+  ws1["!autofilter"]={ref:"A1:G"+(detail.length)};
+  ws1["!freeze"]={xSplit:0,ySplit:1};
+  XLSX.utils.book_append_sheet(wb,ws1,"入库明细");
+  // ====== Sheet2: 数据汇总 ======
+  var totalQty=records.reduce(function(s,r){return s+(Number(r.stockNum)||1);},0);
+  var totalAmt=records.reduce(function(s,r){return s+(parseFloat(r.amount)||0);},0);
+  var uniqueCodes={};
+  records.forEach(function(r){uniqueCodes[r.barcodeId]=true;});
+  var avgPrice=totalQty>0?(totalAmt/totalQty):0;
+  var maxQty=0;
+  records.forEach(function(r){var n=Number(r.stockNum)||1;if(n>maxQty)maxQty=n;});
+  var summary=[];
+  summary.push(["===== 基础信息统计 =====",""]);
+  summary.push(["统计项目","数值"]);
+  summary.push(["总入库单数",records.length]);
+  summary.push(["唯一条码数量",Object.keys(uniqueCodes).length]);
+  summary.push(["总入库数量",totalQty]);
+  summary.push(["总金额(元)",totalAmt.toFixed(2)]);
+  summary.push(["平均单价(元/件)",avgPrice.toFixed(2)]);
+  summary.push(["最大单条入库数量",maxQty]);
+  summary.push([]);
+  summary.push(["===== 各工序明细统计 =====","","",""]);
+  summary.push(["工序名称","总入库数量","总金额(¥)","记录条数"]);
+  for(var pi=0;pi<processOrder.length;pi++){
+    var pn=processOrder[pi];
+    var items=processMap[pn];
+    var pQty=items.reduce(function(s,r){return s+(Number(r.stockNum)||1);},0);
+    var pAmt=items.reduce(function(s,r){return s+(parseFloat(r.amount)||0);},0);
+    summary.push([pn,pQty,pAmt.toFixed(2),items.length]);
+  }
+  var ws2=XLSX.utils.aoa_to_sheet(summary);
+  ws2["!cols"]=[{wch:30},{wch:14},{wch:14},{wch:10}];
+  XLSX.utils.book_append_sheet(wb,ws2,"数据汇总");
+  XLSX.writeFile(wb,"服装入库_"+getTodayCN()+".xlsx");
+  showToast("✅ 导出成功");
+}
+function exportToHtml(){
+  if(!records.length) return showToast("无数据");
+  var hasImg=false;
+  records.forEach(function(r){if(r.imgBase64)hasImg=true;});
+  var html='<html><head><meta charset="utf-8"><title>入库报告</title><style>body{font-family:system-ui;padding:20px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ddd;padding:8px;text-align:left;vertical-align:middle}th{background:#f5f5f5}img{max-width:100px;max-height:100px;display:block}</style></head><body><h2>服装入库报告 '+getTodayCN()+'</h2><table><tr><th>条码</th><th>款号</th><th>尺码</th><th>工序</th><th>数量</th><th>金额</th><th>时间</th>'+(hasImg?'<th>图片</th>':'')+'</tr>';
+  records.forEach(function(r){
+    html+='<tr><td>'+escapeHtml(r.barcodeId)+'</td><td>'+escapeHtml(r.styleNo)+'</td><td>'+escapeHtml(r.size)+'</td><td>'+escapeHtml(r.processName)+'</td><td>'+r.stockNum+'</td><td>'+r.amount.toFixed(2)+'</td><td>'+r.inboundTime+'</td>';
+    if(hasImg) html+='<td>'+(r.imgBase64?'<img src="'+r.imgBase64+'" />':'')+'</td>';
+    html+='</tr>';
+  });
+  html+='</table></body></html>';
+  var blob=new Blob([html],{type:"text/html"});
+  var a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="服装入库_"+getTodayCN()+".html";
+  a.click();
+  showToast("✅ HTML导出成功");
+}
+function triggerImportExcel(){
+  if(html5QrCode) stopScan();
+  document.getElementById('importFileInput').value='';
+  document.getElementById('importFileInput').click();
+}
+function hideImportModal(){
+  document.getElementById('importModal').classList.remove('show');
+  pendingImportData=[];
+}
+function handleImportExcel(e){
+  const file=e.target.files[0];
+  if(!file) return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    try{
+      const wb=XLSX.read(ev.target.result,{type:'array'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      var raw=XLSX.utils.sheet_to_json(ws,{header:1,defval:""});
+      var hdrIdx=-1;
+      for(var hi=0;hi<raw.length;hi++){
+        var row=raw[hi];
+        if(!row||!row.length) continue;
+        var txt=row.join(" ");
+        if(txt.indexOf("入库时间")>=0||txt.indexOf("条码")>=0||txt.indexOf("工序")>=0){
+          hdrIdx=hi;
+          break;
+        }
+      }
+      if(hdrIdx<0){showToast("❌ 未找到表头");return;}
+      var headers=raw[hdrIdx];
+      var colMap={};
+      for(var hi=0;hi<headers.length;hi++){
+        var h=(headers[hi]||"").toString().trim();
+        if(!h) continue;
+        if(/入库时间|时间|日期/.test(h)) colMap.time=hi;
+        if(/条码|条码ID|barcode/i.test(h)) colMap.barcode=hi;
+        if(/季节/.test(h)) colMap.season=hi;
+        if(/序号|自编序号/.test(h)) colMap.seq=hi;
+        if(/尺码|尺寸|size/i.test(h)) colMap.size=hi;
+        if(/工序|工序名称|工序名|process/i.test(h)) colMap.process=hi;
+        if(/款号|款号|style/i.test(h)) colMap.style=hi;
+        if(/数量|入库数量|件数|stock/i.test(h)) colMap.qty=hi;
+        if(/单价|单价\(¥|单价\(元|price/i.test(h)) colMap.price=hi;
+        if(/金额|金额\(¥|金额\(元|amount|总金额|合计/i.test(h)) colMap.amount=hi;
+      }
+      var arr=[];
+      for(var ri=hdrIdx+1;ri<raw.length;ri++){
+        var row=raw[ri];
+        if(!row||!row.length) continue;
+        var rowTxt=row.join("").toString().trim();
+        if(rowTxt.indexOf("=====")>=0||rowTxt.indexOf("小计")>=0||!rowTxt) continue;
+        var _t="";
+        if(colMap.time!==undefined&&row[colMap.time]){
+          var tv=row[colMap.time];
+          if(typeof tv==="number"){
+            var d=XLSX.SSF.parse_date_code(tv);
+            if(d) _t=d.y+"-"+(d.m<10?"0"+d.m:d.m)+"-"+(d.d<10?"0"+d.d:d.d)+" "+(d.H<10?"0"+d.H:d.H)+":"+(d.M<10?"0"+d.M:d.M)+":"+(d.S<10?"0"+d.S:d.S);
+          } else {_t=tv.toString().trim();}
+        }
+        if(!_t && row[0] && typeof row[0]==="number" && row[0]>40000 && row[0]<60000){
+          var d=XLSX.SSF.parse_date_code(row[0]);
+          if(d) _t=d.y+"-"+(d.m<10?"0"+d.m:d.m)+"-"+(d.d<10?"0"+d.d:d.d)+" "+(d.H<10?"0"+d.H:d.H)+":"+(d.M<10?"0"+d.M:d.M)+":"+(d.S<10?"0"+d.S:d.S);
+          colMap.time=0;
+        }
+        if(!_t) continue;
+        
+        var _b=colMap.barcode!==undefined?row[colMap.barcode].toString().trim():"IMP"+Date.now()+Math.random();
+        var _s=colMap.season!==undefined?row[colMap.season].toString().trim():"";
+        var _seq=colMap.seq!==undefined?row[colMap.seq].toString().trim():"";
+        var _sz=colMap.size!==undefined?row[colMap.size].toString().trim():"";
+        var _p=colMap.process!==undefined?row[colMap.process].toString().trim():"未指定";
+        var _st=colMap.style!==undefined?row[colMap.style].toString().trim():"";
+        if(!_st) continue;
+        var _q=colMap.qty!==undefined?(parseFloat(row[colMap.qty])||1):1;
+        var _pr=colMap.price!==undefined?(parseFloat(row[colMap.price])||0):0;
+        var _amt=colMap.amount!==undefined?(parseFloat(row[colMap.amount])||_q*_pr):_q*_pr;
+        
+        arr.push({id:Date.now()+Math.random(),barcodeId:_b,season:_s,sequenceNo:_seq,size:_sz,processName:_p,styleNo:_st,stockNum:_q,price:_pr,amount:_amt,inboundTime:_t,imgBase64:""});
+      }
+
+      pendingImportData=arr;
+      document.getElementById('importCount').textContent=arr.length;
+      if(arr.length>0){
+        document.getElementById('importModal').classList.add('show');
+      }else{
+        showToast("⚠️ 未找到有效数据行");
+      }
+    }catch(e){
+      showToast("❌ 解析失败: "+e.message);
+    }
+  };
+  r.readAsArrayBuffer(file);
+}
+async function importMerge(){
+  records=[...pendingImportData,...records];
+  await saveRecords();
+  renderAll();
+  hideImportModal();
+  showToast("✅ 合并导入成功");
+}
+async function importOverwrite(){
+  records=pendingImportData;
+  await saveRecords();
+  renderAll();
+  hideImportModal();
+  showToast("✅ 覆盖导入成功");
+}
+
+// ========== 工具 ==========
+function showToast(msg){
+  const t=document.createElement('div');
+  t.className='toast';
+  t.innerText=msg;
+  document.body.appendChild(t);
+  setTimeout(()=>document.body.removeChild(t),2300);
+}
+function sortByTime(){
+  records.sort((a,b)=>new Date(b.inboundTime)-new Date(a.inboundTime));
+}
+function renderAll(){
+  renderStats();
+  renderProcessSummary();
+  renderSummary();
+  renderHistory();
+}
+
+// ========== 初始化 ==========
+window.onload=async function(){
+  await loadRecords();
+  sortByTime();
+  bindCalcEvents();
+  bindStyleEvent();
+  bindSequenceNoEvent();
+  renderAll();
+};
+</script>
+</body>
+</html>
