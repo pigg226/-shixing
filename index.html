@@ -192,6 +192,10 @@
   <div class="switch-label">⚙️ 连续扫码时沿用配置</div>
   <label class="switch"><input type="checkbox" id="keepConfigSwitch" checked><span class="slider"></span></label>
 </div>
+<div class="switch-bar">
+  <div class="switch-label">☁️ 云端同步模式</div>
+  <label class="switch"><input type="checkbox" id="cloudSwitch" onchange="toggleCloudMode()"><span class="slider"></span></label>
+</div>
 <div class="scan-status" id="scanStatus"></div>
 <div class="close-scan" id="closeScanArea">
   <button class="btn btn-outline btn-sm" onclick="stopScan(true)">✕ 关闭扫码器</button>
@@ -313,6 +317,90 @@
 <div class="modal-mask" id="dupModal"><div class="modal-box"><h4>⚠️ 条码重复</h4><p id="dupMsg"></p><div class="btn-group" style="margin-top:12px;"><button class="btn btn-success btn-sm" onclick="dupContinue()">继续新增</button><button class="btn btn-primary btn-sm" onclick="dupReplace()">覆盖数据</button></div></div></div>
 <div class="modal-mask" id="importModal"><div class="modal-box"><h4>📥 导入数据</h4><p id="importMsg">检测到 <strong id="importCount">0</strong> 条数据</p><p style="font-size:12px;color:var(--text-light);margin-top:8px;">请选择导入方式</p><div class="btn-group" style="margin-top:12px;"><button class="btn btn-success btn-sm" onclick="importMerge()">合并导入</button><button class="btn btn-warning btn-sm" onclick="importOverwrite()">覆盖导入</button><button class="btn btn-outline btn-sm" onclick="hideImportModal()">取消</button></div></div></div>
 <script>
+// 云端API地址
+const API_HOST = "https://1457448466-8wiuvs21cn.ap-guangzhou.tencentscf.com";
+// 全局本地缓存开关：true=云端同步，false=本地离线
+let useCloud = false;
+
+// ========== 云端 API ==========
+
+// 统一请求接口
+async function apiRequest(action, bodyData = {}) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 8000);
+  try {
+    const url = API_HOST;
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(Object.assign({action: action}, bodyData)),
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+    const raw = await res.json();
+    console.log("apiRequest raw for " + action + ":", raw);
+    if (raw.body) {
+      if (typeof raw.body == "string") {
+        try { return JSON.parse(raw.body); } catch(e) { return raw.body; }
+      }
+      return raw.body;
+    }
+    return raw;
+  } catch(err) {
+    clearTimeout(timeoutId);
+    showToast("云端接口请求失败，请检查网络");
+    throw err;
+  }
+}
+// 从云端拉取全部数据
+async function cloudGetAll() {
+  try {
+    const res = await apiRequest("getAll");
+    console.log("cloudGetAll raw response:", res);
+    if (res.code === 0) return res.data || [];
+    if (res.list) return res.list;
+    if (Array.isArray(res)) return res;
+  } catch(e) {}
+  showToast("云端读取失败，尝试本地数据");
+  return null;
+}
+
+// 覆盖云端全部数据
+async function cloudOverwrite(list) {
+  await apiRequest("overwrite", { list });
+}
+
+// 新增单条记录到云端
+async function cloudAdd(item) {
+  await apiRequest("add", { item });
+}
+
+// 修改云端单条记录
+async function cloudUpdate(item) {
+  await apiRequest("update", { id: item.id, item });
+}
+
+// 删除云端单条记录
+async function cloudDel(id) {
+  await apiRequest("del", { id });
+}
+
+// 上传图片到COS
+async function cloudUploadImg(base64, filename) {
+  const res = await apiRequest("uploadImg", { base64, name: filename });
+  if(res.code === 0) return res.key;
+  throw new Error("图片上传失败");
+}
+
+// 获取图片临时访问链接
+async function cloudGetImgUrl(key) {
+  const res = await apiRequest("getImg", { key });
+  if(res.code === 0) return res.url;
+  return "";
+}
+
 // ========== IndexedDB 数据库封装 ==========
 function openDB() {
   return new Promise((resolve, reject) => {
@@ -355,12 +443,26 @@ async function saveRecords() {
   } catch (e) {
     console.error('IndexedDB保存失败', e);
   }
+
+  // 开启云端时同步到云函数（单人使用全量覆盖，多设备建议用单条接口）
+  if(useCloud) {
+    await cloudOverwrite(records);
+  }
 }
 
 // 【修复版】加载：优先localStorage，再合并IDB数据
 async function loadRecords() {
   records = [];
-  // 优先从IndexedDB读取完整数据（含图片）
+  if(useCloud) {
+    // 云端模式：从云函数拉取数据
+    const cloudData = await cloudGetAll();
+    if(cloudData) {
+      records = cloudData;
+      return;
+    }
+    showToast("云端不可用，切换到本地模式");
+  }
+  // 本地IndexedDB逻辑不变
   try {
     const db = await openDB();
     const store = db.transaction('records', 'readonly').objectStore('records');
@@ -371,7 +473,6 @@ async function loadRecords() {
     });
     if (allRecords && allRecords.length > 0) {
       records = allRecords;
-      // 回写localStorage备份（不含大图片以免超限）
       try {
         localStorage.setItem('garmentRecordsBackup', JSON.stringify(records.map(r => ({...r, imgBase64: r.imgBase64 ? '(有图片)' : ''}))));
       } catch (e) {} 
@@ -380,7 +481,6 @@ async function loadRecords() {
   } catch (e) {
     console.error('读取IndexedDB失败，尝试localStorage兜底', e);
   }
-  // 兜底：从localStorage读取
   const local = localStorage.getItem('garmentRecordsBackup');
   if (local) {
     try {
@@ -417,11 +517,12 @@ function handleUploadStyleImg(event) {
   if (!file) return;
   const reader = new FileReader();
   reader.onload = function (e) {
-    compressImage(e.target.result, 800, 800, (base64) => {
+    compressImage(e.target.result, 800, 800, async (base64) => {
       currentStyleImgBase64 = base64;
       document.getElementById('styleImgPreview').src = base64;
       document.getElementById('imgPreviewBox').style.display = 'block';
       document.getElementById('delImgBtn').style.display = 'inline-flex';
+
     })
   }
   reader.readAsDataURL(file);
@@ -685,6 +786,7 @@ async function submitInbound() {
     price: parseFloat(document.getElementById('price').value)||0,
     amount: parseFloat(document.getElementById('amount').value)||0,
     imgBase64: currentStyleImgBase64,
+    imgKey: '',
     inboundTime: new Date().toLocaleString('zh-CN')
   };
   if(editingIndex!==-1){
@@ -694,6 +796,11 @@ async function submitInbound() {
   }else{
     records.unshift(r);
     showToast("✅ 入库成功");
+  }
+  // 云端模式下上传图片到COS并保存key
+  if(useCloud && r.imgBase64) {
+    const fileName = Date.now() + '.jpg';
+    r.imgKey = await cloudUploadImg(r.imgBase64, fileName);
   }
   clearStyleImg();
   await saveRecords();
@@ -784,10 +891,15 @@ function modifyRecord(i){
   document.getElementById('formCard').style.display='block';
 }
 // ========== 渲染 ==========
-function showLazyImg(el){
+async function showLazyImg(el){
   const imgData=el.getAttribute('data-img');
-  if(!imgData)return;
-  el.innerHTML='<img src="'+imgData+'" style="width:50px;height:50px;object-fit:cover;border-radius:8px;" onclick="event.stopPropagation();openImgModal(\''+safeBase64Encode(imgData)+'\')">';
+  const imgKey=el.getAttribute('data-key');
+  let src = imgData;
+  if(useCloud && imgKey){
+    src = await cloudGetImgUrl(imgKey);
+  }
+  if(!src)return;
+  el.innerHTML='<img src="'+src+'" style="width:50px;height:50px;object-fit:cover;border-radius:8px;" onclick="event.stopPropagation();openImgModal(\''+safeBase64Encode(src)+'\')">';
   el.style.background='transparent';
 }
 function safeBase64Encode(str){
@@ -842,7 +954,6 @@ async function switchDateFilter(days,el){
   currentDateFilter=days;
   document.querySelectorAll('.filter-chip').forEach(ch=>ch.classList.remove('active'));
   el.classList.add('active');
-  await loadRecords();
   renderHistory();
 }
 function getFilteredRecords(){
@@ -879,8 +990,8 @@ function renderHistoryPage(list, page, replace){
     var r = pageItems[idx];
     var ri = records.indexOf(r);
     html += "<div class='record-item'><div class='record-header'><div class='barcode-chip'>" + escapeHtml(r.barcodeId) + "</div><div class='time-text'>" + r.inboundTime + "</div></div>";
-    if (r.imgBase64) {
-      html += "<div class='img-lazy-wrap' style='width:50px;height:50px;background:#f1f5f9;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;overflow:hidden;margin-bottom:8px;' data-img='" + r.imgBase64 + "' onclick='showLazyImg(this)'>🖼️</div>";
+    if (r.imgBase64 || r.imgKey) {
+      html += "<div class='img-lazy-wrap' style='width:50px;height:50px;background:#f1f5f9;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;overflow:hidden;margin-bottom:8px;' data-img='" + (r.imgBase64||"") + "' data-key='" + (r.imgKey||"") + "' onclick='showLazyImg(this)'>🖼️</div>";
     }
     html += "<div class='detail-grid'><div class='detail-tag'><span>款号</span><span>" + escapeHtml(r.styleNo) + "</span></div><div class='detail-tag'><span>尺码</span><span>" + escapeHtml(r.size) + "</span></div><div class='detail-tag'><span>工序</span><span>" + escapeHtml(r.processName) + "</span></div></div>";
     html += "<div class='detail-grid'><div class='detail-tag'><span>数量</span><span>" + r.stockNum + "</span></div><div class='detail-tag'><span>单价</span><span>¥" + r.price + "</span></div><div class='detail-tag'><span>金额</span><span>¥" + (parseFloat(r.amount)||0).toFixed(2) + "</span></div></div>";
@@ -909,7 +1020,6 @@ async function switchSummaryTab(el,idx){
   summaryTab=idx;
   document.querySelectorAll('.summary-tab').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');
-  await loadRecords();
   renderSummary();
 }
 function renderSummary(){
@@ -1123,6 +1233,7 @@ function handleImportExcel(e){
 }
 async function importMerge(){
   records=[...pendingImportData,...records];
+  if(useCloud) showToast("? 正在同步云端...");
   await saveRecords();
   renderAll();
   hideImportModal();
@@ -1130,6 +1241,7 @@ async function importMerge(){
 }
 async function importOverwrite(){
   records=pendingImportData;
+  if(useCloud) showToast("? 正在同步云端...");
   await saveRecords();
   renderAll();
   hideImportModal();
@@ -1137,6 +1249,19 @@ async function importOverwrite(){
 }
 
 // ========== 工具 ==========
+function toggleCloudMode(){
+  useCloud = document.getElementById("cloudSwitch").checked;
+  clearStyleImg();
+  document.getElementById("formCard").style.display="none";
+  document.getElementById("barcodeId").value="";
+  if(useCloud) {
+    showToast("已开启云端同步，数据将保存到云COS");
+    loadRecords().then(renderAll);
+  }else{
+    showToast("已关闭云端，仅本地存储");
+  }
+}
+
 function showToast(msg){
   const t=document.createElement('div');
   t.className='toast';
@@ -1156,12 +1281,14 @@ function renderAll(){
 
 // ========== 初始化 ==========
 window.onload=async function(){
+  showToast("? 正在加载数据...");
   await loadRecords();
   sortByTime();
   bindCalcEvents();
   bindStyleEvent();
   bindSequenceNoEvent();
   renderAll();
+  showToast("OK 数据加载完成");
 };
 </script>
 </body>
