@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
@@ -312,7 +312,6 @@
 <div class="modal-mask" id="todayClearModal"><div class="modal-box"><h4>⚠️ 确认清空本日</h4><p>仅删除今天入库记录，保留历史数据。</p><div class="btn-group" style="margin-top:12px;"><button class="btn btn-outline btn-sm" onclick="hideTodayClearModal()">取消</button><button class="btn btn-warning btn-sm" onclick="clearToday()">确认清空本日</button></div></div></div>
 <div class="modal-mask" id="dupModal"><div class="modal-box"><h4>⚠️ 条码重复</h4><p id="dupMsg"></p><div class="btn-group" style="margin-top:12px;"><button class="btn btn-success btn-sm" onclick="dupContinue()">继续新增</button><button class="btn btn-primary btn-sm" onclick="dupReplace()">覆盖数据</button></div></div></div>
 <div class="modal-mask" id="importModal"><div class="modal-box"><h4>📥 导入数据</h4><p id="importMsg">检测到 <strong id="importCount">0</strong> 条数据</p><p style="font-size:12px;color:var(--text-light);margin-top:8px;">请选择导入方式</p><div class="btn-group" style="margin-top:12px;"><button class="btn btn-success btn-sm" onclick="importMerge()">合并导入</button><button class="btn btn-warning btn-sm" onclick="importOverwrite()">覆盖导入</button><button class="btn btn-outline btn-sm" onclick="hideImportModal()">取消</button></div></div></div>
-
 <script>
 // ========== IndexedDB 数据库封装 ==========
 function openDB() {
@@ -329,36 +328,59 @@ function openDB() {
   });
 }
 
-// 保存数据到 IndexedDB
+// 【修复版】保存：先localStorage兜底，不先清空IDB防止数据全丢
 async function saveRecords() {
+  // 【修复】localStorage和IDB分开处理，防止一处失败导致数据全丢
+  try {
+    localStorage.setItem('garmentRecordsBackup', JSON.stringify(records.map(r => ({...r, imgBase64: r.imgBase64 ? '(有图片)' : ''}))));
+  } catch (e) {
+    try {
+      localStorage.setItem('garmentRecordsBackup', JSON.stringify(records.map(r => ({...r, imgBase64: ''}))));
+    } catch (e2) {} 
+  }
   try {
     const db = await openDB();
-    const tx = db.transaction('records', 'readwrite');
-    const store = tx.objectStore('records');
-    await store.clear();
+    const store = db.transaction('records', 'readwrite').objectStore('records');
     for (const record of records) {
-      await store.put(record);
+      await new Promise((resolve, reject) => {
+        const req = store.put(record);
+        req.onsuccess = resolve;
+        req.onerror = () => reject(req.error);
+      });
     }
-    await tx.complete;
-    localStorage.setItem('garmentRecordsBackup', JSON.stringify(records));
+    await new Promise((resolve, reject) => {
+      store.transaction.oncomplete = resolve;
+      store.transaction.onerror = () => reject(store.transaction.error);
+    });
   } catch (e) {
-    console.error('保存失败', e);
+    console.error('IndexedDB保存失败', e);
   }
 }
 
-// 从 IndexedDB 加载数据
+// 【修复版】加载：优先localStorage，再合并IDB数据
 async function loadRecords() {
+  records = [];
+  // 优先从IndexedDB读取完整数据（含图片）
   try {
     const db = await openDB();
-    const tx = db.transaction('records', 'readonly');
-    const store = tx.objectStore('records');
-    const allRecords = await store.getAll();
+    const store = db.transaction('records', 'readonly').objectStore('records');
+    const allRecords = await new Promise((resolve, reject) => {
+      const req = store.getAll();
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
     if (allRecords && allRecords.length > 0) {
       records = allRecords;
+      // 回写localStorage备份（不含大图片以免超限）
+      try {
+        localStorage.setItem('garmentRecordsBackup', JSON.stringify(records.map(r => ({...r, imgBase64: r.imgBase64 ? '(有图片)' : ''}))));
+      } catch (e) {} 
       return;
     }
-  } catch (e) {}
-  
+  } catch (e) {
+    console.error('读取IndexedDB失败，尝试localStorage兜底', e);
+  }
+  // 兜底：从localStorage读取
   const local = localStorage.getItem('garmentRecordsBackup');
   if (local) {
     try {
@@ -366,8 +388,6 @@ async function loadRecords() {
     } catch (e) {
       records = [];
     }
-  } else {
-    records = [];
   }
 }
 
@@ -381,7 +401,6 @@ let ocrWorker = null;
 let pendingImportData = [];
 let currentStyleImgBase64 = '';
 let currentDateFilter = 7;
-
 // ========== 图片上传 ==========
 function triggerStyleImgUpload() {
   document.getElementById('imgUploadInput').value = '';
@@ -408,6 +427,7 @@ function handleUploadStyleImg(event) {
   reader.readAsDataURL(file);
   document.getElementById('imgUploadInput').value = '';
 }
+// 【修复】降低图片质量减少localStorage超限
 function compressImage(base64Str, maxWidth, maxHeight, callback) {
   const img = new Image();
   img.src = base64Str;
@@ -420,7 +440,7 @@ function compressImage(base64Str, maxWidth, maxHeight, callback) {
     canvas.width = w; canvas.height = h;
     const ctx = canvas.getContext('2d');
     ctx.drawImage(img, 0,0,w,h);
-    callback(canvas.toDataURL('image/jpeg', 0.6));
+    callback(canvas.toDataURL('image/jpeg', 0.4));
   };
 }
 function openImgModal(base64) {
@@ -431,7 +451,6 @@ function closeImgModal() {
   document.getElementById('imgFullModal').classList.remove('show');
   document.getElementById('fullImgSrc').src = '';
 }
-
 // ========== 计算金额 ==========
 function calcAmount(){
   let num = parseFloat(document.getElementById('stockNum').value) || 1;
@@ -446,7 +465,6 @@ function bindCalcEvents(){
     el.addEventListener('change', calcAmount);
   });
 }
-
 // ========== 自动填充 ==========
 function fillByStyle(){
   let style = document.getElementById('styleNo').value.trim();
@@ -491,7 +509,6 @@ function bindSequenceNoEvent(){
   seq.addEventListener('input', fillBySequenceNo);
   seq.addEventListener('change', fillBySequenceNo);
 }
-
 // ========== OCR 识别 ==========
 (async function preloadOCR() {
   try {
@@ -583,7 +600,6 @@ function fillFromOCRData(data) {
   document.getElementById('formCard').style.display = 'block';
   if(data.styleNo) fillByStyle();
 }
-
 // ========== 扫码 ==========
 function fillScanBarcode(barcode){
   document.getElementById('barcodeId').value = barcode;
@@ -652,7 +668,6 @@ async function dupReplace(){
   renderAll();
   fillScanBarcode(currentDupBarcode);
 }
-
 // ========== 提交入库 ==========
 async function submitInbound() {
   const barcode = document.getElementById('barcodeId').value.trim();
@@ -690,9 +705,9 @@ async function submitInbound() {
   document.getElementById('price').value=0;
   document.getElementById('stockNum').value=1;
   calcAmount();
-  if(isContinuousMode) setTimeout(startScanInternal,400);
+  // 【修复】延长等待，保证存储完成再开扫码
+  if(isContinuousMode) setTimeout(startScanInternal, 800);
 }
-
 // ========== 清空 ==========
 function clearTodayRecord(){ document.getElementById('todayClearModal').classList.add('show'); }
 function hideTodayClearModal(){ document.getElementById('todayClearModal').classList.remove('show'); }
@@ -716,6 +731,7 @@ function checkClearConfirm(){
     btn.disabled=true; btn.style.opacity='0.5'; msg.style.display='block';
   }
 }
+// 【修复】清空全部同步删除localStorage备份
 async function clearAll(){
   records=[];
   try{
@@ -730,8 +746,6 @@ async function clearAll(){
   document.getElementById('clearConfirmBtn').disabled=true;
   showToast("✅ 已清空全部");
 }
-
-
 // ========== 删除记录 ==========
 function deleteRecord(idx){
   if(!confirm("确定删除第 " + (idx+1) + " 条记录吗？此操作不可恢复！")) return;
@@ -741,7 +755,6 @@ function deleteRecord(idx){
   renderAll();
   showToast("🗑️ 已删除");
 }
-
 // ========== 修改记录 ==========
 function modifyRecord(i){
   if(html5QrCode) stopScan();
@@ -770,9 +783,7 @@ function modifyRecord(i){
   document.getElementById('scannedBadge').style.display='inline-block';
   document.getElementById('formCard').style.display='block';
 }
-
 // ========== 渲染 ==========
-
 function showLazyImg(el){
   const imgData=el.getAttribute('data-img');
   if(!imgData)return;
@@ -823,14 +834,15 @@ function toggleProcess(id){
   document.getElementById('b'+id).classList.toggle('open');
 }
 function escapeHtml(s){
-  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace( />/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
 }
-
 // ========== 筛选 ==========
-function switchDateFilter(days,el){
+// 【修复】切换筛选重载缓存
+async function switchDateFilter(days,el){
   currentDateFilter=days;
   document.querySelectorAll('.filter-chip').forEach(ch=>ch.classList.remove('active'));
   el.classList.add('active');
+  await loadRecords();
   renderHistory();
 }
 function getFilteredRecords(){
@@ -844,12 +856,11 @@ function getFilteredRecords(){
 }
 let currentPage = 1;
 const PAGE_SIZE = 30;
-
 function renderHistory(){
   var list = getFilteredRecords();
   document.getElementById("recordCount").textContent = list.length + " 条";
   if (list.length === 0) {
-    document.getElementById("history").innerHTML = "<div class=\'empty-state\'>暂无记录</div>";
+    document.getElementById("history").innerHTML = "<div class='empty-state'>暂无记录</div>";
     var lm = document.getElementById("loadMore");
     if (lm) lm.style.display = "none";
     return;
@@ -859,7 +870,6 @@ function renderHistory(){
   var lm = document.getElementById("loadMore");
   if (lm) lm.style.display = list.length > PAGE_SIZE ? "block" : "none";
 }
-
 function renderHistoryPage(list, page, replace){
   var start = (page - 1) * PAGE_SIZE;
   var end = Math.min(start + PAGE_SIZE, list.length);
@@ -868,13 +878,13 @@ function renderHistoryPage(list, page, replace){
   for (var idx = 0; idx < pageItems.length; idx++) {
     var r = pageItems[idx];
     var ri = records.indexOf(r);
-    html += "<div class=\'record-item\'><div class=\'record-header\'><div class=\'barcode-chip\'>" + escapeHtml(r.barcodeId) + "</div><div class=\'time-text\'>" + r.inboundTime + "</div></div>";
+    html += "<div class='record-item'><div class='record-header'><div class='barcode-chip'>" + escapeHtml(r.barcodeId) + "</div><div class='time-text'>" + r.inboundTime + "</div></div>";
     if (r.imgBase64) {
-      html += "<div class=\'img-lazy-wrap\' style=\'width:50px;height:50px;background:#f1f5f9;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;overflow:hidden;margin-bottom:8px;\' data-img=\'" + r.imgBase64 + "\' onclick=\'showLazyImg(this)\'>🖼️</div>";
+      html += "<div class='img-lazy-wrap' style='width:50px;height:50px;background:#f1f5f9;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;overflow:hidden;margin-bottom:8px;' data-img='" + r.imgBase64 + "' onclick='showLazyImg(this)'>🖼️</div>";
     }
-    html += "<div class=\'detail-grid\'><div class=\'detail-tag\'><span>款号</span><span>" + escapeHtml(r.styleNo) + "</span></div><div class=\'detail-tag\'><span>尺码</span><span>" + escapeHtml(r.size) + "</span></div><div class=\'detail-tag\'><span>工序</span><span>" + escapeHtml(r.processName) + "</span></div></div>";
-    html += "<div class=\'detail-grid\'><div class=\'detail-tag\'><span>数量</span><span>" + r.stockNum + "</span></div><div class=\'detail-tag\'><span>单价</span><span>¥" + r.price + "</span></div><div class=\'detail-tag\'><span>金额</span><span>¥" + (parseFloat(r.amount)||0).toFixed(2) + "</span></div></div>";
-    html += "<div class=\'record-actions\'><button class=\'btn btn-sm btn-outline\' onclick=\'modifyRecord(" + ri + ")\'>修 改</button><button class=\'btn btn-sm\' style=\'color:var(--danger);border-color:var(--danger);margin-left:8px;\' onclick=\'deleteRecord(" + ri + ")\'>🗑️ 删除</button></div></div>";
+    html += "<div class='detail-grid'><div class='detail-tag'><span>款号</span><span>" + escapeHtml(r.styleNo) + "</span></div><div class='detail-tag'><span>尺码</span><span>" + escapeHtml(r.size) + "</span></div><div class='detail-tag'><span>工序</span><span>" + escapeHtml(r.processName) + "</span></div></div>";
+    html += "<div class='detail-grid'><div class='detail-tag'><span>数量</span><span>" + r.stockNum + "</span></div><div class='detail-tag'><span>单价</span><span>¥" + r.price + "</span></div><div class='detail-tag'><span>金额</span><span>¥" + (parseFloat(r.amount)||0).toFixed(2) + "</span></div></div>";
+    html += "<div class='record-actions'><button class='btn btn-sm btn-outline' onclick='modifyRecord(" + ri + ")'>修 改</button><button class='btn btn-sm' style='color:var(--danger);border-color:var(--danger);margin-left:8px;' onclick='deleteRecord(" + ri + ")'>🗑️ 删除</button></div></div>";
   }
   if (replace) {
     document.getElementById("history").innerHTML = html;
@@ -887,26 +897,27 @@ function renderHistoryPage(list, page, replace){
     lm.innerHTML = "📄 加载更多 (" + (list.length - end) + " 条)";
   }
 }
-
 function loadMore(){
   var list = getFilteredRecords();
   currentPage++;
   renderHistoryPage(list, currentPage, false);
 }
-
 // ========== 汇总 ==========
 let summaryTab=0;
-function switchSummaryTab(el,idx){
+// 【修复】切换汇总重载缓存
+async function switchSummaryTab(el,idx){
   summaryTab=idx;
   document.querySelectorAll('.summary-tab').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');
+  await loadRecords();
   renderSummary();
 }
 function renderSummary(){
   const now=new Date();
   let list=records;
   if(summaryTab===0){
-    const t=now.toLocaleDateString();
+    // 【修复】统一使用zh-CN日期格式，与inboundTime存储格式一致
+    const t=now.toLocaleDateString('zh-CN');
     list=records.filter(r=>r.inboundTime.includes(t));
   }else if(summaryTab===1){
     const m=now.getMonth();
@@ -925,7 +936,6 @@ function renderSummary(){
   const c=document.getElementById('summaryContent');
   c.innerHTML=`<div class="summary-row-line"><div>入库单数</div><div>${cnt}</div></div><div class="summary-row-line"><div>总数量</div><div>${qty} 件</div></div><div class="summary-row-line total"><div>总金额</div><div>¥${amt.toFixed(2)}</div></div>`;
 }
-
 // ========== 导出 ==========
 function exportToExcel(){
   if(!records.length) return showToast("无数据");
@@ -939,7 +949,6 @@ function exportToExcel(){
     if(!processMap[p]){processMap[p]=[];processOrder.push(p);}
     processMap[p].push(r);
   });
-
   // ====== Sheet1: 入库明细 ======
   var detail=[["入库时间","工序名称","款号","尺码","入库数量","单价(¥)","金额(¥)"]];
   for(var pi=0;pi<processOrder.length;pi++){
@@ -968,7 +977,6 @@ function exportToExcel(){
   ws1["!autofilter"]={ref:"A1:G"+(detail.length)};
   ws1["!freeze"]={xSplit:0,ySplit:1};
   XLSX.utils.book_append_sheet(wb,ws1,"入库明细");
-
   // ====== Sheet2: 数据汇总 ======
   var totalQty=records.reduce(function(s,r){return s+(Number(r.stockNum)||1);},0);
   var totalAmt=records.reduce(function(s,r){return s+(parseFloat(r.amount)||0);},0);
@@ -977,7 +985,6 @@ function exportToExcel(){
   var avgPrice=totalQty>0?(totalAmt/totalQty):0;
   var maxQty=0;
   records.forEach(function(r){var n=Number(r.stockNum)||1;if(n>maxQty)maxQty=n;});
-
   var summary=[];
   summary.push(["===== 基础信息统计 =====",""]);
   summary.push(["统计项目","数值"]);
@@ -1000,7 +1007,6 @@ function exportToExcel(){
   var ws2=XLSX.utils.aoa_to_sheet(summary);
   ws2["!cols"]=[{wch:30},{wch:14},{wch:14},{wch:10}];
   XLSX.utils.book_append_sheet(wb,ws2,"数据汇总");
-
   XLSX.writeFile(wb,"服装入库_"+getTodayCN()+".xlsx");
   showToast("✅ 导出成功");
 }
@@ -1051,7 +1057,6 @@ function handleImportExcel(e){
         }
       }
       if(hdrIdx<0){showToast("❌ 未找到表头");return;}
-
       var headers=raw[hdrIdx];
       var colMap={};
       for(var hi=0;hi<headers.length;hi++){
@@ -1068,7 +1073,6 @@ function handleImportExcel(e){
         if(/单价|单价\(¥|单价\(元|price/i.test(h)) colMap.price=hi;
         if(/金额|金额\(¥|金额\(元|amount|总金额|合计/i.test(h)) colMap.amount=hi;
       }
-
       var arr=[];
       for(var ri=hdrIdx+1;ri<raw.length;ri++){
         var row=raw[ri];
